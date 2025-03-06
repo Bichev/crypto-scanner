@@ -8,8 +8,10 @@ import {
     flexRender,
     SortingState,
 } from '@tanstack/react-table';
-import { CryptoPair, INDICATOR_DESCRIPTIONS } from '../types/crypto';
-import { Card, Title, Text } from '@tremor/react';
+import { CryptoPair } from '../types/crypto';
+import { Card } from './ui/card';
+import { cn } from '@/lib/utils';
+import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 
 const columnHelper = createColumnHelper<CryptoPair>();
 
@@ -17,48 +19,59 @@ const columns = [
     columnHelper.accessor('pair', {
         header: 'Pair',
         cell: info => (
-            <div className="font-semibold text-blue-600">
+            <div className="font-semibold text-primary">
                 {info.getValue()}
             </div>
         ),
     }),
     columnHelper.accessor('currentPrice', {
         header: 'Price (USD)',
-        cell: info => (
-            <div className="font-mono">
-                ${parseFloat(info.getValue()).toLocaleString()}
-            </div>
-        ),
+        cell: info => {
+            const value = parseFloat(info.getValue());
+            return (
+                <div className="font-mono">
+                    {isNaN(value) ? '-' : `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`}
+                </div>
+            );
+        },
     }),
     columnHelper.accessor('dailyPriceChange', {
         header: '24h Change',
         cell: info => {
             const value = parseFloat(info.getValue());
             return (
-                <div className={`font-mono ${value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {value >= 0 ? '+' : ''}{value.toFixed(2)}%
+                <div className={cn(
+                    "font-mono",
+                    value > 0 ? "crypto-value-up" : value < 0 ? "crypto-value-down" : "crypto-value-neutral"
+                )}>
+                    {isNaN(value) ? '-' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`}
                 </div>
             );
         },
     }),
     columnHelper.accessor('currentVolumeUSD', {
         header: '24h Volume (USD)',
-        cell: info => (
-            <div className="font-mono">
-                ${parseFloat(info.getValue()).toLocaleString()}
-            </div>
-        ),
+        cell: info => {
+            const value = parseFloat(info.getValue());
+            return (
+                <div className="font-mono">
+                    {isNaN(value) ? '-' : `$${value.toLocaleString()}`}
+                </div>
+            );
+        },
     }),
     columnHelper.accessor('rsi', {
         header: 'RSI',
         cell: info => {
             const value = parseFloat(info.getValue());
-            let color = 'text-gray-600';
-            if (value >= 70) color = 'text-red-600';
-            if (value <= 30) color = 'text-green-600';
+            let colorClass = 'crypto-value-neutral';
+            if (!isNaN(value)) {
+                if (value >= 70) colorClass = 'crypto-value-down';
+                if (value <= 30) colorClass = 'crypto-value-up';
+            }
             return (
-                <div className={`font-mono ${color}`}>
-                    {value.toFixed(2)}
+                <div className={cn("font-mono", colorClass)}>
+                    {isNaN(value) ? '-' : value.toFixed(2)}
                 </div>
             );
         },
@@ -66,12 +79,14 @@ const columns = [
     columnHelper.accessor('macdTrend', {
         header: 'MACD Trend',
         cell: info => {
-            const trend = info.getValue() || 'Neutral';
-            let color = 'text-gray-600';
-            if (trend?.includes('Strong Up')) color = 'text-green-600';
-            if (trend?.includes('Strong Down')) color = 'text-red-600';
+            const trend = info.getValue() || '-';
+            let colorClass = 'crypto-value-neutral';
+            if (trend.includes('Strong Up')) colorClass = 'crypto-value-up';
+            if (trend.includes('Strong Down')) colorClass = 'crypto-value-down';
+            if (trend.includes('Weak Up')) colorClass = 'crypto-value-up/70';
+            if (trend.includes('Weak Down')) colorClass = 'crypto-value-down/70';
             return (
-                <div className={`${color}`}>
+                <div className={colorClass}>
                     {trend}
                 </div>
             );
@@ -81,12 +96,14 @@ const columns = [
         header: 'Short Term Score',
         cell: info => {
             const value = parseFloat(info.getValue());
-            let color = 'text-gray-600';
-            if (value >= 0.7) color = 'text-green-600';
-            if (value <= 0.3) color = 'text-red-600';
+            let colorClass = 'crypto-value-neutral';
+            if (!isNaN(value)) {
+                if (value >= 0.7) colorClass = 'crypto-value-up';
+                if (value <= 0.3) colorClass = 'crypto-value-down';
+            }
             return (
-                <div className={`font-mono ${color}`}>
-                    {value.toFixed(2)}
+                <div className={cn("font-mono", colorClass)}>
+                    {isNaN(value) ? '-' : value.toFixed(2)}
                 </div>
             );
         },
@@ -113,45 +130,48 @@ export function CryptoTable({ data }: CryptoTableProps) {
     });
 
     return (
-        <Card className="mt-4">
-            <Title>Crypto Market Scanner</Title>
-            <Text>Real-time analysis of cryptocurrency pairs on Coinbase</Text>
+        <Card className="overflow-hidden">
+            <div className="table-header">
+                <div>
+                    <h2 className="text-xl font-semibold text-foreground">Crypto Market Scanner</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Real-time analysis of cryptocurrency pairs on Coinbase
+                    </p>
+                </div>
+            </div>
             
-            <div className="mt-4 overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+            <div className="overflow-x-auto">
+                <table className="crypto-table">
+                    <thead>
                         {table.getHeaderGroups().map(headerGroup => (
                             <tr key={headerGroup.id}>
                                 {headerGroup.headers.map(header => (
                                     <th
                                         key={header.id}
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                         onClick={header.column.getToggleSortingHandler()}
                                     >
-                                        {flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext()
-                                        )}
-                                        {{
-                                            asc: ' 🔼',
-                                            desc: ' 🔽',
-                                        }[header.column.getIsSorted() as string] ?? null}
+                                        <button className="sort-button">
+                                            {flexRender(
+                                                header.column.columnDef.header,
+                                                header.getContext()
+                                            )}
+                                            <span className="text-primary/50">
+                                                {{
+                                                    asc: <ChevronUpIcon className="w-4 h-4" />,
+                                                    desc: <ChevronDownIcon className="w-4 h-4" />,
+                                                }[header.column.getIsSorted() as string] ?? null}
+                                            </span>
+                                        </button>
                                     </th>
                                 ))}
                             </tr>
                         ))}
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody>
                         {table.getRowModel().rows.map(row => (
-                            <tr
-                                key={row.id}
-                                className="hover:bg-gray-50 transition-colors"
-                            >
+                            <tr key={row.id}>
                                 {row.getVisibleCells().map(cell => (
-                                    <td
-                                        key={cell.id}
-                                        className="px-6 py-4 whitespace-nowrap"
-                                    >
+                                    <td key={cell.id}>
                                         {flexRender(
                                             cell.column.columnDef.cell,
                                             cell.getContext()
@@ -162,6 +182,18 @@ export function CryptoTable({ data }: CryptoTableProps) {
                         ))}
                     </tbody>
                 </table>
+            </div>
+            
+            <div className="table-footer">
+                <span className="text-sm text-muted-foreground">
+                    Showing {table.getRowModel().rows.length} pairs
+                </span>
+                <button
+                    onClick={() => table.resetSorting()}
+                    className="reset-button"
+                >
+                    Reset Sorting
+                </button>
             </div>
         </Card>
     );

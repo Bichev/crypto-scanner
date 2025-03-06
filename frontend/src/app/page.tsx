@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { CryptoTable } from '../components/CryptoTable';
 import { cryptoService } from '../services/cryptoService';
 import { CryptoPair } from '../types/crypto';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function Home() {
   const [cryptoPairs, setCryptoPairs] = useState<CryptoPair[]>([]);
@@ -21,7 +22,7 @@ export default function Home() {
         const data = await cryptoService.getCryptoPairs();
         setCryptoPairs(data);
         setTotalPairs(data.length);
-        setAnalyzedPairs(data.length); // Set analyzed pairs to total when complete
+        setAnalyzedPairs(data.length);
         setLastUpdated(new Date());
         setLoading(false);
       } catch (err) {
@@ -31,49 +32,50 @@ export default function Home() {
     };
 
     fetchData();
-
-    // Refresh data every 5 minutes
     const interval = setInterval(fetchData, 5 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <main className="min-h-screen p-4 md:p-8 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          Crypto Scanner
-        </h1>
-        <p className="text-gray-600 mb-8">
-          Real-time analysis and insights for cryptocurrency markets
-        </p>
-        
+    <main className="min-h-screen bg-background p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-4xl font-bold text-foreground">
+            Crypto Scanner
+          </h1>
+          <p className="text-lg text-muted-foreground mt-2">
+            Real-time analysis and insights for cryptocurrency markets
+          </p>
+        </div>
+
         {loading && cryptoPairs.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-600">Loading cryptocurrency data...</p>
+            <LoadingSpinner size="lg" />
+            <p className="text-muted-foreground mt-4">Loading cryptocurrency data...</p>
           </div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
-            <p className="text-red-600">{error}</p>
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+            <p className="text-destructive">{error}</p>
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-center mb-4">
-              <div className="text-sm text-gray-500">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="text-sm text-muted-foreground">
                 {lastUpdated && (
                   <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
                 )}
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-muted-foreground">
                 Analyzed pairs: {analyzedPairs}/{totalPairs}
               </div>
             </div>
+            
             <CryptoTable data={cryptoPairs} />
+            
             {loading && (
-              <div className="fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center space-x-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
-                <span>Refreshing data...</span>
+              <div className="fixed bottom-4 right-4 bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                <LoadingSpinner size="sm" />
+                <span className="text-sm">Refreshing data...</span>
               </div>
             )}
           </>
