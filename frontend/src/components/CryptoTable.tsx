@@ -79,68 +79,68 @@ export function CryptoTable({ data }: CryptoTableProps) {
     const [detailViewOpen, setDetailViewOpen] = useState<boolean>(false);
 
     const columns = useMemo(() => [
-    columnHelper.accessor('pair', {
-        header: 'Pair',
-        cell: info => (
+        columnHelper.accessor('pair', {
+            header: 'Pair',
+            cell: info => (
                 <div className="font-semibold text-primary flex items-center">
                     <div className="w-6 h-6 bg-secondary/40 rounded-full mr-2 flex items-center justify-center overflow-hidden">
                         {info.getValue().split('-')[0].charAt(0)}
                     </div>
-                {info.getValue()}
-            </div>
-        ),
+                    {info.getValue()}
+                </div>
+            ),
             filterFn: 'includesString',
-    }),
-    columnHelper.accessor('currentPrice', {
-        header: 'Price (USD)',
+        }),
+        columnHelper.accessor('currentPrice', {
+            header: 'Price (USD)',
             cell: info => {
                 const value = parseFloat(info.getValue());
                 return (
-            <div className="font-mono">
+                    <div className="font-mono">
                         {isNaN(value) ? '-' : `$${parseFloat(value.toFixed(8)).toLocaleString(undefined, { 
                             minimumFractionDigits: 2, 
                             maximumFractionDigits: value < 0.01 ? 8 : value < 1 ? 6 : 2 
                         })}`}
-            </div>
+                    </div>
                 );
             },
-    }),
-    columnHelper.accessor('dailyPriceChange', {
-        header: '24h Change',
-        cell: info => {
-            const value = parseFloat(info.getValue());
-            return (
+        }),
+        columnHelper.accessor('dailyPriceChange', {
+            header: '24h Change',
+            cell: info => {
+                const value = parseFloat(info.getValue());
+                return (
                     <div className={cn(
                         "font-mono",
                         getValueColor(value, 'price')
                     )}>
                         {isNaN(value) ? '-' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`}
-                </div>
-            );
-        },
+                    </div>
+                );
+            },
             filterFn: (row, id, filterValue) => {
                 const value = parseFloat(row.getValue(id));
                 if (filterValue === 'positive') return value > 0;
                 if (filterValue === 'negative') return value < 0;
                 return true;
             }
-    }),
-    columnHelper.accessor('currentVolumeUSD', {
+        }),
+        columnHelper.accessor('currentVolumeUSD', {
             header: '24h Volume',
             cell: info => {
                 const value = parseFloat(info.getValue());
                 return (
-            <div className="font-mono">
+                    <div className="font-mono">
                         {isNaN(value) ? '-' : `$${value >= 1000000 
                             ? (value / 1000000).toFixed(1) + 'M' 
                             : value >= 1000 
                                 ? (value / 1000).toFixed(1) + 'K' 
                                 : value.toLocaleString()}`}
-            </div>
+                    </div>
                 );
             },
-    }),
-    columnHelper.accessor('rsi', {
+        }),
+        columnHelper.accessor('rsi', {
             header: () => (
                 <TooltipProvider>
                     <Tooltip>
@@ -154,14 +154,14 @@ export function CryptoTable({ data }: CryptoTableProps) {
                     </Tooltip>
                 </TooltipProvider>
             ),
-        cell: info => {
-            const value = parseFloat(info.getValue());
-            return (
+            cell: info => {
+                const value = parseFloat(info.getValue());
+                return (
                     <div className={cn("font-mono", getValueColor(value, 'rsi'))}>
                         {isNaN(value) ? '-' : value.toFixed(2)}
-                </div>
-            );
-        },
+                    </div>
+                );
+            },
             filterFn: (row, id, filterValue) => {
                 const value = parseFloat(row.getValue(id));
                 if (filterValue === 'overbought') return value >= 70;
@@ -169,8 +169,8 @@ export function CryptoTable({ data }: CryptoTableProps) {
                 if (filterValue === 'neutral') return value > 30 && value < 70;
                 return true;
             }
-    }),
-    columnHelper.accessor('macdTrend', {
+        }),
+        columnHelper.accessor('macdTrend', {
             header: () => (
                 <TooltipProvider>
                     <Tooltip>
@@ -184,19 +184,19 @@ export function CryptoTable({ data }: CryptoTableProps) {
                     </Tooltip>
                 </TooltipProvider>
             ),
-        cell: info => {
+            cell: info => {
                 const trend = info.getValue() || '-';
-            return (
+                return (
                     <div className={cn(
                         getValueColor(trend as any, 'trend' as any), 
                         "flex items-center gap-1"
                     )}>
                         {trend.includes('Strong Up') && <ChevronUpIcon className="w-4 h-4" />}
                         {trend.includes('Strong Down') && <ChevronDownIcon className="w-4 h-4" />}
-                    {trend}
-                </div>
-            );
-        },
+                        {trend}
+                    </div>
+                );
+            },
             filterFn: (row, id, filterValue) => {
                 const value = row.getValue(id);
                 if (filterValue === 'uptrend') return value?.toString().includes('Up') ?? false;
@@ -204,13 +204,77 @@ export function CryptoTable({ data }: CryptoTableProps) {
                 if (filterValue === 'neutral') return value === 'Neutral';
                 return true;
             }
-    }),
-    columnHelper.accessor('shortTermScore', {
+        }),
+        columnHelper.accessor(row => row.pricePositionAnalysis.bbPosition, {
+            id: 'pricePosition',
             header: () => (
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <span className="cursor-help underline decoration-dotted underline-offset-2">Short Term Score</span>
+                            <span className="cursor-help underline decoration-dotted underline-offset-2">BB Position</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-64 p-3">
+                            <p className="font-semibold">Bollinger Bands Position</p>
+                            <p className="text-xs mt-1">Current price position relative to Bollinger Bands.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ),
+            cell: info => (
+                <div className="font-medium">
+                    {info.getValue()}
+                </div>
+            ),
+        }),
+        columnHelper.accessor('bb_width', {
+            header: () => (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="cursor-help underline decoration-dotted underline-offset-2">BB Width</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-64 p-3">
+                            <p className="font-semibold">Bollinger Bands Width</p>
+                            <p className="text-xs mt-1">Width of Bollinger Bands as a percentage of the middle band. Higher values indicate higher volatility.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ),
+            cell: info => (
+                <div className="font-mono">
+                    {info.getValue()}%
+                </div>
+            ),
+        }),
+        columnHelper.accessor('volatility', {
+            header: () => (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="cursor-help underline decoration-dotted underline-offset-2">Volatility</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-64 p-3">
+                            <p className="font-semibold">Price Volatility</p>
+                            <p className="text-xs mt-1">Standard deviation of price returns over the last 14 periods.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ),
+            cell: info => {
+                const value = parseFloat(info.getValue());
+                return (
+                    <div className="font-mono">
+                        {isNaN(value) ? '-' : `${value.toFixed(2)}%`}
+                    </div>
+                );
+            },
+        }),
+        columnHelper.accessor('shortTermScore', {
+            header: () => (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="cursor-help underline decoration-dotted underline-offset-2">Short Term</span>
                         </TooltipTrigger>
                         <TooltipContent className="w-64 p-3">
                             <p className="font-semibold">Short Term Score</p>
@@ -219,18 +283,52 @@ export function CryptoTable({ data }: CryptoTableProps) {
                     </Tooltip>
                 </TooltipProvider>
             ),
-        cell: info => {
-            const value = parseFloat(info.getValue());
-            return (
+            cell: info => {
+                const value = parseFloat(info.getValue());
+                return (
                     <div className={cn(
                         "font-mono relative h-6 flex items-center",
                         getValueColor(value, 'score')
                     )}>
                         <div className="absolute left-0 top-0 bottom-0 bg-current opacity-20 rounded-sm" style={{ width: `${(value || 0) * 100}%` }}></div>
                         <span className="relative z-10 pl-1">{isNaN(value) ? '-' : value.toFixed(2)}</span>
-                </div>
-            );
-        },
+                    </div>
+                );
+            },
+            filterFn: (row, id, filterValue) => {
+                const value = parseFloat(row.getValue(id));
+                if (filterValue === 'strong') return value >= 0.7;
+                if (filterValue === 'weak') return value <= 0.3;
+                if (filterValue === 'neutral') return value > 0.3 && value < 0.7;
+                return true;
+            }
+        }),
+        columnHelper.accessor('longTermScore', {
+            header: () => (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="cursor-help underline decoration-dotted underline-offset-2">Long Term</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-64 p-3">
+                            <p className="font-semibold">Long Term Score</p>
+                            <p className="text-xs mt-1">Composite score based on long-term technical indicators and price levels.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ),
+            cell: info => {
+                const value = parseFloat(info.getValue());
+                return (
+                    <div className={cn(
+                        "font-mono relative h-6 flex items-center",
+                        getValueColor(value, 'score')
+                    )}>
+                        <div className="absolute left-0 top-0 bottom-0 bg-current opacity-20 rounded-sm" style={{ width: `${(value || 0) * 100}%` }}></div>
+                        <span className="relative z-10 pl-1">{isNaN(value) ? '-' : value.toFixed(2)}</span>
+                    </div>
+                );
+            },
             filterFn: (row, id, filterValue) => {
                 const value = parseFloat(row.getValue(id));
                 if (filterValue === 'strong') return value >= 0.7;

@@ -8,11 +8,19 @@ import { CryptoAnalyzer } from './services/CryptoAnalyzer';
 import { rateLimiter } from './middleware/rateLimiter';
 import moment from 'moment-timezone';
 import { CandleModel } from './models/Candle';
+import { TrendMonitorService } from './services/TrendMonitorService';
+import { MarketSummaryService } from './services/MarketSummaryService';
+import { CorrelationService } from './services/CorrelationService';
 
 dotenv.config();
 
 // Connect to MongoDB
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crypto-scanner';
+
+// Initialize services
+const trendMonitor = new TrendMonitorService();
+const marketSummary = new MarketSummaryService();
+const correlationService = new CorrelationService();
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
@@ -31,13 +39,21 @@ app.use(rateLimiter);
 const dataFetcher = new CoinbaseDataFetcher();
 const analyzer = new CryptoAnalyzer();
 
+mongoose.connection.on('disconnected', () => {
+    console.log('MongoDB disconnected, attempting to reconnect...');
+    setTimeout(() => {
+      mongoose.connect(MONGODB_URI)
+        .catch(err => console.error('Error reconnecting to MongoDB:', err));
+    }, 5000);
+  });
+
 // Initialize data fetching - run once at startup
 async function initializeData() {
   try {
     const pairs = await dataFetcher.getAllPairs();
     
     // Just initialize for a few pairs initially to avoid long startup time
-    const initialPairs = pairs.slice(0, 3);
+    const initialPairs = pairs;
     console.log(`Initializing data for ${initialPairs.length} pairs...`);
 
     for (const pair of initialPairs) {
@@ -68,7 +84,7 @@ initializeData();
 // Modified route to only analyze pairs that exist in the database
 app.get('/api/crypto/pairs', async (req, res, next) => {
   try {
-    console.log('Fetching pairs from database');
+    console.log('/api/crypto/pairs call - fetching pairs from database');
     
     // Get distinct pairs from the database that have data
     const pairsInDb = await CandleModel.distinct('pair');
@@ -88,6 +104,104 @@ app.get('/api/crypto/pairs', async (req, res, next) => {
     next(error);
   }
 });
+
+
+// Add to server.ts
+app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
+    try {
+      const { pair } = req.params;
+      const { start, end, granularity } = req.query;
+      
+      // Fetch candles for specific time range
+      const candles = await CandleModel.find({
+        pair,
+        timestamp: { 
+          $gte: parseInt(start as string), 
+          $lte: parseInt(end as string) 
+        }
+      }).sort({ timestamp: 1 });
+      
+      res.json(candles);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+    // Add new endpoints
+    app.get('/api/crypto/market/summary', async (req, res, next) => {
+        try {
+        const summary = await marketSummary.generateMarketSummary();
+        res.json(summary);
+        } catch (error) {
+        next(error);
+        }
+    });
+  
+  app.get('/api/crypto/market/correlations', async (req, res, next) => {
+    try {
+      const pairs = await CandleModel.distinct('pair');
+      const period = req.query.period ? parseInt(req.query.period as string) : 30;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      
+      // Get top pairs by volume if limit specified
+      let pairsToAnalyze = pairs;
+      if (pairs.length > limit) {
+        const topPairs = await analyzer.analyzePairs(pairs);
+        pairsToAnalyze = topPairs
+          .sort((a, b) => parseFloat(b.currentVolumeUSD) - parseFloat(a.currentVolumeUSD))
+          .slice(0, limit)
+          .map(p => p.pair);
+      }
+      
+      const correlations = await correlationService.analyzeCorrelations(pairsToAnalyze, period);
+      res.json(correlations);
+    } catch (error) {
+      next(error);
+    }
+  });  
+
+  app.get('/api/crypto/pair/:pair/indicators', async (req, res, next) => {
+    try {
+      const { pair } = req.params;
+      
+      // Check if pair exists in database
+      const exists = await CandleModel.exists({ pair });
+      if (!exists) {
+        return res.status(404).json({ error: 'Pair not found' });
+      }
+      
+      // Analyze single pair in detail
+      const analysis = await analyzer.analyzePairs([pair]);
+      if (analysis.length === 0) {
+        return res.status(404).json({ error: 'Analysis not available' });
+      }
+      
+      res.json(analysis[0]);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/crypto/trends', async (req, res, next) => {
+    try {
+      const pairs = await CandleModel.distinct('pair');
+      const changes = await trendMonitor.monitorTrends(pairs);
+      
+      // Filter by significance if requested
+      const significance = req.query.significance as string;
+      let filteredChanges = changes;
+      
+      if (significance === 'high') {
+        filteredChanges = changes.filter(c => c.significance === 'high');
+      } else if (significance === 'medium') {
+        filteredChanges = changes.filter(c => c.significance !== 'low');
+      }
+      
+      res.json(filteredChanges);
+    } catch (error) {
+      next(error);
+    }
+  });
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

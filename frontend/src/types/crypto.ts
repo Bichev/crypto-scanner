@@ -6,6 +6,13 @@ export interface CryptoPair {
     percentChangeFromLow: string;
     percentChangeFromHigh: string;
     percentChangeLastThreeMonths: string;
+    // Price position analysis
+    pricePositionAnalysis: {
+        bbPosition: string;
+        channelPosition: string;
+    };
+    bb_width: string;
+    volatility: string;
     // Volume indicators
     vma_7: string;
     vma_30: string;
@@ -21,10 +28,19 @@ export interface CryptoPair {
     normalizedOBVChange: string;
     // Technical indicators
     atr: string;
-    roc_1: string;
-    roc_7: string;
-    roc_30: string;
+    roc: string;
     rsi: string;
+    // Additional momentum indicators
+    stoch_k: string;
+    stoch_d: string;
+    williamsR: string;
+    cci: string;
+    mfi: string;
+    // Trend strength
+    adx: string;
+    plusDI: string;
+    minusDI: string;
+    trendStrength: string; // Composite of ADX and DI
     // MACD
     macd: string;
     signalLine: string;
@@ -84,5 +100,34 @@ export const INDICATOR_DESCRIPTIONS: Record<string, IndicatorDescription> = {
         description: "Trend-following momentum indicator showing the relationship between two moving averages",
         interpretation: "Positive MACD indicates upward momentum, negative indicates downward momentum"
     },
-    // Add more indicator descriptions as needed
+    stochastic: {
+        name: "Stochastic Oscillator",
+        description: "Compares current closing price to its price range over a period",
+        interpretation: "Values above 80 indicate overbought, below 20 indicate oversold. %K crossing above %D is bullish"
+    },
+    adx: {
+        name: "Average Directional Index (ADX)",
+        description: "Measures the strength of a trend regardless of direction",
+        interpretation: "ADX > 25 indicates strong trend, < 20 indicates weak trend. Use +DI and -DI for direction"
+    },
+    cci: {
+        name: "Commodity Channel Index",
+        description: "Measures current price level relative to average price level over a period",
+        interpretation: "Above +100 suggests overbought, below -100 suggests oversold. Good for divergence trading"
+    },
+    williamsR: {
+        name: "Williams %R",
+        description: "Momentum indicator similar to Stochastic Oscillator",
+        interpretation: "Below -80 indicates oversold, above -20 indicates overbought conditions"
+    },
+    mfi: {
+        name: "Money Flow Index",
+        description: "Volume-weighted RSI that measures buying and selling pressure",
+        interpretation: "Above 80 indicates overbought, below 20 indicates oversold. Volume adds confirmation"
+    },
+    trendStrength: {
+        name: "Trend Strength",
+        description: "Composite indicator combining ADX and Directional Indicators",
+        interpretation: "Strong trend when ADX > 25 and DI+ > DI- (uptrend) or DI- > DI+ (downtrend)"
+    }
 };
