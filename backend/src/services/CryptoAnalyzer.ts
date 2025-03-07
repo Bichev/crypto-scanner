@@ -1,7 +1,7 @@
 import moment from 'moment-timezone';
 import { CandleData, CoinbaseDataFetcher } from './CoinbaseDataFetcher';
 import * as ti from 'technicalindicators';
-
+import { CandleModel } from '../models/Candle';
 export interface IndicatorDescription {
     name: string;
     description: string;
@@ -51,58 +51,72 @@ export class CryptoAnalyzer {
     }
 
     async analyzePairs(pairs: string[]): Promise<any[]> {
-        // Check cache first
-        if (this.cache && (Date.now() - this.cache.timestamp) < this.CACHE_DURATION) {
-            console.log('Returning cached data');
-            return this.cache.data;
-        }
-
-        console.log(`Fetching fresh data for all pairs (${pairs.length} pairs total)`);
         const results = [];
-        const now = moment();
-        const threeMonthsAgo = now.clone().subtract(3, 'months');
-        const fiveYearsAgo = now.clone().subtract(5, 'years');
-
-        let analyzedCount = 0;
+        
         for (const pair of pairs) {
-            try {
-                analyzedCount++;
-                console.log(`Processing ${pair}... (${analyzedCount}/${pairs.length})`);
-                const [threeMonthCandles, allTimeCandles] = await Promise.all([
-                    this.dataFetcher.fetchDailyCandles(pair, threeMonthsAgo, now),
-                    this.dataFetcher.fetchDailyCandles(pair, fiveYearsAgo, now)
-                ]);
-
-                if (threeMonthCandles.length === 0 || allTimeCandles.length === 0) {
-                    console.log(`No data available for ${pair}. Skipping...`);
-                    continue;
-                }
-
-                const analysis = this.calculateIndicators(allTimeCandles, threeMonthCandles);
-                results.push({
-                    pair,
-                    ...analysis
-                });
-
-                // Add delay between pairs to avoid rate limiting
-                await this.delay(this.API_DELAY);
-            } catch (error: any) {
-                console.error(`Error analyzing ${pair}:`, error);
-                if (error.response?.data?.message === 'Public rate limit exceeded') {
-                    console.log('Rate limit hit, increasing delay...');
-                    await this.delay(this.API_DELAY * 2);
-                }
+          try {
+            // Get data from MongoDB instead of API
+            const threeMonthsAgo = moment().subtract(3, 'months').unix();
+            const fiveYearsAgo = moment().subtract(5, 'years').unix();
+            
+            const [threeMonthCandles, allTimeCandles] = await Promise.all([
+              CandleModel.find({ 
+                pair, 
+                timestamp: { $gte: threeMonthsAgo } 
+              }).sort({ timestamp: 1 }),
+              
+              CandleModel.find({ 
+                pair, 
+                timestamp: { $gte: fiveYearsAgo } 
+              }).sort({ timestamp: 1 }),
+              
+            //   this.dataFetcher.getCurrentPrice(pair)
+            ]);
+            
+            if (threeMonthCandles.length === 0 || allTimeCandles.length === 0) {
+              console.log(`No data available for ${pair}. Skipping...`);
+              continue;
             }
+            
+            // Calculate USD volume
+            const lastCandle = allTimeCandles[allTimeCandles.length - 1];
+            const currentVolumeUSD = lastCandle.volume * lastCandle.close;
+            
+            // Add delay after fetching current price
+            // await this.delay(this.API_DELAY);
+            
+            // Calculate other metrics
+            const analysis = this.calculateIndicators(
+              allTimeCandles.map((c: CandleData) => ({
+                timestamp: c.timestamp,
+                open: c.open,
+                high: c.high,
+                low: c.low,
+                close: c.close,
+                volume: c.volume
+              })), 
+              threeMonthCandles.map((c: CandleData) => ({
+                timestamp: c.timestamp,
+                open: c.open,
+                high: c.high,
+                low: c.low,
+                close: c.close,
+                volume: c.volume
+              }))
+            );
+            
+            results.push({
+              pair,
+              currentVolumeUSD: currentVolumeUSD.toFixed(2),
+              ...analysis
+            });
+          } catch (error) {
+            console.error(`Error analyzing ${pair} from database:`, error);
+          }
         }
-
-        // Update cache
-        this.cache = {
-            timestamp: Date.now(),
-            data: results
-        };
-
+        
         return results;
-    }
+      }
 
     private calculateIndicators(allTimeCandles: CandleData[], threeMonthCandles: CandleData[]) {
         const closePrices = allTimeCandles.map(candle => candle.close);
@@ -128,8 +142,13 @@ export class CryptoAnalyzer {
         // Calculate moving averages
         const sma7 = ti.SMA.calculate({ values: closePrices, period: 7 });
         const sma30 = ti.SMA.calculate({ values: closePrices, period: 30 });
+        const sma50 = ti.SMA.calculate({ values: closePrices, period: 50 });
+        const sma200 = ti.SMA.calculate({ values: closePrices, period: 200 });
+        
         const ema7 = ti.EMA.calculate({ values: closePrices, period: 7 });
         const ema30 = ti.EMA.calculate({ values: closePrices, period: 30 });
+        const ema50 = ti.EMA.calculate({ values: closePrices, period: 50 });
+        const ema200 = ti.EMA.calculate({ values: closePrices, period: 200 });
 
         // Calculate volume indicators
         const vma7 = ti.SMA.calculate({ values: volumes, period: 7 });
@@ -138,21 +157,92 @@ export class CryptoAnalyzer {
         const latestMACD = macd[macd.length - 1] || { MACD: 0, signal: 0, histogram: 0 };
         const volumeOscillator = ((vma7[vma7.length - 1] - vma30[vma30.length - 1]) / vma30[vma30.length - 1]) * 100;
 
+        // Calculate historical highs and lows
+        const allTimeHigh = Math.max(...allTimeCandles.map(c => c.high));
+        const allTimeLow = Math.min(...allTimeCandles.map(c => c.low));
+        const percentFromHigh = ((currentPrice - allTimeHigh) / allTimeHigh) * 100;
+        const percentFromLow = ((currentPrice - allTimeLow) / allTimeLow) * 100;
+
+        // Calculate three-month change
+        const threeMonthStartPrice = threeMonthCandles[0]?.close || currentPrice;
+        const threeMonthChange = ((currentPrice - threeMonthStartPrice) / threeMonthStartPrice) * 100;
+
+        // Calculate short-term and long-term scores
+        const shortTermScore = this.calculateShortTermScore(rsi[rsi.length - 1], latestMACD, sma7[sma7.length - 1], sma30[sma30.length - 1]);
+        const longTermScore = this.calculateLongTermScore(sma50[sma50.length - 1], sma200[sma200.length - 1], percentFromHigh, percentFromLow);
+        const riskAdjustedScore = (shortTermScore + longTermScore) / 2;
+
         return {
             currentPrice: currentPrice.toFixed(8),
             dailyPriceChange: this.calculateDailyPriceChange(allTimeCandles),
+            percentChangeFromHigh: percentFromHigh.toFixed(2),
+            percentChangeFromLow: percentFromLow.toFixed(2),
+            percentChangeLastThreeMonths: threeMonthChange.toFixed(2),
+            
+            // Volume indicators
+            vma_7: vma7[vma7.length - 1]?.toFixed(2),
+            vma_30: vma30[vma30.length - 1]?.toFixed(2),
+            volumeOscillator: volumeOscillator.toFixed(2),
+            
+            // Technical indicators
             rsi: rsi[rsi.length - 1]?.toFixed(2),
+            
+            // MACD
             macd: latestMACD?.MACD?.toFixed(8) ?? "0.00000000",
             signalLine: latestMACD?.signal?.toFixed(8) ?? "0.00000000",
             histogram: latestMACD?.histogram?.toFixed(8) ?? "0.00000000",
             macdTrend: this.calculateMACDTrend(macd),
-            volumeOscillator: volumeOscillator.toFixed(2),
-            sma7: sma7[sma7.length - 1]?.toFixed(8),
-            sma30: sma30[sma30.length - 1]?.toFixed(8),
-            ema7: ema7[ema7.length - 1]?.toFixed(8),
-            ema30: ema30[ema30.length - 1]?.toFixed(8),
-            // Add more indicators as needed
+            
+            // Moving averages
+            sma_7: sma7[sma7.length - 1]?.toFixed(8),
+            sma_30: sma30[sma30.length - 1]?.toFixed(8),
+            sma_50: sma50[sma50.length - 1]?.toFixed(8),
+            sma_200: sma200[sma200.length - 1]?.toFixed(8),
+            ema_7: ema7[ema7.length - 1]?.toFixed(8),
+            ema_30: ema30[ema30.length - 1]?.toFixed(8),
+            ema_50: ema50[ema50.length - 1]?.toFixed(8),
+            ema_200: ema200[ema200.length - 1]?.toFixed(8),
+            
+            // Composite scores
+            shortTermScore: shortTermScore.toFixed(2),
+            longTermScore: longTermScore.toFixed(2),
+            riskAdjustedScore: riskAdjustedScore.toFixed(2)
         };
+    }
+
+    private calculateShortTermScore(rsi: number, macd: any, sma7: number, sma30: number): number {
+        let score = 0.5; // Start at neutral
+
+        // RSI component (0.3 weight)
+        if (rsi > 70) score -= 0.15;
+        else if (rsi < 30) score += 0.15;
+        else score += 0.15 * ((rsi - 30) / 40 - 0.5);
+
+        // MACD component (0.4 weight)
+        if (macd.histogram > 0) score += 0.2;
+        if (macd.histogram < 0) score -= 0.2;
+
+        // Short-term MA component (0.3 weight)
+        if (sma7 > sma30) score += 0.15;
+        if (sma7 < sma30) score -= 0.15;
+
+        // Ensure score is between 0 and 1
+        return Math.max(0, Math.min(1, score));
+    }
+
+    private calculateLongTermScore(sma50: number, sma200: number, percentFromHigh: number, percentFromLow: number): number {
+        let score = 0.5; // Start at neutral
+
+        // Long-term MA component (0.4 weight)
+        if (sma50 > sma200) score += 0.2;
+        if (sma50 < sma200) score -= 0.2;
+
+        // Historical price levels component (0.6 weight)
+        const pricePositionScore = (Math.abs(percentFromLow) - Math.abs(percentFromHigh)) / (Math.abs(percentFromLow) + Math.abs(percentFromHigh));
+        score += 0.3 * pricePositionScore;
+
+        // Ensure score is between 0 and 1
+        return Math.max(0, Math.min(1, score));
     }
 
     private calculateDailyPriceChange(candles: CandleData[]): string {
