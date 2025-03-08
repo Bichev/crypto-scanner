@@ -14,7 +14,7 @@ export interface CandleData {
 
 function identifyMissingDateRanges(startDate: moment.Moment, endDate: moment.Moment, existingTimestamps: Set<number>): { start: moment.Moment, end: moment.Moment }[] {
     const missingRanges = [];
-    let currentStart = startDate.clone();
+    let currentStart = startDate.clone().utc().startOf('day');
     let rangeStart: moment.Moment | null = null;
 
     while (currentStart.isBefore(endDate)) {
@@ -35,11 +35,10 @@ function identifyMissingDateRanges(startDate: moment.Moment, endDate: moment.Mom
         currentStart = currentStart.clone().add(1, 'day');
     }
 
-    // Don't forget to add the last range if it exists
     if (rangeStart) {
         missingRanges.push({
             start: rangeStart,
-            end: endDate.clone()
+            end: endDate.clone().utc().endOf('day')
         });
     }
 
@@ -49,8 +48,8 @@ function identifyMissingDateRanges(startDate: moment.Moment, endDate: moment.Mom
 export class CoinbaseDataFetcher {
     private readonly BASE_URL = 'https://api.exchange.coinbase.com/products';
     private readonly MAX_CANDLES_PER_REQUEST = 300;
-    private readonly PUBLIC_RATE_LIMIT = 10; // requests per second
-    private readonly BATCH_SIZE = 5; // process 5 pairs at a time
+    private readonly PUBLIC_RATE_LIMIT = 10;
+    private readonly BATCH_SIZE = 5;
 
     async getAllPairs(): Promise<string[]> {
         try {
@@ -71,19 +70,20 @@ export class CoinbaseDataFetcher {
 
     async fetchDailyCandles(pair: string, start: moment.Moment, end: moment.Moment): Promise<CandleData[]> {
         let allCandles: CandleData[] = [];
-        let startTime = start.clone();
+        let startTime = start.clone().utc().startOf('day');
+        const endTime = end.clone().utc().endOf('day');
 
-        while (startTime.isBefore(end)) {
+        while (startTime.isBefore(endTime)) {
             const chunkEndTime = moment.min(
                 startTime.clone().add(this.MAX_CANDLES_PER_REQUEST, 'days'),
-                end
+                endTime
             );
 
             try {
-                console.log(`Fetching candles for ${pair} from ${startTime.format('YYYY-MM-DD')} to ${chunkEndTime.format('YYYY-MM-DD')}`);
+                console.log(`Fetching candles for ${pair} from ${startTime.format('YYYY-MM-DD HH:mm:ss')} UTC to ${chunkEndTime.format('YYYY-MM-DD HH:mm:ss')} UTC`);
                 const response = await axios.get(`${this.BASE_URL}/${pair}/candles`, {
                     params: {
-                        granularity: 86400, // Daily candles
+                        granularity: 86400,
                         start: startTime.toISOString(),
                         end: chunkEndTime.toISOString(),
                     },
@@ -100,14 +100,12 @@ export class CoinbaseDataFetcher {
 
                 allCandles = allCandles.concat(formattedCandles);
                 console.log(`Fetched ${formattedCandles.length} candles for ${pair}`);
-
-                // Add delay between chunk requests to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (error) {
                 if (axios.isAxiosError(error) && error.response?.status === 429) {
                     console.log('Rate limit reached, waiting for 60 seconds...');
                     await new Promise(resolve => setTimeout(resolve, 60000));
-                    continue; // Retry the same chunk
+                    continue;
                 }
                 console.error(`Error fetching data for ${pair}:`, error);
                 break;
@@ -130,30 +128,29 @@ export class CoinbaseDataFetcher {
     }
 
     async fetchHistoricalData(pair: string, startDate: moment.Moment, endDate: moment.Moment): Promise<CandleData[]> {
-        console.log(`Checking existing data for ${pair} from ${startDate.format('YYYY-MM-DD')} to ${endDate.format('YYYY-MM-DD')}`);
+        const utcStartDate = startDate.clone().utc().startOf('day');
+        const utcEndDate = endDate.clone().utc().endOf('day');
         
-        // First check what data we already have in MongoDB
+        console.log(`Checking existing data for ${pair} from ${utcStartDate.format('YYYY-MM-DD HH:mm:ss')} UTC to ${utcEndDate.format('YYYY-MM-DD HH:mm:ss')} UTC`);
+        
         const existingCandles = await CandleModel.find({
           pair,
           timestamp: { 
-            $gte: startDate.unix(), 
-            $lte: endDate.unix() 
+            $gte: utcStartDate.unix(), 
+            $lte: utcEndDate.unix() 
           }
         }).sort({ timestamp: 1 });
         
-        // Identify missing date ranges
         const existingTimestamps = new Set(existingCandles.map(candle => candle.timestamp));
-        const missingRanges = identifyMissingDateRanges(startDate, endDate, existingTimestamps);
+        const missingRanges = identifyMissingDateRanges(utcStartDate, utcEndDate, existingTimestamps);
         
         console.log(`Found ${missingRanges.length} missing date ranges for ${pair}`);
         
-        // Fetch only missing data from Coinbase
         let newCandles: CandleData[] = [];
         for (const range of missingRanges) {
-          console.log(`Fetching missing data for ${pair} from ${range.start.format('YYYY-MM-DD')} to ${range.end.format('YYYY-MM-DD')}`);
+          console.log(`Fetching missing data for ${pair} from ${range.start.format('YYYY-MM-DD HH:mm:ss')} UTC to ${range.end.format('YYYY-MM-DD HH:mm:ss')} UTC`);
           const fetchedCandles = await this.fetchDailyCandles(pair, range.start, range.end);
           
-          // Store new candles in MongoDB
           if (fetchedCandles.length > 0) {
             const candlesToInsert = fetchedCandles.map(candle => ({
               pair,
@@ -170,37 +167,26 @@ export class CoinbaseDataFetcher {
             newCandles = newCandles.concat(fetchedCandles);
           }
           
-          // Add delay between ranges to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
         
-        // Combine existing and new data
         return [...existingCandles, ...newCandles].sort((a, b) => a.timestamp - b.timestamp);
     }
 
     async updateCurrentDayData(): Promise<void> {
         const pairs = await this.getAllPairs();
-        const now = moment();
+        const now = moment().utc();
         const today = now.clone().startOf('day');
         const yesterday = today.clone().subtract(1, 'day');
 
-        // Validate dates to ensure we're not fetching future data
-        if (today.isAfter(now)) {
-            console.warn('Attempted to fetch future data, adjusting date range...');
-            today.subtract(1, 'day');
-            yesterday.subtract(1, 'day');
-        }
-
-        console.log(`Updating data for date range: ${yesterday.format('YYYY-MM-DD')} to ${today.format('YYYY-MM-DD')}`);
+        console.log(`Updating data for date range: ${yesterday.format('YYYY-MM-DD HH:mm:ss')} UTC to ${today.format('YYYY-MM-DD HH:mm:ss')} UTC`);
         
-        // Process pairs in batches
         for (let i = 0; i < pairs.length; i += this.BATCH_SIZE) {
             const batch = pairs.slice(i, i + this.BATCH_SIZE);
             console.log(`Processing batch ${i / this.BATCH_SIZE + 1} of ${Math.ceil(pairs.length / this.BATCH_SIZE)}`);
             
             await this.processBatch(batch, yesterday, today);
             
-            // Add delay between batches to respect rate limits
             const delayMs = (1000 / this.PUBLIC_RATE_LIMIT) * this.BATCH_SIZE;
             await new Promise(resolve => setTimeout(resolve, delayMs));
         }
@@ -211,9 +197,8 @@ export class CoinbaseDataFetcher {
     private async processBatch(pairs: string[], yesterday: moment.Moment, today: moment.Moment): Promise<void> {
         const batchPromises = pairs.map(async pair => {
             try {
-                // Ensure we're not fetching future data
-                const endDate = moment.min(today, moment());
-                console.log(`Fetching recent data for ${pair} from ${yesterday.format('YYYY-MM-DD')} to ${endDate.format('YYYY-MM-DD')}`);
+                const endDate = moment.min(today, moment().utc());
+                console.log(`Fetching recent data for ${pair} from ${yesterday.format('YYYY-MM-DD HH:mm:ss')} UTC to ${endDate.format('YYYY-MM-DD HH:mm:ss')} UTC`);
                 
                 const recentCandles = await this.fetchDailyCandles(pair, yesterday, endDate);
                 
