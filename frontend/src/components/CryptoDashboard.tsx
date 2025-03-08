@@ -58,6 +58,24 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
         }>;
     }>({ today: [], week: [] });
 
+    // Add new state for pump and dump data
+    const [pumpDumpData, setPumpDumpData] = useState<{
+        pumpingPairs: Array<{
+            pair: string;
+            score: number;
+            volumeIncrease: number;
+            priceChange: number;
+            intradayPriceChange: number;
+        }>;
+        dumpingPairs: Array<{
+            pair: string;
+            score: number;
+            volumeIncrease: number;
+            priceChange: number;
+            intradayPriceChange: number;
+        }>;
+    }>({ pumpingPairs: [], dumpingPairs: [] });
+
     useEffect(() => {
         const loadRecentPairs = async () => {
             const pairs = await cryptoService.fetchRecentPairs();
@@ -76,15 +94,17 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                 setLoadingTrendChanges(true);
 
                 // Use Promise.all to fetch data in parallel
-                const [summary, correlationData, trendData] = await Promise.all([
+                const [summary, correlationData, trendData, pumpDumpInfo] = await Promise.all([
                     cryptoService.getMarketSummary(),
                     cryptoService.getCorrelations(10),
-                    cryptoService.getTrendChanges('high')
+                    cryptoService.getTrendChanges('high'),
+                    cryptoService.getPumpDumpPairs()
                 ]);
 
                 setMarketSummary(summary);
                 setCorrelations(correlationData);
-                setTrendChanges(trendData || []);
+                setTrendChanges(trendData);
+                setPumpDumpData(pumpDumpInfo);
             } catch (error) {
                 console.error('Error fetching market data:', error);
             } finally {
@@ -255,6 +275,82 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardContent>
                 </Card>
 
+                {/* Pumping Pairs Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center">
+                            <ChartBarIcon className="w-5 h-5 mr-2 text-emerald-400" />
+                            Pumping Pairs
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ul className="space-y-3">
+                            {pumpDumpData.pumpingPairs.slice(0, 3).map((pair, i) => (
+                                <li key={pair.pair} className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                        <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                        <span className="font-medium">{pair.pair}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-emerald-400 font-medium block">
+                                            {formatPercentage(pair.priceChange)}
+                                            {pair.intradayPriceChange > pair.priceChange && (
+                                                <span className="text-xs ml-1">
+                                                    (Spike: {formatPercentage(pair.intradayPriceChange)})
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            Vol: +{pair.volumeIncrease.toFixed(0)}%
+                                        </span>
+                                    </div>
+                                </li>
+                            ))}
+                            {pumpDumpData.pumpingPairs.length === 0 && (
+                                <li className="text-muted-foreground text-sm">No pumping pairs detected</li>
+                            )}
+                        </ul>
+                    </CardContent>
+                </Card>
+
+                {/* Dumping Pairs Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center">
+                            <ChartBarIcon className="w-5 h-5 mr-2 text-red-400" />
+                            Dumping Pairs
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ul className="space-y-3">
+                            {pumpDumpData.dumpingPairs.slice(0, 3).map((pair, i) => (
+                                <li key={pair.pair} className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                        <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                        <span className="font-medium">{pair.pair}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-red-400 font-medium block">
+                                            {formatPercentage(pair.priceChange)}
+                                            {pair.intradayPriceChange > Math.abs(pair.priceChange) && (
+                                                <span className="text-xs ml-1">
+                                                    (Spike: {formatPercentage(-pair.intradayPriceChange)})
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            Vol: +{pair.volumeIncrease.toFixed(0)}%
+                                        </span>
+                                    </div>
+                                </li>
+                            ))}
+                            {pumpDumpData.dumpingPairs.length === 0 && (
+                                <li className="text-muted-foreground text-sm">No dumping pairs detected</li>
+                            )}
+                        </ul>
+                    </CardContent>
+                </Card>
+
                 {/* Technical Signals */}
                 <Card>
                     <CardHeader className="pb-2">
@@ -330,12 +426,6 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         {recentPairs.week.map(pair => (
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400/50 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
-                                                {/* <div className="text-xs text-muted-foreground">
-                                                    First seen: {new Date(pair.firstSeen).toLocaleString()}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    Candles: {pair.candleCount}
-                                                </div> */}
                                             </li>
                                         ))}
                                     </ul>

@@ -102,4 +102,27 @@ export const cryptoService = {
             return { today: [], week: [] };
         }
     },
+
+    async getPumpDumpPairs(): Promise<{
+        pumpingPairs: Array<{
+            pair: string;
+            score: number;
+            volumeIncrease: number;
+            priceChange: number;
+            intradayPriceChange: number;
+        }>;
+        dumpingPairs: Array<{
+            pair: string;
+            score: number;
+            volumeIncrease: number;
+            priceChange: number;
+            intradayPriceChange: number;
+        }>;
+    }> {
+        const response = await fetch(`${API_BASE_URL}/crypto/market/pump-dump`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch pump and dump pairs');
+        }
+        return response.json();
+    },
 };

@@ -114,10 +114,20 @@ export class CryptoAnalyzer {
               }))
             );
             
+            // Add pump/dump detection
+            const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
+            
             results.push({
               pair,
               currentVolumeUSD: currentVolumeUSD.toFixed(2),
-              ...analysis
+              ...analysis,
+              isPumping: pumpDumpAnalysis.isPumping,
+              isDumping: pumpDumpAnalysis.isDumping,
+              pumpScore: pumpDumpAnalysis.pumpScore,
+              dumpScore: pumpDumpAnalysis.dumpScore,
+              volumeIncrease: pumpDumpAnalysis.volumeIncrease,
+              priceChange: pumpDumpAnalysis.priceChange,
+              intradayPriceChange: pumpDumpAnalysis.intradayPriceChange
             });
           } catch (error) {
             console.error(`Error analyzing ${pair} from database:`, error);
@@ -398,7 +408,7 @@ export class CryptoAnalyzer {
         // Calculate volatility
         const volatility = this.calculateVolatility(recentClosePrices, 14);
         
-        // Calculate price momentum
+        // Calculate momentum
         const momentum = this.calculateMomentum(recentClosePrices, 14);
 
         // Calculate three-month change
@@ -590,19 +600,23 @@ export class CryptoAnalyzer {
     }
 
     private calculateVolatility(prices: number[], period: number): number {
-        const returns = prices.slice(1).map((price, i) => 
+        // Calculate standard deviation of price changes
+        const changes = prices.slice(1).map((price, i) => 
             ((price - prices[i]) / prices[i]) * 100
         );
-        const meanReturn = returns.slice(-period).reduce((a, b) => a + b, 0) / period;
-        const variance = returns.slice(-period)
-            .reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / period;
-        return Math.sqrt(variance);
+        
+        // Use the library's SD (Standard Deviation) indicator
+        return ti.SD.calculate({
+            period: period,
+            values: changes
+        })[0] || 0;
     }
 
     private calculateMomentum(prices: number[], period: number): number {
-        const currentPrice = prices[prices.length - 1];
-        const previousPrice = prices[prices.length - 1 - period];
-        return ((currentPrice - previousPrice) / previousPrice) * 100;
+        return ti.ROC.calculate({
+            values: prices,
+            period: period
+        })[0] || 0;
     }
 
     private calculateMATrend(shortMA: number[], longMA: number[]): string {
@@ -784,117 +798,56 @@ export class CryptoAnalyzer {
 
     // Add Bollinger Bands calculation
     private calculateBollingerBands(prices: number[], period: number = 20, stdDev: number = 2): any {
-        const sma = ti.SMA.calculate({ values: prices, period });
-        
-        // Calculate standard deviation
-        const stdDevValues: number[] = [];
-        for (let i = period - 1; i < prices.length; i++) {
-        const slice = prices.slice(i - period + 1, i + 1);
-        const mean = slice.reduce((sum, val) => sum + val, 0) / period;
-        const squaredDiffs = slice.map(val => Math.pow(val - mean, 2));
-        const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / period;
-        stdDevValues.push(Math.sqrt(variance));
-        }
-        
-        // Calculate upper and lower bands
-        const upperBand = sma.map((val, i) => val + (stdDevValues[i] * stdDev));
-        const lowerBand = sma.map((val, i) => val - (stdDevValues[i] * stdDev));
-        
-        const latestPrice = prices[prices.length - 1];
-        const latestSMA = sma[sma.length - 1];
-        const latestUpper = upperBand[upperBand.length - 1];
-        const latestLower = lowerBand[lowerBand.length - 1];
-        
-        // Calculate bandwidth and %B
-        const bandwidth = (latestUpper - latestLower) / latestSMA * 100;
-        const percentB = (latestPrice - latestLower) / (latestUpper - latestLower);
-        
-        return {
-        sma: latestSMA,
-        upper: latestUpper,
-        lower: latestLower,
-        bandwidth,
-        percentB,
-        signal: percentB > 1 ? 'Overbought' : percentB < 0 ? 'Oversold' : 'Neutral'
-        };
+        return ti.BollingerBands.calculate({
+            values: prices,
+            period,
+            stdDev
+        });
     }
 
     // Add Ichimoku Cloud calculation
     private calculateIchimoku(high: number[], low: number[], close: number[]): any {
-        const tenkanPeriod = 9;
-        const kijunPeriod = 26;
-        const senkouBPeriod = 52;
-        const displacement = 26;
-        
-        // Calculate Tenkan-sen (Conversion Line)
-        const tenkan = [];
-        for (let i = tenkanPeriod - 1; i < high.length; i++) {
-        const highVal = Math.max(...high.slice(i - tenkanPeriod + 1, i + 1));
-        const lowVal = Math.min(...low.slice(i - tenkanPeriod + 1, i + 1));
-        tenkan.push((highVal + lowVal) / 2);
-        }
-        
-        // Calculate Kijun-sen (Base Line)
-        const kijun = [];
-        for (let i = kijunPeriod - 1; i < high.length; i++) {
-        const highVal = Math.max(...high.slice(i - kijunPeriod + 1, i + 1));
-        const lowVal = Math.min(...low.slice(i - kijunPeriod + 1, i + 1));
-        kijun.push((highVal + lowVal) / 2);
-        }
-        
-        // Calculate Senkou Span A (Leading Span A)
-        const senkouA = [];
-        for (let i = 0; i < tenkan.length && i < kijun.length; i++) {
-        senkouA.push((tenkan[i] + kijun[i]) / 2);
-        }
-        
-        // Calculate Senkou Span B (Leading Span B)
-        const senkouB = [];
-        for (let i = senkouBPeriod - 1; i < high.length; i++) {
-        const highVal = Math.max(...high.slice(i - senkouBPeriod + 1, i + 1));
-        const lowVal = Math.min(...low.slice(i - senkouBPeriod + 1, i + 1));
-        senkouB.push((highVal + lowVal) / 2);
-        }
-        
-        // Calculate Chikou Span (Lagging Span)
-        const chikou = close.slice(displacement);
-        
-        const currentPrice = close[close.length - 1];
-        const latestTenkan = tenkan[tenkan.length - 1];
-        const latestKijun = kijun[kijun.length - 1];
-        const latestSenkouA = senkouA[senkouA.length - displacement - 1] || null;
-        const latestSenkouB = senkouB[senkouB.length - displacement - 1] || null;
+        const ichimoku = ti.IchimokuCloud.calculate({
+            high,
+            low,
+            conversionPeriod: 9,
+            basePeriod: 26,
+            spanPeriod: 52,
+            displacement: 26
+        });
+
+        const latest = ichimoku[ichimoku.length - 1] || {};
         
         // Cloud analysis
         let signal = 'Neutral';
-        if (latestSenkouA && latestSenkouB) {
-        if (currentPrice > latestSenkouA && currentPrice > latestSenkouB) {
-            signal = 'Strong Bullish';
-        } else if (currentPrice < latestSenkouA && currentPrice < latestSenkouB) {
-            signal = 'Strong Bearish';
-        } else if (latestSenkouA > latestSenkouB) {
-            signal = 'Bullish';
-        } else {
-            signal = 'Bearish';
-        }
+        if (latest.spanA && latest.spanB) {
+            if (close[close.length - 1] > latest.spanA && close[close.length - 1] > latest.spanB) {
+                signal = 'Strong Bullish';
+            } else if (close[close.length - 1] < latest.spanA && close[close.length - 1] < latest.spanB) {
+                signal = 'Strong Bearish';
+            } else if (latest.spanA > latest.spanB) {
+                signal = 'Bullish';
+            } else {
+                signal = 'Bearish';
+            }
         }
         
         // TK Cross analysis
         let tkCross = 'None';
-        if (latestTenkan > latestKijun && tenkan[tenkan.length - 2] <= kijun[kijun.length - 2]) {
-        tkCross = 'Bullish TK Cross';
-        } else if (latestTenkan < latestKijun && tenkan[tenkan.length - 2] >= kijun[kijun.length - 2]) {
-        tkCross = 'Bearish TK Cross';
+        if (latest.conversion > latest.base && ichimoku[ichimoku.length - 2]?.conversion <= ichimoku[ichimoku.length - 2]?.base) {
+            tkCross = 'Bullish TK Cross';
+        } else if (latest.conversion < latest.base && ichimoku[ichimoku.length - 2]?.conversion >= ichimoku[ichimoku.length - 2]?.base) {
+            tkCross = 'Bearish TK Cross';
         }
         
         return {
-        tenkan: latestTenkan,
-        kijun: latestKijun,
-        senkouA: latestSenkouA,
-        senkouB: latestSenkouB,
-        currentPrice,
-        cloudSignal: signal,
-        tkCross
+            tenkan: latest.conversion,
+            kijun: latest.base,
+            senkouA: latest.spanA,
+            senkouB: latest.spanB,
+            currentPrice: close[close.length - 1],
+            cloudSignal: signal,
+            tkCross
         };
     }
 
@@ -962,7 +915,6 @@ export class CryptoAnalyzer {
         };
     }
 
-    // Calculate potential support and resistance levels
     private calculateSupportResistance(close: number[], period: number = 20): any {
         const levels = [];
         
@@ -1245,5 +1197,198 @@ export class CryptoAnalyzer {
         srScore * weights.supportResistance;
         
         return Math.max(0, Math.min(1, compositeScore)); // Ensure score is between 0 and 1
+    }
+
+    private detectPumpDump(candles: CandleData[], recentCandles: CandleData[]): {
+        isPumping: boolean;
+        isDumping: boolean;
+        pumpScore: number;
+        dumpScore: number;
+        volumeIncrease: number;
+        priceChange: number;
+        intradayPriceChange: number;
+    } {
+        // Get the most recent candle
+        const currentCandle = recentCandles[recentCandles.length - 1];
+        const previousCandle = recentCandles[recentCandles.length - 2];
+
+        if (!currentCandle || !previousCandle || recentCandles.length < 30) {
+            return {
+                isPumping: false,
+                isDumping: false,
+                pumpScore: 0,
+                dumpScore: 0,
+                volumeIncrease: 0,
+                priceChange: 0,
+                intradayPriceChange: 0
+            };
+        }
+
+        const prices = recentCandles.map(c => c.close);
+        const volumes = recentCandles.map(c => c.volume);
+        const highs = recentCandles.map(c => c.high);
+        const lows = recentCandles.map(c => c.low);
+
+        // Calculate volume metrics
+        const volumeSMA20 = ti.SMA.calculate({ values: volumes, period: 20 });
+        const avgVolume20 = volumeSMA20[volumeSMA20.length - 1];
+        const volumeIncrease = ((currentCandle.volume - avgVolume20) / avgVolume20) * 100;
+
+        // Calculate price changes over different periods
+        const priceChange = ((currentCandle.close - previousCandle.close) / previousCandle.close) * 100;
+        
+        // Calculate average true range for volatility context
+        const atr = ti.ATR.calculate({
+            high: highs,
+            low: lows,
+            close: prices,
+            period: 14
+        });
+        const currentATR = atr[atr.length - 1];
+        const normalizedATR = (currentATR / currentCandle.close) * 100;
+
+        // Calculate price changes relative to recent ranges
+        const currentDay = recentCandles[recentCandles.length - 1];
+        const previousDay = recentCandles[recentCandles.length - 2];
+        
+        // Daily high-low range
+        const dailyRange = ((currentDay.high - currentDay.low) / currentDay.low) * 100;
+        
+        // Day-over-day range
+        const dayOverDayHigh = Math.max(currentDay.high, previousDay.high);
+        const dayOverDayLow = Math.min(currentDay.low, previousDay.low);
+        const dayOverDayRange = ((dayOverDayHigh - dayOverDayLow) / dayOverDayLow) * 100;
+
+        // Intraday movement calculations
+        const intradayPumpChange = ((currentDay.close - currentDay.low) / currentDay.low) * 100;
+        const intradayDumpChange = ((currentDay.high - currentDay.close) / currentDay.high) * 100;
+
+        // Technical indicators
+        const rsi = ti.RSI.calculate({
+            values: prices,
+            period: 14
+        });
+        const currentRSI = rsi[rsi.length - 1];
+
+        const bb = ti.BollingerBands.calculate({
+            values: prices,
+            period: 20,
+            stdDev: 2
+        });
+        const latestBB = bb[bb.length - 1];
+        
+        // Price position relative to Bollinger Bands
+        let pricePosition = 'Neutral';
+        let bbDeviation = 0;
+        if (latestBB && latestBB.upper !== undefined && latestBB.lower !== undefined && latestBB.middle !== undefined) {
+            bbDeviation = ((currentCandle.close - latestBB.middle) / (latestBB.upper - latestBB.middle)) * 100;
+            pricePosition = currentCandle.close > latestBB.upper ? 'Above Upper' :
+                          currentCandle.close < latestBB.lower ? 'Below Lower' :
+                          currentCandle.close > latestBB.middle ? 'Near Upper' : 'Near Lower';
+        }
+
+        const macd = ti.MACD.calculate({
+            values: prices,
+            fastPeriod: 12,
+            slowPeriod: 26,
+            signalPeriod: 9,
+            SimpleMAOscillator: false,
+            SimpleMASignal: false
+        });
+        const macdSlope = macd.length >= 2 ? 
+            (macd[macd.length - 1]?.histogram || 0) - (macd[macd.length - 2]?.histogram || 0) : 0;
+
+        // Enhanced Pump Score Components
+        const pumpScore = (
+            // Volume component (max 30 points)
+            (volumeIncrease > 300 ? 30 :
+             volumeIncrease > 200 ? 25 :
+             volumeIncrease > 100 ? 20 :
+             volumeIncrease > 50 ? 15 : 0) +
+            
+            // Price change components (max 30 points)
+            (priceChange > 20 ? 30 :
+             priceChange > 15 ? 25 :
+             priceChange > 10 ? 20 :
+             priceChange > 5 ? 15 : 0) +
+            
+            // Intraday volatility component (max 15 points)
+            (intradayPumpChange > dayOverDayRange ? 15 :
+             intradayPumpChange > dayOverDayRange * 0.75 ? 10 :
+             intradayPumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
+            
+            // Add daily range component (max 10 points)
+            (dailyRange > 15 ? 10 :
+             dailyRange > 10 ? 7 :
+             dailyRange > 5 ? 5 : 0) +
+            
+            // Technical indicators (max 15 points, reduced from 25)
+            // RSI component
+            (currentRSI > 80 ? 7 :
+             currentRSI > 70 ? 5 :
+             currentRSI > 60 ? 3 : 0) +
+            
+            // Bollinger Band component
+            (bbDeviation > 100 ? 5 :
+             bbDeviation > 75 ? 3 :
+             bbDeviation > 50 ? 2 : 0) +
+            
+            // MACD momentum
+            (macdSlope > 0 ? 3 : 0)
+        );
+
+        // Enhanced Dump Score Components
+        const dumpScore = (
+            // Volume component (max 30 points)
+            (volumeIncrease > 300 ? 30 :
+             volumeIncrease > 200 ? 25 :
+             volumeIncrease > 100 ? 20 :
+             volumeIncrease > 50 ? 15 : 0) +
+            
+            // Price change components (max 30 points)
+            (priceChange < -20 ? 30 :
+             priceChange < -15 ? 25 :
+             priceChange < -10 ? 20 :
+             priceChange < -5 ? 15 : 0) +
+            
+            // Intraday volatility component (max 15 points)
+            (intradayDumpChange > dayOverDayRange ? 15 :
+             intradayDumpChange > dayOverDayRange * 0.75 ? 10 :
+             intradayDumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
+            
+            // Add daily range component (max 10 points)
+            (dailyRange > 15 ? 10 :
+             dailyRange > 10 ? 7 :
+             dailyRange > 5 ? 5 : 0) +
+            
+            // Technical indicators (max 15 points, reduced from 25)
+            // RSI component
+            (currentRSI < 20 ? 7 :
+             currentRSI < 30 ? 5 :
+             currentRSI < 40 ? 3 : 0) +
+            
+            // Bollinger Band component
+            (bbDeviation < -100 ? 5 :
+             bbDeviation < -75 ? 3 :
+             bbDeviation < -50 ? 2 : 0) +
+            
+            // MACD momentum
+            (macdSlope < 0 ? 3 : 0)
+        );
+
+        // Adjust thresholds based on market volatility
+        const volatilityAdjustment = Math.min(normalizedATR / 2, 10);
+        const pumpThreshold = 70 - volatilityAdjustment;
+        const dumpThreshold = 70 - volatilityAdjustment;
+
+        return {
+            isPumping: pumpScore >= pumpThreshold && priceChange > 0,
+            isDumping: dumpScore >= dumpThreshold && priceChange < 0,
+            pumpScore,
+            dumpScore,
+            volumeIncrease,
+            priceChange,
+            intradayPriceChange: Math.max(intradayPumpChange, intradayDumpChange)
+        };
     }
 }

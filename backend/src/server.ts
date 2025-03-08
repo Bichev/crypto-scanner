@@ -300,6 +300,44 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
     }
   });
 
+// Add new endpoint for pump and dump pairs
+app.get('/api/crypto/market/pump-dump', async (req, res, next) => {
+  try {
+    const pairs = await CandleModel.distinct('pair');
+    const analysis = await analyzer.analyzePairs(pairs);
+    
+    const pumpingPairs = analysis
+      .filter(pair => pair.isPumping)
+      .sort((a, b) => b.pumpScore - a.pumpScore)
+      .map(pair => ({
+        pair: pair.pair,
+        score: pair.pumpScore,
+        volumeIncrease: pair.volumeIncrease,
+        priceChange: pair.priceChange,
+        intradayPriceChange: pair.intradayPriceChange
+      }));
+
+    const dumpingPairs = analysis
+      .filter(pair => pair.isDumping)
+      .sort((a, b) => b.dumpScore - a.dumpScore)
+      .map(pair => ({
+        pair: pair.pair,
+        score: pair.dumpScore,
+        volumeIncrease: pair.volumeIncrease,
+        priceChange: pair.priceChange,
+        intradayPriceChange: pair.intradayPriceChange
+      }));
+
+    res.json({
+      timestamp: Date.now(),
+      pumpingPairs,
+      dumpingPairs
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: 'Internal server error' });
