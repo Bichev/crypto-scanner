@@ -22,6 +22,16 @@ interface MarketSummary {
   topGainers: { pair: string; change: string }[];
   topLosers: { pair: string; change: string }[];
   marketSentiment: string;
+  marketBreadth: {
+    advanceDeclineRatio: number;
+    advances: number;
+    declines: number;
+    unchanged: number;
+    averageRSI: number;
+    averageMACD: number;
+    percentStrongUptrend: number;
+    percentStrongDowntrend: number;
+  };
 }
 
 export class MarketSummaryService {
@@ -37,6 +47,9 @@ export class MarketSummaryService {
     
     // Analyze all pairs
     const analyses = await this.analyzer.analyzePairs(pairs);
+    
+    // Calculate market breadth
+    const marketBreadth = await this.analyzer.calculateMarketBreadth(analyses);
     
     // Calculate distributions
     const trendDistribution = {
@@ -96,19 +109,8 @@ export class MarketSummaryService {
       change: a.dailyPriceChange 
     }));
     
-    // Determine overall market sentiment
-    let marketSentiment = 'Neutral';
-    const bullishCount = trendDistribution.strongUptrend + trendDistribution.weakUptrend;
-    const bearishCount = trendDistribution.strongDowntrend + trendDistribution.weakDowntrend;
-    const totalCount = analyses.length;
-    
-    const bullishPercentage = (bullishCount / totalCount) * 100;
-    const bearishPercentage = (bearishCount / totalCount) * 100;
-    
-    if (bullishPercentage > 60) marketSentiment = 'Bullish';
-    else if (bullishPercentage > 75) marketSentiment = 'Strongly Bullish';
-    else if (bearishPercentage > 60) marketSentiment = 'Bearish';
-    else if (bearishPercentage > 75) marketSentiment = 'Strongly Bearish';
+    // Use market breadth for sentiment
+    let marketSentiment = marketBreadth.marketSentiment;
     
     return {
       timestamp: Date.now(),
@@ -118,7 +120,17 @@ export class MarketSummaryService {
       volumeChange,
       topGainers,
       topLosers,
-      marketSentiment
+      marketSentiment,
+      marketBreadth: {
+        advanceDeclineRatio: marketBreadth.advanceDeclineRatio,
+        advances: marketBreadth.advances,
+        declines: marketBreadth.declines,
+        unchanged: marketBreadth.unchanged,
+        averageRSI: marketBreadth.averageRSI,
+        averageMACD: marketBreadth.averageMACD,
+        percentStrongUptrend: marketBreadth.percentStrongUptrend,
+        percentStrongDowntrend: marketBreadth.percentStrongDowntrend
+      }
     };
   }
 }

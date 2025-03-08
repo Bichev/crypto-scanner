@@ -84,6 +84,15 @@ export class CryptoAnalyzer {
               }).sort({ timestamp: 1 }),
             ]);
             
+            console.log('Candle data for', pair, {
+              thirtyDaysAgo: thirtyDaysAgo.format(),
+              twoHundredDaysAgo: twoHundredDaysAgo.format(),
+              recentCandlesCount: recentCandles.length,
+              longTermCandlesCount: longTermCandles.length,
+              firstRecentCandle: recentCandles[0]?.timestamp ? moment.unix(recentCandles[0].timestamp).format() : 'none',
+              lastRecentCandle: recentCandles[recentCandles.length - 1]?.timestamp ? moment.unix(recentCandles[recentCandles.length - 1].timestamp).format() : 'none'
+            });
+            
             if (recentCandles.length === 0) {
               console.log(`No data available for ${pair}. Skipping...`);
               continue;
@@ -281,12 +290,19 @@ export class CryptoAnalyzer {
 
         // Calculate MACD (26 days max)
         const macd = ti.MACD.calculate({
-            values: recentClosePrices,
+            values: longTermClosePrices,  // Use long-term data for MACD
             fastPeriod: 12,
             slowPeriod: 26,
             signalPeriod: 9,
             SimpleMAOscillator: false,
             SimpleMASignal: false
+        });
+
+        console.log('MACD calculation:', {
+            recentClosePrices: longTermClosePrices.slice(-5),  // Show last 5 prices from long-term data
+            macdLength: macd.length,
+            lastMACD: macd[macd.length - 1],
+            secondLastMACD: macd[macd.length - 2]
         });
 
         // Calculate recent moving averages
@@ -604,6 +620,12 @@ export class CryptoAnalyzer {
             riskAdjustedScore: riskAdjustedScore.toFixed(2),
             enhancedScore: enhancedScore.toFixed(2)
         };
+        console.log('Response object MACD data:', {
+            macd: latestMACD?.MACD,
+            signal: latestMACD?.signal,
+            histogram: latestMACD?.histogram,
+            trend: this.calculateMACDTrend(macd)
+        });
     }
 
     private calculateVolatility(prices: number[], period: number): number {
@@ -729,21 +751,69 @@ export class CryptoAnalyzer {
     }
 
     private calculateMACDTrend(macdData: any[]): string {
-        if (!macdData || macdData.length < 2) return 'Neutral';
+        if (!macdData || macdData.length < 2) {
+            console.log('Invalid MACD data:', { macdData });
+            return 'Neutral';
+        }
         
         const current = macdData[macdData.length - 1];
         const previous = macdData[macdData.length - 2];
         
-        if (!current || !previous) return 'Neutral';
+        if (!current || !previous) {
+            console.log('Missing current or previous MACD data:', { current, previous });
+            return 'Neutral';
+        }
 
         const macdChange = current.MACD - previous.MACD;
         const signalChange = current.signal - previous.signal;
         const histogram = current.histogram;
+        const macdAboveSignal = current.MACD > current.signal;
+        const prevMacdAboveSignal = previous.MACD > previous.signal;
 
-        if (histogram > 0 && macdChange > 0) return 'Strong Uptrend';
-        if (histogram < 0 && macdChange < 0) return 'Strong Downtrend';
-        if (histogram > 0) return 'Weak Uptrend';
-        if (histogram < 0) return 'Weak Downtrend';
+        // Detect crossovers
+        const bullishCrossover = !prevMacdAboveSignal && macdAboveSignal;
+        const bearishCrossover = prevMacdAboveSignal && !macdAboveSignal;
+
+        console.log('MACD trend calculation:', {
+            current: {
+                MACD: current.MACD,
+                signal: current.signal,
+                histogram: current.histogram
+            },
+            changes: {
+                macdChange,
+                signalChange,
+                histogram
+            },
+            conditions: {
+                macdAboveSignal,
+                prevMacdAboveSignal,
+                bullishCrossover,
+                bearishCrossover
+            }
+        });
+
+        // Strong trend conditions
+        if (macdAboveSignal && histogram > 0 && macdChange > 0 && signalChange > 0) {
+            console.log('Strong Uptrend detected');
+            return 'Strong Uptrend';
+        }
+        if (!macdAboveSignal && histogram < 0 && macdChange < 0 && signalChange < 0) {
+            console.log('Strong Downtrend detected');
+            return 'Strong Downtrend';
+        }
+
+        // Weak trend conditions
+        if (bullishCrossover || (macdAboveSignal && histogram > 0)) {
+            console.log('Weak Uptrend detected');
+            return 'Weak Uptrend';
+        }
+        if (bearishCrossover || (!macdAboveSignal && histogram < 0)) {
+            console.log('Weak Downtrend detected');
+            return 'Weak Downtrend';
+        }
+
+        console.log('No trend detected - Neutral');
         return 'Neutral';
     }
 
@@ -1087,42 +1157,44 @@ export class CryptoAnalyzer {
         const advances = pairs.filter(pair => parseFloat(pair.dailyPriceChange) > 0).length;
         const declines = pairs.filter(pair => parseFloat(pair.dailyPriceChange) < 0).length;
         const unchanged = pairs.length - advances - declines;
-        
+
         const advanceDeclineRatio = advances / (declines || 1);
-        
+
         // Calculate average indicators across market
         const avgRSI = pairs.reduce((sum, pair) => sum + parseFloat(pair.rsi || '0'), 0) / pairs.length;
         const avgMACD = pairs.reduce((sum, pair) => sum + parseFloat(pair.macd || '0'), 0) / pairs.length;
-        
+
         // Calculate the percentage of assets in strong trends
+        console.log('Sample of MACD trends:', pairs.slice(0, 5).map((pair, index) => ({ index, trend: pair.macdTrend })));
         const strongUptrends = pairs.filter(pair => pair.macdTrend === 'Strong Uptrend').length;
         const strongDowntrends = pairs.filter(pair => pair.macdTrend === 'Strong Downtrend').length;
-        
+        console.log('Strong trends counts:', { strongUptrends, strongDowntrends });
+
         const percentStrongUptrend = (strongUptrends / pairs.length) * 100;
         const percentStrongDowntrend = (strongDowntrends / pairs.length) * 100;
-        
+
         // Overall market sentiment
         let marketSentiment = 'Neutral';
         if (advanceDeclineRatio > 3 && avgRSI > 60) {
-        marketSentiment = 'Strongly Bullish';
+            marketSentiment = 'Strongly Bullish';
         } else if (advanceDeclineRatio > 1.5 && avgRSI > 50) {
-        marketSentiment = 'Bullish';
+            marketSentiment = 'Bullish';
         } else if (advanceDeclineRatio < 0.33 && avgRSI < 40) {
-        marketSentiment = 'Strongly Bearish';
+            marketSentiment = 'Strongly Bearish';
         } else if (advanceDeclineRatio < 0.67 && avgRSI < 50) {
-        marketSentiment = 'Bearish';
+            marketSentiment = 'Bearish';
         }
-        
+
         return {
-        advanceDeclineRatio,
-        advances,
-        declines,
-        unchanged,
-        averageRSI: avgRSI,
-        averageMACD: avgMACD,
-        percentStrongUptrend,
-        percentStrongDowntrend,
-        marketSentiment
+            advanceDeclineRatio,
+            advances,
+            declines,
+            unchanged,
+            averageRSI: avgRSI,
+            averageMACD: avgMACD,
+            percentStrongUptrend,
+            percentStrongDowntrend,
+            marketSentiment
         };
     }
 

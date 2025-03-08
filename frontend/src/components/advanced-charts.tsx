@@ -127,26 +127,26 @@ export function AdvancedTrendChart({ data }: ChartProps) {
   const chartData = React.useMemo(() => {
     const trendCount = {
       strongUp: 0,
-      up: 0,
+      weakUp: 0,
       neutral: 0,
-      down: 0,
+      weakDown: 0,
       strongDown: 0
     };
     
     data.forEach(pair => {
-      const trend = pair.advancedTrend || 'Neutral';
-      if (trend.includes('Strong Up')) trendCount.strongUp++;
-      else if (trend.includes('Up')) trendCount.up++;
-      else if (trend.includes('Strong Down')) trendCount.strongDown++;
-      else if (trend.includes('Down')) trendCount.down++;
+      const trend = pair.macdTrend || 'Neutral';
+      if (trend === 'Strong Uptrend') trendCount.strongUp++;
+      else if (trend === 'Weak Uptrend') trendCount.weakUp++;
+      else if (trend === 'Strong Downtrend') trendCount.strongDown++;
+      else if (trend === 'Weak Downtrend') trendCount.weakDown++;
       else trendCount.neutral++;
     });
     
     return [
       { name: 'Strong Uptrend', value: trendCount.strongUp, color: '#10B981' },
-      { name: 'Uptrend', value: trendCount.up, color: '#34D399' },
+      { name: 'Weak Uptrend', value: trendCount.weakUp, color: '#34D399' },
       { name: 'Neutral', value: trendCount.neutral, color: '#6B7280' },
-      { name: 'Downtrend', value: trendCount.down, color: '#F87171' },
+      { name: 'Weak Downtrend', value: trendCount.weakDown, color: '#F87171' },
       { name: 'Strong Downtrend', value: trendCount.strongDown, color: '#EF4444' }
     ];
   }, [data]);

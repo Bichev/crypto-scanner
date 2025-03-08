@@ -187,15 +187,12 @@ export function CryptoTable({ data }: CryptoTableProps) {
         cell: info => {
                 const trend = info.getValue() || '-';
             return (
-                    <div className={cn(
-                        getValueColor(trend as any, 'trend' as any), 
-                        "flex items-center gap-1"
-                    )}>
-                        {trend.includes('Strong Up') && <ChevronUpIcon className="w-4 h-4" />}
-                        {trend.includes('Strong Down') && <ChevronDownIcon className="w-4 h-4" />}
-                    {trend}
-                </div>
-            );
+                    <div className={`flex items-center ${getValueColor(trend as any, 'trend' as any)}`}>
+                        {trend}
+                        {trend === 'Strong Uptrend' && <ChevronUpIcon className="w-4 h-4" />}
+                        {trend === 'Strong Downtrend' && <ChevronDownIcon className="w-4 h-4" />}
+                    </div>
+                );
         },
             filterFn: (row, id, filterValue) => {
                 const value = row.getValue(id);
@@ -335,10 +332,10 @@ export function CryptoTable({ data }: CryptoTableProps) {
             else if (trend?.includes('Down')) colorClass = 'text-red-400/70';
             
             return (
-                <div className={cn(colorClass, "flex items-center gap-1")}>
-                    {trend?.includes('Strong Up') && <ChevronUpIcon className="w-4 h-4" />}
-                    {trend?.includes('Strong Down') && <ChevronDownIcon className="w-4 h-4" />}
-                    {trend || '-'}
+                <div className={`flex items-center ${colorClass}`}>
+                    {trend}
+                    {trend === 'Strong Uptrend' && <ChevronUpIcon className="w-4 h-4" />}
+                    {trend === 'Strong Downtrend' && <ChevronDownIcon className="w-4 h-4" />}
                 </div>
             );
         },

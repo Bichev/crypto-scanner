@@ -32,6 +32,15 @@ interface MarketSummary {
     topGainers: { pair: string; change: string }[];
     topLosers: { pair: string; change: string }[];
     marketSentiment: string;
+    marketBreadth: {
+        advances: number;
+        declines: number;
+        averageRSI: number;
+        advanceDeclineRatio: number;
+        percentStrongUptrend: number;
+        percentStrongDowntrend: number;
+        averageMACD: number;
+    };
   }
 
 export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
@@ -159,8 +168,8 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
             .filter(pair => !isNaN(parseFloat(pair.dailyPriceChange)))
             .sort((a, b) => parseFloat(b.dailyPriceChange) - parseFloat(a.dailyPriceChange));
         
-        const topGainers = sortedByChange.slice(0, 3);
-        const topLosers = sortedByChange.slice(-3).reverse();
+        const topGainers = sortedByChange.slice(0, 5);
+        const topLosers = sortedByChange.slice(-5).reverse();
 
         return {
             totalPairs,
@@ -200,30 +209,138 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             <div>
                                 <p className="text-sm text-muted-foreground">Gainers</p>
                                 <p className={`text-2xl font-bold text-emerald-400`}>
-                                    {marketStats.changes.positive}
+                                    {marketSummary?.marketBreadth.advances || marketStats.changes.positive}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Losers</p>
                                 <p className={`text-2xl font-bold text-red-400`}>
-                                    {marketStats.changes.negative}
+                                    {marketSummary?.marketBreadth.declines || marketStats.changes.negative}
                                 </p>
                             </div>
                         </div>
+                        
+                        {/* Market Sentiment */}
+                        <div className="mt-4 pb-2 border-b border-border">
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-muted-foreground">Market Sentiment</p>
+                                <p className={cn(
+                                    "text-sm font-medium",
+                                    marketSummary?.marketSentiment?.includes('Strongly Bullish') ? "text-emerald-400" :
+                                    marketSummary?.marketSentiment?.includes('Bullish') ? "text-emerald-400/70" :
+                                    marketSummary?.marketSentiment?.includes('Strongly Bearish') ? "text-red-400" :
+                                    marketSummary?.marketSentiment?.includes('Bearish') ? "text-red-400/70" :
+                                    "text-blue-400"
+                                )}>
+                                    {marketSummary?.marketSentiment || 'Neutral'}
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="mt-4">
-                            <p className="text-sm text-muted-foreground">Market RSI</p>
-                            <div className="flex items-center mt-1">
-                                <div className="w-full bg-secondary/30 rounded-full h-2.5 overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full ${
-                                            marketStats.avgRsi >= 70 ? 'bg-red-400' : 
-                                            marketStats.avgRsi <= 30 ? 'bg-emerald-400' : 
-                                            'bg-blue-400'
-                                        }`}
-                                        style={{ width: `${Math.min(100, marketStats.avgRsi)}%` }}
-                                    ></div>
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-1">
+                                    <p className="text-sm text-muted-foreground">Market RSI</p>
+                                    <div className="group relative">
+                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-1">Relative Strength Index (RSI)</p>
+                                            <ul className="space-y-1 text-xs">
+                                                <li><span className="text-red-400">Above 70:</span> Market is overbought</li>
+                                                <li><span className="text-blue-400">Between 30-70:</span> Normal market conditions</li>
+                                                <li><span className="text-emerald-400">Below 30:</span> Market is oversold</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span className="ml-2 text-sm">{marketStats.avgRsi.toFixed(1)}</span>
+                                <p className="text-sm font-medium">
+                                    {marketSummary?.marketBreadth.averageRSI.toFixed(1) || marketStats.avgRsi.toFixed(1)}
+                                </p>
+                            </div>
+                            <div className="w-full bg-secondary/30 rounded-full h-2.5 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full ${
+                                        (marketSummary?.marketBreadth.averageRSI || marketStats.avgRsi) >= 70 ? 'bg-red-400' : 
+                                        (marketSummary?.marketBreadth.averageRSI || marketStats.avgRsi) <= 30 ? 'bg-emerald-400' : 
+                                        'bg-blue-400'
+                                    }`}
+                                    style={{ width: `${Math.min(100, marketSummary?.marketBreadth.averageRSI || marketStats.avgRsi)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-1">
+                                    <p className="text-sm text-muted-foreground">Market MACD</p>
+                                    <div className="group relative">
+                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-1">Moving Average Convergence Divergence</p>
+                                            <ul className="space-y-1 text-xs">
+                                                <li><span className="text-emerald-400">Positive:</span> Bullish market momentum</li>
+                                                <li><span className="text-red-400">Negative:</span> Bearish market momentum</li>
+                                                <li><span className="text-blue-400">Near Zero:</span> Consolidating market</li>
+                                            </ul>
+                                            <p className="text-xs mt-2 text-muted-foreground">Average MACD across all pairs</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className={cn(
+                                    "text-sm font-medium",
+                                    (marketSummary?.marketBreadth?.averageMACD || 0) > 0 ? "text-emerald-400" :
+                                    (marketSummary?.marketBreadth?.averageMACD || 0) < 0 ? "text-red-400" :
+                                    "text-blue-400"
+                                )}>
+                                    {marketSummary?.marketBreadth?.averageMACD?.toFixed(2) || '0.00'}
+                                </p>
+                            </div>
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-1">
+                                    <p className="text-sm text-muted-foreground">A/D Ratio</p>
+                                    <div className="group relative">
+                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-1">Advance/Decline Ratio</p>
+                                            <p className="text-xs mb-2">Measures market breadth by comparing advancing vs declining assets.</p>
+                                            <ul className="space-y-1 text-xs">
+                                                <li><span className="text-emerald-400">&gt; 1.5:</span> Strong bullish market breadth</li>
+                                                <li><span className="text-blue-400">0.67 - 1.5:</span> Neutral market breadth</li>
+                                                <li><span className="text-red-400">&lt; 0.67:</span> Strong bearish market breadth</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className={cn(
+                                    "text-sm font-medium",
+                                    (marketSummary?.marketBreadth?.advanceDeclineRatio || 1) > 1.5 ? "text-emerald-400" :
+                                    (marketSummary?.marketBreadth?.advanceDeclineRatio || 1) < 0.67 ? "text-red-400" :
+                                    "text-blue-400"
+                                )}>
+                                    {marketSummary?.marketBreadth?.advanceDeclineRatio?.toFixed(2) || '-'}
+                                </p>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-1">
+                                    <p className="text-sm text-muted-foreground">Strong Trends</p>
+                                    <div className="group relative">
+                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-1">Strong Trend Distribution</p>
+                                            <p className="text-xs mb-2">Percentage of assets in strong uptrends vs downtrends based on multiple indicators.</p>
+                                            <ul className="space-y-1 text-xs">
+                                                <li><span className="text-emerald-400">↑ Uptrend:</span> Assets showing strong bullish momentum</li>
+                                                <li><span className="text-red-400">↓ Downtrend:</span> Assets showing strong bearish momentum</li>
+                                            </ul>
+                                            <p className="text-xs mt-2 text-muted-foreground">Higher percentages indicate stronger market direction.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-emerald-400">↑{marketSummary?.marketBreadth?.percentStrongUptrend?.toFixed(1) || '0.0'}%</span>
+                                    <span className="text-sm text-muted-foreground">/</span>
+                                    <span className="text-sm text-red-400">↓{marketSummary?.marketBreadth?.percentStrongDowntrend?.toFixed(1) || '0.0'}%</span>
+                                </div>
                             </div>
                         </div>
                     </CardContent>
@@ -445,14 +562,18 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             </li>
                             <li className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Strong Uptrend</span>
-                                <span className="text-emerald-400 font-medium">
-                                    {data.filter(p => p.macdTrend?.includes('Strong Up')).length}
+                                <span className="text-2xl font-bold">
+                                {(() => {
+                                    console.log('All MACD Trends:', data.map(p => p.macdTrend));
+                                    console.log('Strong Uptrends:', data.filter(p => p.macdTrend === 'Strong Uptrend').length);
+                                    return data.filter(p => p.macdTrend === 'Strong Uptrend').length;
+                                })()}
                                 </span>
                             </li>
                             <li className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Strong Downtrend</span>
-                                <span className="text-red-400 font-medium">
-                                    {data.filter(p => p.macdTrend?.includes('Strong Down')).length}
+                                <span className="text-2xl font-bold">
+                                {data.filter(p => p.macdTrend === 'Strong Downtrend').length}
                                 </span>
                             </li>
                         </ul>

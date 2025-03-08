@@ -147,19 +147,20 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                 </div>
                 <div className="mt-4">
                   <p className="text-sm text-muted-foreground">Trend</p>
-                  <p className={`font-medium ${
-                    pair.macdTrend?.includes('Strong Up') ? 'text-emerald-400' :
-                    pair.macdTrend?.includes('Weak Up') ? 'text-emerald-400/70' :
-                    pair.macdTrend?.includes('Strong Down') ? 'text-red-400' :
-                    pair.macdTrend?.includes('Weak Down') ? 'text-red-400/70' :
+                  <p className={cn(
+                    "font-medium",
+                    pair.macdTrend === 'Strong Uptrend' ? 'text-emerald-400' :
+                    pair.macdTrend === 'Weak Uptrend' ? 'text-emerald-300' :
+                    pair.macdTrend === 'Strong Downtrend' ? 'text-red-400' :
+                    pair.macdTrend === 'Weak Downtrend' ? 'text-red-300' :
                     'text-gray-400'
-                  }`}>
+                  )}>
                     {pair.macdTrend || 'Neutral'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {pair.macdTrend?.includes('Up') ? 
+                    {pair.macdTrend === 'Strong Uptrend' ? 
                       'MACD indicates bullish momentum in the market. Uptrends suggest potential buying opportunities.' :
-                      pair.macdTrend?.includes('Down') ?
+                      pair.macdTrend === 'Strong Downtrend' ?
                       'MACD indicates bearish momentum in the market. Downtrends suggest caution or potential selling opportunities.' :
                       'MACD suggests a sideways or consolidating market. No clear trend direction.'
                     }
