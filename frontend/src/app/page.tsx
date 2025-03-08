@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { CryptoTable } from '../components/CryptoTable';
-import { CryptoDashboard } from '../components/CryptoDashboard';
+import { CryptoDashboard } from '@/components/CryptoDashboard';
 import { cryptoService } from '../services/cryptoService';
 import { CryptoPair } from '../types/crypto';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';

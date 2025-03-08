@@ -49,6 +49,8 @@ function identifyMissingDateRanges(startDate: moment.Moment, endDate: moment.Mom
 export class CoinbaseDataFetcher {
     private readonly BASE_URL = 'https://api.exchange.coinbase.com/products';
     private readonly MAX_CANDLES_PER_REQUEST = 300;
+    private readonly PUBLIC_RATE_LIMIT = 10; // requests per second
+    private readonly BATCH_SIZE = 5; // process 5 pairs at a time
 
     async getAllPairs(): Promise<string[]> {
         try {
@@ -178,37 +180,69 @@ export class CoinbaseDataFetcher {
 
     async updateCurrentDayData(): Promise<void> {
         const pairs = await this.getAllPairs();
-        const today = moment().startOf('day');
-        const tomorrow = moment().startOf('day').add(1, 'day');
-        
-        for (const pair of pairs) {
-          try {
-            // Fetch just today's candle
-            const currentDayCandle = await this.fetchDailyCandles(pair, today, tomorrow);
-            
-            if (currentDayCandle.length > 0) {
-              // Upsert the candle (update if exists, insert if not)
-              await CandleModel.updateOne(
-                { pair, timestamp: currentDayCandle[0].timestamp },
-                { 
-                  $set: {
-                    open: currentDayCandle[0].open,
-                    high: currentDayCandle[0].high,
-                    low: currentDayCandle[0].low,
-                    close: currentDayCandle[0].close,
-                    volume: currentDayCandle[0].volume,
-                    lastUpdated: new Date()
-                  }
-                },
-                { upsert: true }
-              );
-            }
-            
-            // Add delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 100));
-          } catch (error) {
-            console.error(`Error updating current day data for ${pair}:`, error);
-          }
+        const now = moment();
+        const today = now.clone().startOf('day');
+        const yesterday = today.clone().subtract(1, 'day');
+
+        // Validate dates to ensure we're not fetching future data
+        if (today.isAfter(now)) {
+            console.warn('Attempted to fetch future data, adjusting date range...');
+            today.subtract(1, 'day');
+            yesterday.subtract(1, 'day');
         }
-      }
+
+        console.log(`Updating data for date range: ${yesterday.format('YYYY-MM-DD')} to ${today.format('YYYY-MM-DD')}`);
+        
+        // Process pairs in batches
+        for (let i = 0; i < pairs.length; i += this.BATCH_SIZE) {
+            const batch = pairs.slice(i, i + this.BATCH_SIZE);
+            console.log(`Processing batch ${i / this.BATCH_SIZE + 1} of ${Math.ceil(pairs.length / this.BATCH_SIZE)}`);
+            
+            await this.processBatch(batch, yesterday, today);
+            
+            // Add delay between batches to respect rate limits
+            const delayMs = (1000 / this.PUBLIC_RATE_LIMIT) * this.BATCH_SIZE;
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+        
+        console.log('Finished updating current day data for all pairs');
+    }
+
+    private async processBatch(pairs: string[], yesterday: moment.Moment, today: moment.Moment): Promise<void> {
+        const batchPromises = pairs.map(async pair => {
+            try {
+                // Ensure we're not fetching future data
+                const endDate = moment.min(today, moment());
+                console.log(`Fetching recent data for ${pair} from ${yesterday.format('YYYY-MM-DD')} to ${endDate.format('YYYY-MM-DD')}`);
+                
+                const recentCandles = await this.fetchDailyCandles(pair, yesterday, endDate);
+                
+                if (recentCandles.length > 0) {
+                    const operations = recentCandles.map(candle => ({
+                        updateOne: {
+                            filter: { pair, timestamp: candle.timestamp },
+                            update: {
+                                $set: {
+                                    open: candle.open,
+                                    high: candle.high,
+                                    low: candle.low,
+                                    close: candle.close,
+                                    volume: candle.volume,
+                                    lastUpdated: new Date()
+                                }
+                            },
+                            upsert: true
+                        }
+                    }));
+
+                    await CandleModel.bulkWrite(operations);
+                    console.log(`Updated ${recentCandles.length} candles for ${pair}`);
+                }
+            } catch (error) {
+                console.error(`Error updating data for ${pair}:`, error);
+            }
+        });
+
+        await Promise.all(batchPromises);
+    }
 }

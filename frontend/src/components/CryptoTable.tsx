@@ -79,68 +79,68 @@ export function CryptoTable({ data }: CryptoTableProps) {
     const [detailViewOpen, setDetailViewOpen] = useState<boolean>(false);
 
     const columns = useMemo(() => [
-        columnHelper.accessor('pair', {
-            header: 'Pair',
-            cell: info => (
+    columnHelper.accessor('pair', {
+        header: 'Pair',
+        cell: info => (
                 <div className="font-semibold text-primary flex items-center">
                     <div className="w-6 h-6 bg-secondary/40 rounded-full mr-2 flex items-center justify-center overflow-hidden">
                         {info.getValue().split('-')[0].charAt(0)}
                     </div>
-                    {info.getValue()}
-                </div>
-            ),
+                {info.getValue()}
+            </div>
+        ),
             filterFn: 'includesString',
-        }),
-        columnHelper.accessor('currentPrice', {
-            header: 'Price (USD)',
+    }),
+    columnHelper.accessor('currentPrice', {
+        header: 'Price (USD)',
             cell: info => {
                 const value = parseFloat(info.getValue());
                 return (
-                    <div className="font-mono">
+            <div className="font-mono">
                         {isNaN(value) ? '-' : `$${parseFloat(value.toFixed(8)).toLocaleString(undefined, { 
                             minimumFractionDigits: 2, 
                             maximumFractionDigits: value < 0.01 ? 8 : value < 1 ? 6 : 2 
                         })}`}
-                    </div>
+            </div>
                 );
             },
-        }),
-        columnHelper.accessor('dailyPriceChange', {
-            header: '24h Change',
-            cell: info => {
-                const value = parseFloat(info.getValue());
-                return (
+    }),
+    columnHelper.accessor('dailyPriceChange', {
+        header: '24h Change',
+        cell: info => {
+            const value = parseFloat(info.getValue());
+            return (
                     <div className={cn(
                         "font-mono",
                         getValueColor(value, 'price')
                     )}>
                         {isNaN(value) ? '-' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`}
-                    </div>
-                );
-            },
+                </div>
+            );
+        },
             filterFn: (row, id, filterValue) => {
                 const value = parseFloat(row.getValue(id));
                 if (filterValue === 'positive') return value > 0;
                 if (filterValue === 'negative') return value < 0;
                 return true;
             }
-        }),
-        columnHelper.accessor('currentVolumeUSD', {
+    }),
+    columnHelper.accessor('currentVolumeUSD', {
             header: '24h Volume',
             cell: info => {
                 const value = parseFloat(info.getValue());
                 return (
-                    <div className="font-mono">
+            <div className="font-mono">
                         {isNaN(value) ? '-' : `$${value >= 1000000 
                             ? (value / 1000000).toFixed(1) + 'M' 
                             : value >= 1000 
                                 ? (value / 1000).toFixed(1) + 'K' 
                                 : value.toLocaleString()}`}
-                    </div>
+            </div>
                 );
             },
-        }),
-        columnHelper.accessor('rsi', {
+    }),
+    columnHelper.accessor('rsi', {
             header: () => (
                 <TooltipProvider>
                     <Tooltip>
@@ -154,14 +154,14 @@ export function CryptoTable({ data }: CryptoTableProps) {
                     </Tooltip>
                 </TooltipProvider>
             ),
-            cell: info => {
-                const value = parseFloat(info.getValue());
-                return (
+        cell: info => {
+            const value = parseFloat(info.getValue());
+            return (
                     <div className={cn("font-mono", getValueColor(value, 'rsi'))}>
                         {isNaN(value) ? '-' : value.toFixed(2)}
-                    </div>
-                );
-            },
+                </div>
+            );
+        },
             filterFn: (row, id, filterValue) => {
                 const value = parseFloat(row.getValue(id));
                 if (filterValue === 'overbought') return value >= 70;
@@ -169,8 +169,8 @@ export function CryptoTable({ data }: CryptoTableProps) {
                 if (filterValue === 'neutral') return value > 30 && value < 70;
                 return true;
             }
-        }),
-        columnHelper.accessor('macdTrend', {
+    }),
+    columnHelper.accessor('macdTrend', {
             header: () => (
                 <TooltipProvider>
                     <Tooltip>
@@ -184,19 +184,19 @@ export function CryptoTable({ data }: CryptoTableProps) {
                     </Tooltip>
                 </TooltipProvider>
             ),
-            cell: info => {
+        cell: info => {
                 const trend = info.getValue() || '-';
-                return (
+            return (
                     <div className={cn(
                         getValueColor(trend as any, 'trend' as any), 
                         "flex items-center gap-1"
                     )}>
                         {trend.includes('Strong Up') && <ChevronUpIcon className="w-4 h-4" />}
                         {trend.includes('Strong Down') && <ChevronDownIcon className="w-4 h-4" />}
-                        {trend}
-                    </div>
-                );
-            },
+                    {trend}
+                </div>
+            );
+        },
             filterFn: (row, id, filterValue) => {
                 const value = row.getValue(id);
                 if (filterValue === 'uptrend') return value?.toString().includes('Up') ?? false;
@@ -260,15 +260,168 @@ export function CryptoTable({ data }: CryptoTableProps) {
                     </Tooltip>
                 </TooltipProvider>
             ),
-            cell: info => {
-                const value = parseFloat(info.getValue());
-                return (
+        cell: info => {
+            const value = parseFloat(info.getValue());
+            return (
                     <div className="font-mono">
                         {isNaN(value) ? '-' : `${value.toFixed(2)}%`}
-                    </div>
-                );
-            },
-        }),
+                </div>
+            );
+        },
+    }),
+    
+
+            // Add Bollinger Bands column
+    columnHelper.accessor(row => {
+        const percentB = row.bollingerBands?.percentB || '0';
+        return parseFloat(percentB);
+    }, {
+        id: 'bbPercentB',
+        header: () => (
+        <TooltipProvider>
+            <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2">%B</span>
+            </TooltipTrigger>
+            <TooltipContent className="w-64 p-3">
+                <p className="font-semibold">Bollinger Bands %B</p>
+                <p className="text-xs mt-1">Indicates where price is relative to the bands. Values above 1 indicate overbought conditions, values below 0 indicate oversold conditions.</p>
+            </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+        ),
+        cell: info => {
+            const value = info.getValue();
+            let colorClass = 'text-gray-400';
+            if (value > 1) colorClass = 'text-red-400';
+            else if (value < 0) colorClass = 'text-emerald-400';
+            return (
+                <div className={cn("font-mono", colorClass)}>
+                    {!isNaN(value) ? value.toFixed(2) : '-'}
+                </div>
+            );
+        },
+        filterFn: (row, id, filterValue) => {
+            const value = parseFloat(row.getValue(id) || '0');
+            if (filterValue === 'overbought') return value > 1;
+            if (filterValue === 'oversold') return value < 0;
+            if (filterValue === 'neutral') return value >= 0 && value <= 1;
+            return true;
+          }
+    }),
+    
+    // Add Advanced Trend column
+    columnHelper.accessor('advancedTrend', {
+        header: () => (
+        <TooltipProvider>
+            <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2">Advanced Trend</span>
+            </TooltipTrigger>
+            <TooltipContent className="w-64 p-3">
+                <p className="font-semibold">Advanced Trend Analysis</p>
+                <p className="text-xs mt-1">Comprehensive trend assessment using multiple indicators including MACD, RSI, and moving averages.</p>
+            </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+        ),
+        cell: info => {
+            const trend = info.getValue();
+            let colorClass = 'text-gray-400';
+            
+            if (trend?.includes('Strong Up')) colorClass = 'text-emerald-400';
+            else if (trend?.includes('Up')) colorClass = 'text-emerald-400/70';
+            else if (trend?.includes('Strong Down')) colorClass = 'text-red-400';
+            else if (trend?.includes('Down')) colorClass = 'text-red-400/70';
+            
+            return (
+                <div className={cn(colorClass, "flex items-center gap-1")}>
+                    {trend?.includes('Strong Up') && <ChevronUpIcon className="w-4 h-4" />}
+                    {trend?.includes('Strong Down') && <ChevronDownIcon className="w-4 h-4" />}
+                    {trend || '-'}
+                </div>
+            );
+        },
+        filterFn: (row, id, filterValue) => {
+            const value = row.getValue(id)?.toString() || '';
+            if (filterValue === 'uptrend') return value.includes('Up');
+            if (filterValue === 'downtrend') return value.includes('Down');
+            if (filterValue === 'neutral') return value.includes('Neutral');
+            return true;
+          }
+    }),
+    
+    // Add Volatility Index column
+    columnHelper.accessor(row => {
+        return row.volatilityIndex?.value || '0';
+    }, {
+        id: 'volatilityIndex',
+        header: () => (
+        <TooltipProvider>
+            <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2">Volatility</span>
+            </TooltipTrigger>
+            <TooltipContent className="w-64 p-3">
+                <p className="font-semibold">Volatility Index</p>
+                <p className="text-xs mt-1">Measures price fluctuation intensity. Higher values indicate greater volatility.</p>
+            </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+        ),
+        cell: info => {
+            const value = parseFloat(info.getValue());
+            let colorClass = 'text-gray-400';
+            
+            if (value > 5) colorClass = 'text-red-400';
+            else if (value > 3) colorClass = 'text-amber-400';
+            else if (value < 1) colorClass = 'text-blue-400';
+            
+            return (
+                <div className={cn("font-mono", colorClass)}>
+                    {!isNaN(value) ? value.toFixed(2) : '-'}
+                </div>
+            );
+        }
+    }),
+    
+    // Add Enhanced Score column
+    columnHelper.accessor('enhancedScore', {
+        header: () => (
+        <TooltipProvider>
+            <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2">Enhanced Score</span>
+            </TooltipTrigger>
+            <TooltipContent className="w-64 p-3">
+                <p className="font-semibold">Enhanced Composite Score</p>
+                <p className="text-xs mt-1">Advanced scoring system incorporating multiple technical factors with weighted importance.</p>
+            </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+        ),
+        cell: info => {
+            const value = parseFloat(info.getValue());
+            return (
+                <div className={cn(
+                    "font-mono relative h-6 flex items-center",
+                    getValueColor(value, 'score')
+                )}>
+                    <div className="absolute left-0 top-0 bottom-0 bg-current opacity-20 rounded-sm" style={{ width: `${(value || 0) * 100}%` }}></div>
+                    <span className="relative z-10 pl-1">{isNaN(value) ? '-' : value.toFixed(2)}</span>
+                </div>
+            );
+        },
+        filterFn: (row, id, filterValue) => {
+            const value = row.getValue(id)?.toString() || '';
+            if (filterValue === 'uptrend') return value.includes('Up');
+            if (filterValue === 'downtrend') return value.includes('Down');
+            if (filterValue === 'neutral') return value.includes('Neutral');
+            return true;
+          }
+    }),
+
+
         columnHelper.accessor('shortTermScore', {
             header: () => (
                 <TooltipProvider>

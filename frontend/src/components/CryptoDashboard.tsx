@@ -1,16 +1,102 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CryptoPair } from '@/types/crypto';
-import { formatNumber, formatPercentage, getTrendColor } from '@/lib/utils';
-import { ArrowUpIcon, ArrowDownIcon, ChartBarIcon } from '@heroicons/react/24/solid';
+import { formatNumber, formatPercentage, getTrendColor, cn } from '@/lib/utils';
+import { ArrowUpIcon, ArrowDownIcon, ChartBarIcon, PlusCircleIcon } from '@heroicons/react/24/solid';
 import { MarketDistributionChart, RSIDistributionChart, PriceChangeChart } from '@/components/chart-coponent';
+import { cryptoService } from '@/services/cryptoService';
+import { BollingerDistributionChart, VolatilityRadarChart, AdvancedTrendChart } from '@/components/advanced-charts';
 
 interface DashboardProps {
     data: CryptoPair[];
     lastUpdated: Date | null;
 }
 
+// Add market summary interface
+interface MarketSummary {
+    timestamp: number;
+    totalPairs: number;
+    trendDistribution: {
+      strongUptrend: number;
+      weakUptrend: number;
+      neutral: number;
+      weakDowntrend: number;
+      strongDowntrend: number;
+    };
+    rsiDistribution: {
+      oversold: number;
+      neutral: number;
+      overbought: number;
+    };
+    volumeChange: number;
+    topGainers: { pair: string; change: string }[];
+    topLosers: { pair: string; change: string }[];
+    marketSentiment: string;
+  }
+
 export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
+    const [marketSummary, setMarketSummary] = useState<MarketSummary | null>(null);
+    const [correlations, setCorrelations] = useState<any[]>([]);
+    const [trendChanges, setTrendChanges] = useState<any[]>([]);
+    const [loadingSummary, setLoadingSummary] = useState(true);
+    const [loadingCorrelations, setLoadingCorrelations] = useState(true);
+    const [loadingTrendChanges, setLoadingTrendChanges] = useState(true);
+
+    
+    const [recentPairs, setRecentPairs] = React.useState<{
+        today: Array<{
+            pair: string;
+            firstSeen: string;
+            lastSeen: string;
+            candleCount: number;
+        }>;
+        week: Array<{
+            pair: string;
+            firstSeen: string;
+            lastSeen: string;
+            candleCount: number;
+        }>;
+    }>({ today: [], week: [] });
+
+    useEffect(() => {
+        const loadRecentPairs = async () => {
+            const pairs = await cryptoService.fetchRecentPairs();
+            setRecentPairs(pairs);
+        };
+        loadRecentPairs();
+    }, []);
+
+
+    useEffect(() => {
+        // Fetch market summary
+        const fetchMarketData = async () => {
+            try {
+                setLoadingSummary(true);
+                setLoadingCorrelations(true);
+                setLoadingTrendChanges(true);
+
+                // Use Promise.all to fetch data in parallel
+                const [summary, correlationData, trendData] = await Promise.all([
+                    cryptoService.getMarketSummary(),
+                    cryptoService.getCorrelations(10),
+                    cryptoService.getTrendChanges('high')
+                ]);
+
+                setMarketSummary(summary);
+                setCorrelations(correlationData);
+                setTrendChanges(trendData || []);
+            } catch (error) {
+                console.error('Error fetching market data:', error);
+            } finally {
+                setLoadingSummary(false);
+                setLoadingCorrelations(false);
+                setLoadingTrendChanges(false);
+            }
+        };
+
+        fetchMarketData();
+    }, [data]);
+
     // Calculate aggregated market stats
     const marketStats = React.useMemo(() => {
         if (!data.length) return null;
@@ -67,7 +153,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
     return (
         <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* Market Overview Card */}
                 <Card>
                     <CardHeader className="pb-2">
@@ -180,13 +266,13 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     <CardContent>
                         <ul className="space-y-3">
                             <li className="flex justify-between items-center">
-                                <span className="text-sm text-muted-foreground">Overbought (RSI &gt; 70)</span>
+                                <span className="text-sm text-muted-foreground">Overbought (&gt;70)</span>
                                 <span className="text-red-400 font-medium">
                                     {data.filter(p => parseFloat(p.rsi) > 70).length}
                                 </span>
                             </li>
                             <li className="flex justify-between items-center">
-                                <span className="text-sm text-muted-foreground">Oversold (RSI &lt; 30)</span>
+                                <span className="text-sm text-muted-foreground">Oversold (&lt;30)</span>
                                 <span className="text-emerald-400 font-medium">
                                     {data.filter(p => parseFloat(p.rsi) < 30).length}
                                 </span>
@@ -206,6 +292,192 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         </ul>
                     </CardContent>
                 </Card>
+
+                {/* New Pairs Widget */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center">
+                            <PlusCircleIcon className="w-5 h-5 mr-2 text-blue-400" />
+                            Recently Added Pairs
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            <div>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-2">Added Today</h3>
+                                {recentPairs.today.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {recentPairs.today.map(pair => (
+                                            <li key={pair.pair} className="text-sm border-l-2 border-blue-400 pl-2">
+                                                <div className="font-medium text-primary">{pair.pair}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    First seen: {new Date(pair.firstSeen).toLocaleString()}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Candles: {pair.candleCount}
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No new pairs today</p>
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-2">Added Last 7 Days</h3>
+                                {recentPairs.week.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {recentPairs.week.map(pair => (
+                                            <li key={pair.pair} className="text-sm border-l-2 border-blue-400/50 pl-2">
+                                                <div className="font-medium text-primary">{pair.pair}</div>
+                                                {/* <div className="text-xs text-muted-foreground">
+                                                    First seen: {new Date(pair.firstSeen).toLocaleString()}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Candles: {pair.candleCount}
+                                                </div> */}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No new pairs in the last 30 days</p>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">    
+                      {/* Add Market Sentiment Card */}
+                {marketSummary && (
+                    <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium">Market Sentiment</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-xl font-bold mb-4">
+                        {marketSummary.marketSentiment}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-2">Trend Distribution</h3>
+                            <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-sm">Strong Uptrend</span>
+                                <span className="text-sm font-medium text-emerald-400">{marketSummary.trendDistribution.strongUptrend}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Weak Uptrend</span>
+                                <span className="text-sm font-medium text-emerald-400/70">{marketSummary.trendDistribution.weakUptrend}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Neutral</span>
+                                <span className="text-sm font-medium">{marketSummary.trendDistribution.neutral}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Weak Downtrend</span>
+                                <span className="text-sm font-medium text-red-400/70">{marketSummary.trendDistribution.weakDowntrend}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Strong Downtrend</span>
+                                <span className="text-sm font-medium text-red-400">{marketSummary.trendDistribution.strongDowntrend}</span>
+                            </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-2">RSI Distribution</h3>
+                            <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-sm">Overbought (&gt;70)</span>
+                                <span className="text-sm font-medium text-red-400">{marketSummary.rsiDistribution.overbought}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Neutral</span>
+                                <span className="text-sm font-medium">{marketSummary.rsiDistribution.neutral}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Oversold (&lt;30)</span>
+                                <span className="text-sm font-medium text-emerald-400">{marketSummary.rsiDistribution.oversold}</span>
+                            </div>
+                            </div>
+                            <div className="mt-4">
+                            <h3 className="text-sm font-medium text-muted-foreground mb-2">Volume Change</h3>
+                            <div className={cn(
+                                "text-lg font-bold",
+                                marketSummary.volumeChange > 0 ? "text-emerald-400" : "text-red-400"
+                            )}>
+                                {marketSummary.volumeChange > 0 ? '+' : ''}{marketSummary.volumeChange.toFixed(2)}%
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </CardContent>
+                    </Card>
+                )}
+                
+                {/* Add Recent Trend Changes Card */}
+                {trendChanges.length > 0 && (
+                    <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium">Recent Significant Changes</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                        {trendChanges.slice(0, 5).map((change, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                            <div>
+                                <span className="font-medium">{change.pair}</span>
+                                <span className="text-sm text-muted-foreground ml-2">{change.indicator}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">{change.previousValue}</span>
+                                <span className="font-bold">→</span>
+                                <span className={cn(
+                                "text-sm font-medium",
+                                change.newValue.includes('Up') || change.newValue.includes('Oversold') ? "text-emerald-400" :
+                                change.newValue.includes('Down') || change.newValue.includes('Overbought') ? "text-red-400" : ""
+                                )}>
+                                {change.newValue}
+                                </span>
+                            </div>
+                            </div>
+                        ))}
+                        </div>
+                    </CardContent>
+                    </Card>
+                )}
+                
+                {/* Add Correlations Card */}
+                {correlations.length > 0 && (
+                    <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium">Strong Market Correlations</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                        {correlations.slice(0, 5).map((correlation, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                            <div>
+                                <span className="font-medium">{correlation.pair1}</span>
+                                <span className="text-sm mx-2">↔</span>
+                                <span className="font-medium">{correlation.pair2}</span>
+                            </div>
+                            <div>
+                                <span className={cn(
+                                "text-sm font-medium",
+                                correlation.correlation > 0 ? "text-emerald-400" : "text-red-400"
+                                )}>
+                                {correlation.correlation.toFixed(2)}
+                                </span>
+                                <span className="text-xs text-muted-foreground ml-2">({correlation.strength})</span>
+                            </div>
+                            </div>
+                        ))}
+                        </div>
+                    </CardContent>
+                    </Card>
+                )}
             </div>
 
             {/* Charts */}
@@ -214,6 +486,14 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                 <MarketDistributionChart data={data} />
                 <RSIDistributionChart data={data} />
             </div>
+
+            {/* New Charts Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <BollingerDistributionChart data={data} />
+                <VolatilityRadarChart data={data} />
+                <AdvancedTrendChart data={data} />
+            </div>
+
         </div>
     );
 }

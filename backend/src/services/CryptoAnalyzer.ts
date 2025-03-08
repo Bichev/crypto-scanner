@@ -61,41 +61,42 @@ export class CryptoAnalyzer {
     async analyzePairs(pairs: string[]): Promise<any[]> {
         const results = [];
         
+        // Calculate optimal time ranges
+        const now = moment();
+        const oneDayAgo = now.clone().subtract(1, 'day');
+        const thirtyDaysAgo = now.clone().subtract(30, 'days');
+        const twoHundredDaysAgo = now.clone().subtract(200, 'days');
+        
         for (const pair of pairs) {
           try {
-            // Get data from MongoDB instead of API
-            const threeMonthsAgo = moment().subtract(3, 'months').unix();
-            const fiveYearsAgo = moment().subtract(5, 'years').unix();
-            
-            const [threeMonthCandles, allTimeCandles] = await Promise.all([
+            // Get data in different time ranges for optimization
+            const [recentCandles, longTermCandles] = await Promise.all([
+              // Recent data for most indicators (30 days)
               CandleModel.find({ 
                 pair, 
-                timestamp: { $gte: threeMonthsAgo } 
+                timestamp: { $gte: thirtyDaysAgo.unix() } 
               }).sort({ timestamp: 1 }),
               
+              // Long-term data only for 200MA and long-term analysis
               CandleModel.find({ 
                 pair, 
-                timestamp: { $gte: fiveYearsAgo } 
+                timestamp: { $gte: twoHundredDaysAgo.unix() } 
               }).sort({ timestamp: 1 }),
-              
-            //   this.dataFetcher.getCurrentPrice(pair)
             ]);
             
-            if (threeMonthCandles.length === 0 || allTimeCandles.length === 0) {
+            if (recentCandles.length === 0) {
               console.log(`No data available for ${pair}. Skipping...`);
               continue;
             }
             
-            // Calculate USD volume
-            const lastCandle = allTimeCandles[allTimeCandles.length - 1];
+            // Calculate USD volume using recent data
+            const lastCandle = recentCandles[recentCandles.length - 1];
             const currentVolumeUSD = lastCandle.volume * lastCandle.close;
             
-            // Add delay after fetching current price
-            // await this.delay(this.API_DELAY);
-            
-            // Calculate other metrics
+            // Calculate indicators with appropriate data ranges
             const analysis = this.calculateIndicators(
-              allTimeCandles.map((c: CandleData) => ({
+              // Map candle data
+              longTermCandles.map((c: CandleData) => ({
                 timestamp: c.timestamp,
                 open: c.open,
                 high: c.high,
@@ -103,7 +104,7 @@ export class CryptoAnalyzer {
                 close: c.close,
                 volume: c.volume
               })), 
-              threeMonthCandles.map((c: CandleData) => ({
+              recentCandles.map((c: CandleData) => ({
                 timestamp: c.timestamp,
                 open: c.open,
                 high: c.high,
@@ -235,69 +236,92 @@ export class CryptoAnalyzer {
         };
     }
 
-    private calculateIndicators(allTimeCandles: CandleData[], threeMonthCandles: CandleData[]) {
-        // Example of safe toFixed usage with null check
+    private calculateIndicators(longTermCandles: CandleData[], recentCandles: CandleData[]) {
         const safeToFixed = (value: any, decimals: number): string => {
             if (value === undefined || value === null || isNaN(value)) {
-            return "0"; // Or any default value you prefer
+                return "0";
             }
             return value.toFixed(decimals);
         };
 
-        const closePrices = allTimeCandles.map(candle => candle.close);
-        const volumes = allTimeCandles.map(candle => candle.volume);
-        const highs = allTimeCandles.map(candle => candle.high);
-        const lows = allTimeCandles.map(candle => candle.low);
-        const currentPrice = closePrices[closePrices.length - 1];
+        // Use recent data for most calculations
+        const recentClosePrices = recentCandles.map(candle => candle.close);
+        const recentVolumes = recentCandles.map(candle => candle.volume);
+        const recentHighs = recentCandles.map(candle => candle.high);
+        const recentLows = recentCandles.map(candle => candle.low);
+        const currentPrice = recentClosePrices[recentClosePrices.length - 1];
 
-        // Calculate price levels
-        const priceLevels = this.calculatePriceLevels(allTimeCandles);
+        // Use long-term data only for specific indicators
+        const longTermClosePrices = longTermCandles.map(candle => candle.close);
+        const allTimeHigh = Math.max(...longTermClosePrices);
+        const allTimeLow = Math.min(...longTermClosePrices);
 
-        // Calculate RSI with multiple periods
+        // Calculate RSI (14 days)
         const rsi = ti.RSI.calculate({
-            values: closePrices,
+            values: recentClosePrices,
             period: 14
         });
 
+        // Calculate MACD (26 days max)
+        const macd = ti.MACD.calculate({
+            values: recentClosePrices,
+            fastPeriod: 12,
+            slowPeriod: 26,
+            signalPeriod: 9,
+            SimpleMAOscillator: false,
+            SimpleMASignal: false
+        });
+
+        // Calculate recent moving averages
+        const sma7 = ti.SMA.calculate({ values: recentClosePrices, period: 7 });
+        const sma30 = ti.SMA.calculate({ values: recentClosePrices, period: 30 });
+        
+        // Calculate long-term moving averages
+        const sma50 = ti.SMA.calculate({ values: longTermClosePrices, period: 50 });
+        const sma200 = ti.SMA.calculate({ values: longTermClosePrices, period: 200 });
+
+        // Calculate price levels
+        const priceLevels = this.calculatePriceLevels(recentCandles);
+
         // Calculate Stochastic Oscillator
         const stoch = ti.Stochastic.calculate({
-            high: highs,
-            low: lows,
-            close: closePrices,
+            high: recentHighs,
+            low: recentLows,
+            close: recentClosePrices,
             period: 14,
             signalPeriod: 3
         });
 
         // Calculate Williams %R
         const williamsr = ti.WilliamsR.calculate({
-            high: highs,
-            low: lows,
-            close: closePrices,
+            high: recentHighs,
+            low: recentLows,
+            close: recentClosePrices,
             period: 14
         });
 
         // Calculate CCI
         const cci = ti.CCI.calculate({
-            high: highs,
-            low: lows,
-            close: closePrices,
+            high: recentHighs,
+            low: recentLows,
+            close: recentClosePrices,
             period: 20
         });
 
         // Calculate MFI
         const mfi = ti.MFI.calculate({
-            high: highs,
-            low: lows,
-            close: closePrices,
-            volume: volumes,
+            high: recentHighs,
+            low: recentLows,
+            close: recentClosePrices,
+            volume: recentVolumes,
             period: 14
         });
 
         // Calculate ADX
         const adxResult = ti.ADX.calculate({
-            high: highs,
-            low: lows,
-            close: closePrices,
+            high: recentHighs,
+            low: recentLows,
+            close: recentClosePrices,
             period: 14
         });
 
@@ -315,45 +339,30 @@ export class CryptoAnalyzer {
             minusDI: latestADX.mdi || 0
         });
 
-        // Calculate MACD
-        const macd = ti.MACD.calculate({
-            values: closePrices,
-            fastPeriod: 12,
-            slowPeriod: 26,
-            signalPeriod: 9,
-            SimpleMAOscillator: false,
-            SimpleMASignal: false
-        });
-
         // Calculate moving averages
-        const sma7 = ti.SMA.calculate({ values: closePrices, period: 7 });
-        const sma30 = ti.SMA.calculate({ values: closePrices, period: 30 });
-        const sma50 = ti.SMA.calculate({ values: closePrices, period: 50 });
-        const sma200 = ti.SMA.calculate({ values: closePrices, period: 200 });
+        const ema7 = ti.EMA.calculate({ values: recentClosePrices, period: 7 });
+        const ema30 = ti.EMA.calculate({ values: recentClosePrices, period: 30 });
+        const ema50 = ti.EMA.calculate({ values: recentClosePrices, period: 50 });
+        const ema200 = ti.EMA.calculate({ values: recentClosePrices, period: 200 });
         
-        const ema7 = ti.EMA.calculate({ values: closePrices, period: 7 });
-        const ema30 = ti.EMA.calculate({ values: closePrices, period: 30 });
-        const ema50 = ti.EMA.calculate({ values: closePrices, period: 50 });
-        const ema200 = ti.EMA.calculate({ values: closePrices, period: 200 });
-
         // Calculate Bollinger Bands
         const bb = ti.BollingerBands.calculate({
-            values: closePrices,
+            values: recentClosePrices,
             period: 20,
             stdDev: 2
         });
 
         // Calculate ATR (Average True Range)
         const atr = ti.ATR.calculate({
-            high: highs,
-            low: lows,
-            close: closePrices,
+            high: recentHighs,
+            low: recentLows,
+            close: recentClosePrices,
             period: 14
         });
 
         // Calculate Stochastic RSI
         const stochRsi = ti.StochasticRSI.calculate({
-            values: closePrices,
+            values: recentClosePrices,
             rsiPeriod: 14,
             stochasticPeriod: 14,
             kPeriod: 3,
@@ -362,16 +371,16 @@ export class CryptoAnalyzer {
 
         // Calculate ROC (Rate of Change)
         const roc = ti.ROC.calculate({
-            values: closePrices,
+            values: recentClosePrices,
             period: 14
         });
 
         // Volume analysis
-        const vma7 = ti.SMA.calculate({ values: volumes, period: 7 });
-        const vma30 = ti.SMA.calculate({ values: volumes, period: 30 });
+        const vma7 = ti.SMA.calculate({ values: recentVolumes, period: 7 });
+        const vma30 = ti.SMA.calculate({ values: recentVolumes, period: 30 });
         const obv = ti.OBV.calculate({
-            close: closePrices,
-            volume: volumes
+            close: recentClosePrices,
+            volume: recentVolumes
         });
 
         // Get latest values
@@ -383,19 +392,17 @@ export class CryptoAnalyzer {
         const volumeOscillator = ((vma7[vma7.length - 1] - vma30[vma30.length - 1]) / vma30[vma30.length - 1]) * 100;
 
         // Calculate historical highs and lows
-        const allTimeHigh = Math.max(...allTimeCandles.map(c => c.high));
-        const allTimeLow = Math.min(...allTimeCandles.map(c => c.low));
         const percentFromHigh = ((currentPrice - allTimeHigh) / allTimeHigh) * 100;
         const percentFromLow = ((currentPrice - allTimeLow) / allTimeLow) * 100;
 
         // Calculate volatility
-        const volatility = this.calculateVolatility(closePrices, 14);
+        const volatility = this.calculateVolatility(recentClosePrices, 14);
         
         // Calculate price momentum
-        const momentum = this.calculateMomentum(closePrices, 14);
+        const momentum = this.calculateMomentum(recentClosePrices, 14);
 
         // Calculate three-month change
-        const threeMonthStartPrice = threeMonthCandles[0]?.close || currentPrice;
+        const threeMonthStartPrice = longTermCandles[0]?.close || currentPrice;
         const threeMonthChange = ((currentPrice - threeMonthStartPrice) / threeMonthStartPrice) * 100;
 
         // Calculate scores
@@ -424,15 +431,15 @@ export class CryptoAnalyzer {
         );
 
         // New indicators
-        const bollingerBands = this.calculateBollingerBands(closePrices);
-        const ichimoku = this.calculateIchimoku(highs, lows, closePrices);
-        const stochastic = this.calculateStochastic(highs, lows, closePrices);
-        const advancedATR = this.calculateATR(highs, lows, closePrices);
-        const supportResistance = this.calculateSupportResistance(closePrices);
+        const bollingerBands = this.calculateBollingerBands(recentClosePrices);
+        const ichimoku = this.calculateIchimoku(recentHighs, recentLows, recentClosePrices);
+        const stochastic = this.calculateStochastic(recentHighs, recentLows, recentClosePrices);
+        const advancedATR = this.calculateATR(recentHighs, recentLows, recentClosePrices);
+        const supportResistance = this.calculateSupportResistance(recentClosePrices);
         // Make sure all the inputs to calculateAdvancedTrend have values
         const advancedTrend = macd && macd.length > 0 && rsi && rsi.length > 0 
         ? this.calculateAdvancedTrend(
-            closePrices, 
+            recentClosePrices, 
             macd, 
             rsi, 
             ema50,
@@ -440,8 +447,8 @@ export class CryptoAnalyzer {
             )
         : 'Insufficient Data';
         const volatilityIndex = this.calculateVolatilityIndex(
-            closePrices,
-            ti.ATR.calculate({ high: highs, low: lows, close: closePrices, period: 14 })
+            recentClosePrices,
+            ti.ATR.calculate({ high: recentHighs, low: recentLows, close: recentClosePrices, period: 14 })
         );
         
         // Enhanced scores
@@ -449,7 +456,7 @@ export class CryptoAnalyzer {
             rsi: rsi[rsi.length - 1],
             macdTrend: this.calculateMACDTrend(macd),
             volumeOscillator: ((vma7[vma7.length - 1] - vma30[vma30.length - 1]) / vma30[vma30.length - 1]) * 100,
-            dailyPriceChange: this.calculateDailyPriceChange(allTimeCandles),
+            dailyPriceChange: this.calculateDailyPriceChange(recentCandles),
             sma_7: sma7[sma7.length - 1],
             sma_30: sma30[sma30.length - 1],
             sma_50: sma50[sma50.length - 1],
@@ -460,7 +467,7 @@ export class CryptoAnalyzer {
 
         return {
             currentPrice: currentPrice.toFixed(8),
-            dailyPriceChange: this.calculateDailyPriceChange(allTimeCandles),
+            dailyPriceChange: this.calculateDailyPriceChange(recentCandles),
             percentChangeFromHigh: percentFromHigh.toFixed(2),
             percentChangeFromLow: percentFromLow.toFixed(2),
             percentChangeLastThreeMonths: threeMonthChange.toFixed(2),
@@ -474,7 +481,7 @@ export class CryptoAnalyzer {
             
             // RSI indicators
             rsi: rsi[rsi.length - 1]?.toFixed(2),
-            rsiDivergence: this.calculateRSIDivergence(closePrices, rsi, 14),
+            rsiDivergence: this.calculateRSIDivergence(recentClosePrices, rsi, 14),
             stoch_k: latestStoch.k?.toFixed(2),
             stoch_d: latestStoch.d?.toFixed(2),
             stochRsi_k: latestStochRSI.k?.toFixed(2),
@@ -1238,5 +1245,5 @@ export class CryptoAnalyzer {
         srScore * weights.supportResistance;
         
         return Math.max(0, Math.min(1, compositeScore)); // Ensure score is between 0 and 1
-    }    
+    }
 }

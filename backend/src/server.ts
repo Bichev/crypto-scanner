@@ -51,17 +51,37 @@ mongoose.connection.on('disconnected', () => {
 async function initializeData() {
   try {
     const pairs = await dataFetcher.getAllPairs();
-    
-    // Just initialize for a few pairs initially to avoid long startup time
-    const initialPairs = pairs;
-    console.log(`Initializing data for ${initialPairs.length} pairs...`);
+    console.log(`Found ${pairs.length} pairs to initialize...`);
 
-    for (const pair of initialPairs) {
+    // First, check which pairs need initialization
+    const startDate = moment().subtract(3, 'year');
+    const endDate = moment();
+    
+    const pairsToInitialize = [];
+    for (const pair of pairs) {
+      // Check if we have any data for this pair
+      const existingData = await CandleModel.findOne({ 
+        pair,
+        timestamp: { 
+          $gte: startDate.unix(),
+          $lte: endDate.unix()
+        }
+      });
+      
+      if (!existingData) {
+        pairsToInitialize.push(pair);
+      }
+    }
+
+    console.log(`${pairsToInitialize.length} pairs need initialization...`);
+
+    // Initialize only pairs that don't have data
+    for (const pair of pairsToInitialize) {
       console.log(`Fetching historical data for ${pair}...`);
       await dataFetcher.fetchHistoricalData(
         pair, 
-        moment().subtract(3, 'year'), 
-        moment()
+        startDate,
+        endDate
       );
       // Add delay between pairs to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -199,6 +219,83 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
       
       res.json(filteredChanges);
     } catch (error) {
+      next(error);
+    }
+  });
+
+  // Add new endpoint for recently added pairs
+  app.get('/api/crypto/pairs/recent', async (req, res, next) => {
+    try {
+      const today = moment().startOf('day');
+      const weekAgo = moment().subtract(7, 'days').startOf('day');
+
+      console.log('Fetching recent pairs:', {
+        today: today.format(),
+        weekAgo: weekAgo.format(),
+        todayUnix: today.unix(),
+        weekAgoUnix: weekAgo.unix()
+      });
+
+      // Find pairs added today
+      const todayPairs = await CandleModel.aggregate([
+        {
+          $group: {
+            _id: '$pair',
+            firstCandle: { $min: '$timestamp' },
+            lastCandle: { $max: '$timestamp' },
+            candleCount: { $sum: 1 }
+          }
+        },
+        {
+          $match: {
+            firstCandle: { $gte: today.unix() }
+          }
+        },
+        {
+          $sort: { firstCandle: -1 }
+        }
+      ]);
+
+      console.log('Today pairs found:', todayPairs.length);
+
+      // Find pairs added in the last 30 days
+      const weekPairs = await CandleModel.aggregate([
+        {
+          $group: {
+            _id: '$pair',
+            firstCandle: { $min: '$timestamp' },
+            lastCandle: { $max: '$timestamp' },
+            candleCount: { $sum: 1 }
+          }
+        },
+        {
+          $match: {
+            firstCandle: { 
+              $gte: weekAgo.unix(),
+              $lt: today.unix()
+            }
+          }
+        },
+        {
+          $sort: { firstCandle: -1 }
+        }
+      ]);
+
+      console.log('7-day pairs found:', weekPairs.length);
+
+      const formatPairInfo = (pair: any) => ({
+        pair: pair._id,
+        firstSeen: moment.unix(pair.firstCandle).format('YYYY-MM-DD HH:mm:ss'),
+        lastSeen: moment.unix(pair.lastCandle).format('YYYY-MM-DD HH:mm:ss'),
+        candleCount: pair.candleCount
+      });
+
+      res.json({
+        today: todayPairs.map(formatPairInfo),
+        week: weekPairs.map(formatPairInfo)
+      });
+    } catch (error) {
+      console.error('Error fetching recent pairs:', error);
       next(error);
     }
   });

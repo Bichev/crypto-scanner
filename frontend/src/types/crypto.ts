@@ -40,7 +40,7 @@ export interface CryptoPair {
     adx: string;
     plusDI: string;
     minusDI: string;
-    trendStrength: string; // Composite of ADX and DI
+    trendStrength: string;
     // MACD
     macd: string;
     signalLine: string;
@@ -76,6 +76,46 @@ export interface CryptoPair {
     shortTermScore: string;
     longTermScore: string;
     riskAdjustedScore: string;
+    // New indicators from CryptoAnalyzer
+    ichimoku?: {
+        tenkan: string;
+        kijun: string;
+        senkouA: string;
+        senkouB: string;
+        cloudSignal: string;
+        tkCross: string;
+    };
+    
+    stochastic?: {
+        k: string;
+        d: string;
+        signal: string;
+    };
+    
+    atrAnalysis?: {
+        atr: string;
+        normalizedATR: string;
+        volatility: string;
+    };
+    supportResistance?: {
+        supports: Array<{price: number; type: string; strength: number}>;
+        resistances: Array<{price: number; type: string; strength: number}>;
+    };
+    bollingerBands?: {
+        upper: string;
+        middle: string;
+        lower: string;
+        bandwidth: string;
+        percentB: string;
+        signal: string;
+    };
+    volatilityIndex?: {
+        value: string;
+        trend: string;
+    };
+    
+    advancedTrend: string;
+    enhancedScore: string;
 }
 
 export interface IndicatorDescription {
