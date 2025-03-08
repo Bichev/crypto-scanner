@@ -66,6 +66,8 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
             volumeIncrease: number;
             priceChange: number;
             intradayPriceChange: number;
+            liquidityType: 'Low' | 'Normal' | 'High';
+            volumeScore: number;
         }>;
         dumpingPairs: Array<{
             pair: string;
@@ -73,6 +75,8 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
             volumeIncrease: number;
             priceChange: number;
             intradayPriceChange: number;
+            liquidityType: 'Low' | 'Normal' | 'High';
+            volumeScore: number;
         }>;
     }>({ pumpingPairs: [], dumpingPairs: [] });
 
@@ -289,7 +293,35 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                 <li key={pair.pair} className="flex justify-between items-center">
                                     <div className="flex items-center">
                                         <span className="text-muted-foreground mr-2">{i + 1}.</span>
-                                        <span className="font-medium">{pair.pair}</span>
+                                        <div>
+                                            <span className="font-medium">{pair.pair}</span>
+                                            <div className="group relative ml-2">
+                                                <span className={cn(
+                                                    "text-xs px-1.5 py-0.5 rounded cursor-help",
+                                                    pair.liquidityType === 'Low' ? "bg-yellow-500/20 text-yellow-500" :
+                                                    pair.liquidityType === 'High' ? "bg-emerald-500/20 text-emerald-500" :
+                                                    "bg-blue-500/20 text-blue-500"
+                                                )}>
+                                                    {pair.liquidityType} Liquidity
+                                                </span>
+                                                <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-2 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                                    <p className="font-medium mb-1">Understanding Liquidity:</p>
+                                                    <ul className="space-y-1 text-xs">
+                                                        <li><span className="text-yellow-500">Low:</span> Price moves easily with small trades. Exercise caution.</li>
+                                                        <li><span className="text-blue-500">Normal:</span> Standard market depth and activity.</li>
+                                                        <li><span className="text-emerald-500">High:</span> Deep market, stable price action.</li>
+                                                    </ul>
+                                                    <div className="mt-2">
+                                                        <p className="font-medium mb-1">Volume Score:</p>
+                                                        <ul className="space-y-1 text-xs">
+                                                            <li><span className="text-emerald-400">High (≥15pts):</span> Strong market activity</li>
+                                                            <li><span className="text-emerald-400/70">Med (≥10pts):</span> Moderate activity</li>
+                                                            <li><span className="text-muted-foreground">Low (&lt;10pts):</span> Weak activity</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="text-right">
                                         <span className="text-emerald-400 font-medium block">
@@ -300,8 +332,13 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                                 </span>
                                             )}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Vol: +{pair.volumeIncrease.toFixed(0)}%
+                                        <span className={cn(
+                                            "text-xs",
+                                            pair.volumeScore >= 15 ? "text-emerald-400" :
+                                            pair.volumeScore >= 10 ? "text-emerald-400/70" :
+                                            "text-muted-foreground"
+                                        )}>
+                                            Vol: +{pair.volumeIncrease.toFixed(0)}% ({pair.volumeScore} pts)
                                         </span>
                                     </div>
                                 </li>
@@ -327,7 +364,35 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                 <li key={pair.pair} className="flex justify-between items-center">
                                     <div className="flex items-center">
                                         <span className="text-muted-foreground mr-2">{i + 1}.</span>
-                                        <span className="font-medium">{pair.pair}</span>
+                                        <div>
+                                            <span className="font-medium">{pair.pair}</span>
+                                            <div className="group relative ml-2">
+                                                <span className={cn(
+                                                    "text-xs px-1.5 py-0.5 rounded cursor-help",
+                                                    pair.liquidityType === 'Low' ? "bg-yellow-500/20 text-yellow-500" :
+                                                    pair.liquidityType === 'High' ? "bg-emerald-500/20 text-emerald-500" :
+                                                    "bg-blue-500/20 text-blue-500"
+                                                )}>
+                                                    {pair.liquidityType} Liquidity
+                                                </span>
+                                                <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-2 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                                    <p className="font-medium mb-1">Understanding Liquidity:</p>
+                                                    <ul className="space-y-1 text-xs">
+                                                        <li><span className="text-yellow-500">Low:</span> Price moves easily with small trades. Exercise caution.</li>
+                                                        <li><span className="text-blue-500">Normal:</span> Standard market depth and activity.</li>
+                                                        <li><span className="text-emerald-500">High:</span> Deep market, stable price action.</li>
+                                                    </ul>
+                                                    <div className="mt-2">
+                                                        <p className="font-medium mb-1">Volume Score:</p>
+                                                        <ul className="space-y-1 text-xs">
+                                                            <li><span className="text-emerald-400">High (≥15pts):</span> Strong market activity</li>
+                                                            <li><span className="text-emerald-400/70">Med (≥10pts):</span> Moderate activity</li>
+                                                            <li><span className="text-muted-foreground">Low (&lt;10pts):</span> Weak activity</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="text-right">
                                         <span className="text-red-400 font-medium block">
@@ -338,8 +403,13 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                                 </span>
                                             )}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Vol: +{pair.volumeIncrease.toFixed(0)}%
+                                        <span className={cn(
+                                            "text-xs",
+                                            pair.volumeScore >= 15 ? "text-emerald-400" :
+                                            pair.volumeScore >= 10 ? "text-emerald-400/70" :
+                                            "text-muted-foreground"
+                                        )}>
+                                            Vol: +{pair.volumeIncrease.toFixed(0)}% ({pair.volumeScore} pts)
                                         </span>
                                     </div>
                                 </li>

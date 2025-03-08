@@ -127,7 +127,14 @@ export class CryptoAnalyzer {
               dumpScore: pumpDumpAnalysis.dumpScore,
               volumeIncrease: pumpDumpAnalysis.volumeIncrease,
               priceChange: pumpDumpAnalysis.priceChange,
-              intradayPriceChange: pumpDumpAnalysis.intradayPriceChange
+              intradayPriceChange: pumpDumpAnalysis.intradayPriceChange,
+              liquidityType: pumpDumpAnalysis.liquidityType,
+              volumeScore: pumpDumpAnalysis.volumeScore,
+              movementType: pumpDumpAnalysis.isPumping ? 
+                          (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
+                          pumpDumpAnalysis.isDumping ? 
+                          (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
+                          'Normal'
             });
           } catch (error) {
             console.error(`Error analyzing ${pair} from database:`, error);
@@ -1207,6 +1214,8 @@ export class CryptoAnalyzer {
         volumeIncrease: number;
         priceChange: number;
         intradayPriceChange: number;
+        liquidityType: 'Low' | 'Normal' | 'High';
+        volumeScore: number;
     } {
         // Get the most recent candle
         const currentCandle = recentCandles[recentCandles.length - 1];
@@ -1220,7 +1229,9 @@ export class CryptoAnalyzer {
                 dumpScore: 0,
                 volumeIncrease: 0,
                 priceChange: 0,
-                intradayPriceChange: 0
+                intradayPriceChange: 0,
+                liquidityType: 'Normal',
+                volumeScore: 0
             };
         }
 
@@ -1237,6 +1248,12 @@ export class CryptoAnalyzer {
         // Calculate price changes over different periods
         const priceChange = ((currentCandle.close - previousCandle.close) / previousCandle.close) * 100;
         
+        // Add price velocity calculation (rate of price change)
+        const priceVelocity = priceChange / (currentCandle.volume / avgVolume20); // Price change per unit of relative volume
+        
+        // Calculate low liquidity multiplier
+        const lowLiquidityMultiplier = Math.min(2, Math.max(1, 1 + (1 - currentCandle.volume / avgVolume20)));
+
         // Calculate average true range for volatility context
         const atr = ti.ATR.calculate({
             high: highs,
@@ -1300,86 +1317,97 @@ export class CryptoAnalyzer {
 
         // Enhanced Pump Score Components
         const pumpScore = (
-            // Volume component (max 30 points)
-            (volumeIncrease > 300 ? 30 :
-             volumeIncrease > 200 ? 25 :
-             volumeIncrease > 100 ? 20 :
-             volumeIncrease > 50 ? 15 : 0) +
+            // Volume component (max 20 points, reduced from 30)
+            (volumeIncrease > 300 ? 20 :
+             volumeIncrease > 200 ? 15 :
+             volumeIncrease > 100 ? 10 :
+             volumeIncrease > 50 ? 5 : 0) +
             
-            // Price change components (max 30 points)
-            (priceChange > 20 ? 30 :
-             priceChange > 15 ? 25 :
-             priceChange > 10 ? 20 :
-             priceChange > 5 ? 15 : 0) +
+            // Price change components (max 35 points, increased from 30)
+            (priceChange > 20 ? 35 :
+             priceChange > 15 ? 30 :
+             priceChange > 10 ? 25 :
+             priceChange > 5 ? 20 : 0) +
+            
+            // Add price velocity component (max 10 points)
+            (priceVelocity > 5 ? 10 :
+             priceVelocity > 3 ? 7 :
+             priceVelocity > 1 ? 5 : 0) +
             
             // Intraday volatility component (max 15 points)
             (intradayPumpChange > dayOverDayRange ? 15 :
              intradayPumpChange > dayOverDayRange * 0.75 ? 10 :
              intradayPumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
             
-            // Add daily range component (max 10 points)
-            (dailyRange > 15 ? 10 :
-             dailyRange > 10 ? 7 :
-             dailyRange > 5 ? 5 : 0) +
-            
-            // Technical indicators (max 15 points, reduced from 25)
+            // Technical indicators (max 20 points)
             // RSI component
-            (currentRSI > 80 ? 7 :
-             currentRSI > 70 ? 5 :
-             currentRSI > 60 ? 3 : 0) +
+            (currentRSI > 80 ? 10 :
+             currentRSI > 70 ? 7 :
+             currentRSI > 60 ? 5 : 0) +
             
             // Bollinger Band component
-            (bbDeviation > 100 ? 5 :
-             bbDeviation > 75 ? 3 :
-             bbDeviation > 50 ? 2 : 0) +
+            (bbDeviation > 100 ? 7 :
+             bbDeviation > 75 ? 5 :
+             bbDeviation > 50 ? 3 : 0) +
             
             // MACD momentum
             (macdSlope > 0 ? 3 : 0)
-        );
+        ) * lowLiquidityMultiplier; // Apply low liquidity multiplier
 
-        // Enhanced Dump Score Components
+        // Enhanced Dump Score Components with similar adjustments
         const dumpScore = (
-            // Volume component (max 30 points)
-            (volumeIncrease > 300 ? 30 :
-             volumeIncrease > 200 ? 25 :
-             volumeIncrease > 100 ? 20 :
-             volumeIncrease > 50 ? 15 : 0) +
+            // Volume component (max 20 points, reduced from 30)
+            (volumeIncrease > 300 ? 20 :
+             volumeIncrease > 200 ? 15 :
+             volumeIncrease > 100 ? 10 :
+             volumeIncrease > 50 ? 5 : 0) +
             
-            // Price change components (max 30 points)
-            (priceChange < -20 ? 30 :
-             priceChange < -15 ? 25 :
-             priceChange < -10 ? 20 :
-             priceChange < -5 ? 15 : 0) +
+            // Price change components (max 35 points, increased from 30)
+            (priceChange < -20 ? 35 :
+             priceChange < -15 ? 30 :
+             priceChange < -10 ? 25 :
+             priceChange < -5 ? 20 : 0) +
+            
+            // Add price velocity component (max 10 points)
+            (priceVelocity < -5 ? 10 :
+             priceVelocity < -3 ? 7 :
+             priceVelocity < -1 ? 5 : 0) +
             
             // Intraday volatility component (max 15 points)
             (intradayDumpChange > dayOverDayRange ? 15 :
              intradayDumpChange > dayOverDayRange * 0.75 ? 10 :
              intradayDumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
             
-            // Add daily range component (max 10 points)
-            (dailyRange > 15 ? 10 :
-             dailyRange > 10 ? 7 :
-             dailyRange > 5 ? 5 : 0) +
-            
-            // Technical indicators (max 15 points, reduced from 25)
+            // Technical indicators (max 20 points)
             // RSI component
-            (currentRSI < 20 ? 7 :
-             currentRSI < 30 ? 5 :
-             currentRSI < 40 ? 3 : 0) +
+            (currentRSI < 20 ? 10 :
+             currentRSI < 30 ? 7 :
+             currentRSI < 40 ? 5 : 0) +
             
             // Bollinger Band component
-            (bbDeviation < -100 ? 5 :
-             bbDeviation < -75 ? 3 :
-             bbDeviation < -50 ? 2 : 0) +
+            (bbDeviation < -100 ? 7 :
+             bbDeviation < -75 ? 5 :
+             bbDeviation < -50 ? 3 : 0) +
             
             // MACD momentum
             (macdSlope < 0 ? 3 : 0)
-        );
+        ) * lowLiquidityMultiplier; // Apply low liquidity multiplier
 
-        // Adjust thresholds based on market volatility
+        // Adjust thresholds based on market volatility and liquidity
         const volatilityAdjustment = Math.min(normalizedATR / 2, 10);
-        const pumpThreshold = 70 - volatilityAdjustment;
-        const dumpThreshold = 70 - volatilityAdjustment;
+        const liquidityAdjustment = Math.max(0, 10 * (1 - currentCandle.volume / avgVolume20));
+        const pumpThreshold = Math.max(50, 70 - volatilityAdjustment - liquidityAdjustment);
+        const dumpThreshold = Math.max(50, 70 - volatilityAdjustment - liquidityAdjustment);
+
+        // Determine liquidity type based on volume metrics
+        const liquidityType = volumeIncrease > 200 ? 'High' :
+                            currentCandle.volume < avgVolume20 * 0.5 ? 'Low' : 'Normal';
+
+        // Calculate separate volume score for UI display
+        const volumeScore = (volumeIncrease > 300 ? 20 :
+                           volumeIncrease > 200 ? 15 :
+                           volumeIncrease > 100 ? 10 :
+                           volumeIncrease > 50 ? 5 : 0);
 
         return {
             isPumping: pumpScore >= pumpThreshold && priceChange > 0,
@@ -1388,7 +1416,9 @@ export class CryptoAnalyzer {
             dumpScore,
             volumeIncrease,
             priceChange,
-            intradayPriceChange: Math.max(intradayPumpChange, intradayDumpChange)
+            intradayPriceChange: Math.max(intradayPumpChange, intradayDumpChange),
+            liquidityType,
+            volumeScore
         };
     }
 }

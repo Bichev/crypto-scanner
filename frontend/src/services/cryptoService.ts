@@ -110,6 +110,8 @@ export const cryptoService = {
             volumeIncrease: number;
             priceChange: number;
             intradayPriceChange: number;
+            liquidityType: 'Low' | 'Normal' | 'High';
+            volumeScore: number;
         }>;
         dumpingPairs: Array<{
             pair: string;
@@ -117,12 +119,19 @@ export const cryptoService = {
             volumeIncrease: number;
             priceChange: number;
             intradayPriceChange: number;
+            liquidityType: 'Low' | 'Normal' | 'High';
+            volumeScore: number;
         }>;
     }> {
-        const response = await fetch(`${API_BASE_URL}/crypto/market/pump-dump`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch pump and dump pairs');
+        try {
+            const response = await fetch(`${API_BASE_URL}/crypto/market/pump-dump`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch pump and dump pairs');
+            }
+            return response.json();
+        } catch (error) {
+            console.error('Error fetching pump and dump pairs:', error);
+            return { pumpingPairs: [], dumpingPairs: [] };
         }
-        return response.json();
     },
 };
