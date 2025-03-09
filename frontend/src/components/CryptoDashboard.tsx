@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CryptoPair, AnalyzerResponse, MarketSummary } from '@/types/crypto';
 import { formatNumber, formatPercentage, getTrendColor, cn } from '@/lib/utils';
-import { ArrowUpIcon, ArrowDownIcon, ChartBarIcon, PlusCircleIcon } from '@heroicons/react/24/solid';
+import { ArrowUpIcon, ArrowDownIcon, ChartBarIcon, PlusCircleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid';
 import { MarketDistributionChart, RSIDistributionChart, PriceChangeChart } from '@/components/chart-coponent';
 import { cryptoService } from '@/services/cryptoService';
 import { BollingerDistributionChart, VolatilityRadarChart, AdvancedTrendChart } from '@/components/advanced-charts';
@@ -17,7 +17,6 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
     const [trendChanges, setTrendChanges] = useState<any[]>([]);
     const [loadingCorrelations, setLoadingCorrelations] = useState(true);
     const [loadingTrendChanges, setLoadingTrendChanges] = useState(true);
-
     const [recentPairs, setRecentPairs] = React.useState<{
         today: Array<{
             pair: string;
@@ -31,29 +30,44 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
             lastSeen: string;
             candleCount: number;
         }>;
-    }>({ today: [], week: [] });
+        month: Array<{
+            pair: string;
+            firstSeen: string;
+            lastSeen: string;
+            candleCount: number;
+        }>;
+    }>({ today: [], week: [], month: [] });
 
-    // Add new state for pump and dump data
-    const [pumpDumpData, setPumpDumpData] = useState<{
-        pumpingPairs: Array<{
-            pair: string;
-            score: number;
-            volumeIncrease: number;
-            priceChange: number;
-            intradayPriceChange: number;
-            liquidityType: 'Low' | 'Normal' | 'High';
-            volumeScore: number;
-        }>;
-        dumpingPairs: Array<{
-            pair: string;
-            score: number;
-            volumeIncrease: number;
-            priceChange: number;
-            intradayPriceChange: number;
-            liquidityType: 'Low' | 'Normal' | 'High';
-            volumeScore: number;
-        }>;
-    }>({ pumpingPairs: [], dumpingPairs: [] });
+    // Process pump/dump data directly from the main data
+    const pumpDumpData = React.useMemo(() => {
+        const pumpingPairs = data.pairs
+            .filter(pair => pair.isPumping)
+            .map(pair => ({
+                pair: pair.pair,
+                score: pair.pumpScore,
+                volumeIncrease: pair.volumeIncrease,
+                priceChange: pair.priceChange,
+                intradayPriceChange: pair.intradayPriceChange,
+                liquidityType: pair.liquidityType,
+                volumeScore: pair.volumeScore
+            }))
+            .sort((a, b) => b.score - a.score);
+
+        const dumpingPairs = data.pairs
+            .filter(pair => pair.isDumping)
+            .map(pair => ({
+                pair: pair.pair,
+                score: pair.dumpScore,
+                volumeIncrease: pair.volumeIncrease,
+                priceChange: pair.priceChange,
+                intradayPriceChange: pair.intradayPriceChange,
+                liquidityType: pair.liquidityType,
+                volumeScore: pair.volumeScore
+            }))
+            .sort((a, b) => b.score - a.score);
+
+        return { pumpingPairs, dumpingPairs };
+    }, [data.pairs]);
 
     useEffect(() => {
         const loadRecentPairs = async () => {
@@ -69,15 +83,13 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                 setLoadingCorrelations(true);
                 setLoadingTrendChanges(true);
 
-                const [correlationData, trendData, pumpDumpInfo] = await Promise.all([
+                const [correlationData, trendData] = await Promise.all([
                     cryptoService.getCorrelations(10),
-                    cryptoService.getTrendChanges('high'),
-                    cryptoService.getPumpDumpPairs()
+                    cryptoService.getTrendChanges('high')
                 ]);
 
                 setCorrelations(correlationData);
                 setTrendChanges(trendData);
-                setPumpDumpData(pumpDumpInfo);
             } catch (error) {
                 console.error('Error fetching market data:', error);
             } finally {
@@ -89,68 +101,15 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
         fetchMarketData();
     }, [data]);
 
-    // Get market summary from the main data prop
-    const marketSummary = data.marketSummary;
+    // Use market summary directly from the API response
+    const { marketSummary } = data;
 
-    // Calculate aggregated market stats from pairs data
-    const marketStats = React.useMemo(() => {
-        if (!data.pairs.length) return null;
-
-        const pairs = data.pairs;
-        
-        // Get total number of pairs
-        const totalPairs = pairs.length;
-
-        // Calculate total 24h volume
-        const totalVolume = pairs.reduce((sum: number, pair: CryptoPair) => {
-            const volume = parseFloat(pair.currentVolumeUSD || '0');
-            return sum + (isNaN(volume) ? 0 : volume);
-        }, 0);
-
-        // Count positive and negative 24h changes
-        const changes = pairs.reduce(
-            (acc: { positive: number; negative: number }, pair: CryptoPair) => {
-                const change = parseFloat(pair.dailyPriceChange);
-                if (isNaN(change)) return acc;
-                if (change > 0) acc.positive += 1;
-                if (change < 0) acc.negative += 1;
-                return acc;
-            },
-            { positive: 0, negative: 0 }
-        );
-
-        // Calculate average RSI
-        const validRsi = pairs
-            .map((pair: CryptoPair) => parseFloat(pair.rsi))
-            .filter((rsi: number) => !isNaN(rsi));
-        const avgRsi = validRsi.length
-            ? validRsi.reduce((sum: number, rsi: number) => sum + rsi, 0) / validRsi.length
-            : 0;
-
-        // Get top gainers and losers
-        const sortedByChange = [...pairs]
-            .filter(pair => !isNaN(parseFloat(pair.dailyPriceChange)))
-            .sort((a, b) => parseFloat(b.dailyPriceChange) - parseFloat(a.dailyPriceChange));
-        
-        const topGainers = sortedByChange.slice(0, 5);
-        const topLosers = sortedByChange.slice(-5).reverse();
-
-        return {
-            totalPairs,
-            totalVolume,
-            changes,
-            avgRsi,
-            topGainers,
-            topLosers,
-        };
-    }, [data]);
-
-    if (!marketStats) return null;
+    if (!data.pairs.length) return null;
 
     return (
         <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Market Overview Card */}
                 <Card>
                     <CardHeader className="pb-2">
@@ -160,26 +119,30 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm text-muted-foreground">Pairs</p>
-                                <p className="text-2xl font-bold">{marketStats.totalPairs}</p>
+                                <p className="text-2xl font-bold">{data.pairs.length}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">24h Volume</p>
                                 <p className="text-2xl font-bold">
-                                    {marketStats.totalVolume >= 1_000_000
-                                        ? `${(marketStats.totalVolume / 1_000_000).toFixed(1)}M`
-                                        : `${(marketStats.totalVolume / 1_000).toFixed(1)}K`}
+                                    {(() => {
+                                        const volume = data.marketSummary.totalVolume;
+                                        if (isNaN(volume) || volume === 0) return '-';
+                                        if (volume >= 1_000_000) return `$${(volume / 1_000_000).toFixed(0)}M`;
+                                        if (volume >= 1_000) return `$${(volume / 1_000).toFixed(0)}K`;
+                                        return `$${volume.toFixed(0)}`;
+                                    })()}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Gainers</p>
                                 <p className={`text-2xl font-bold text-emerald-400`}>
-                                    {marketSummary?.marketBreadth.advances || marketStats.changes.positive}
+                                    {data.marketSummary.marketBreadth.advances}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Losers</p>
                                 <p className={`text-2xl font-bold text-red-400`}>
-                                    {marketSummary?.marketBreadth.declines || marketStats.changes.negative}
+                                    {data.marketSummary.marketBreadth.declines}
                                 </p>
                             </div>
                         </div>
@@ -187,9 +150,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         {/* Market Sentiment */}
                         <div className="mt-4 pb-2 border-b border-border">
                             <div className="flex justify-between items-center">
-                                <p className="text-sm text-muted-foreground">Sentiment</p>
+                                <p className="text-sm">Sentiment</p>
                                 <p className={cn(
-                                    "text-sm font-medium",
+                                    "text-xl font-medium",
                                     marketSummary?.marketSentiment?.includes('Strongly Bullish') ? "text-emerald-400" :
                                     marketSummary?.marketSentiment?.includes('Bullish') ? "text-emerald-400/70" :
                                     marketSummary?.marketSentiment?.includes('Strongly Bearish') ? "text-red-400" :
@@ -204,9 +167,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         <div className="mt-4">
                             <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-1">
-                                    <p className="text-sm text-muted-foreground">Market RSI</p>
+                                    <p className="text-sm">Market RSI</p>
                                     <div className="group relative">
-                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
                                         <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
                                             <p className="font-medium mb-1">Relative Strength Index (RSI)</p>
                                             <ul className="space-y-1 text-xs">
@@ -217,28 +180,55 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-sm font-medium">
-                                    {marketSummary?.marketBreadth.averageRSI.toFixed(1) || marketStats.avgRsi.toFixed(1)}
+                                <p className="text-m font-medium">
+                                    {data.marketSummary.marketBreadth.averageRSI.toFixed(1)}
                                 </p>
                             </div>
                             <div className="w-full bg-secondary/30 rounded-full h-2.5 overflow-hidden">
                                 <div
                                     className={`h-full rounded-full ${
-                                        (marketSummary?.marketBreadth.averageRSI || marketStats.avgRsi) >= 70 ? 'bg-red-400' : 
-                                        (marketSummary?.marketBreadth.averageRSI || marketStats.avgRsi) <= 30 ? 'bg-emerald-400' : 
+                                        data.marketSummary.marketBreadth.averageRSI >= 70 ? 'bg-red-400' : 
+                                        data.marketSummary.marketBreadth.averageRSI <= 30 ? 'bg-emerald-400' : 
                                         'bg-blue-400'
                                     }`}
-                                    style={{ width: `${Math.min(100, marketSummary?.marketBreadth.averageRSI || marketStats.avgRsi)}%` }}
+                                    style={{ width: `${Math.min(100, data.marketSummary.marketBreadth.averageRSI)}%` }}
                                 ></div>
                             </div>
                         </div>
-                        
+
                         <div className="mt-4">
+                        <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-1">
+                                    <p className="text-sm">Volume Change</p>
+                                    <div className="group relative">
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                        <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-1">24h Volume Change</p>
+                                            <ul className="space-y-1 text-xs">
+                                                <li><span className="text-emerald-400">Positive:</span> Volume is increasing (higher market activity)</li>
+                                                <li><span className="text-red-400">Negative:</span> Volume is decreasing (lower market activity)</li>
+                                                <li><span className="text-blue-400">Near Zero:</span> Volume is stable</li>
+                                            </ul>
+                                            <p className="text-xs mt-2 text-muted-foreground">Compares current volume to 7-day average</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className={cn(
+                                    "text-m font-medium",
+                                    data.marketSummary.volumeChange > 0 ? "text-emerald-400" : 
+                                    data.marketSummary.volumeChange < 0 ? "text-red-400" : 
+                                    "text-muted-foreground"
+                                )}>
+                                    {data.marketSummary.volumeChange === 0 ? 'No change' :
+                                    `${data.marketSummary.volumeChange > 0 ? '+' : ''}${data.marketSummary.volumeChange.toFixed(2)}%`}
+                                </p>
+                            </div>
+
                             <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-1">
-                                    <p className="text-sm text-muted-foreground">Market MACD</p>
+                                    <p className="text-sm">Market MACD</p>
                                     <div className="group relative">
-                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
                                         <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
                                             <p className="font-medium mb-1">Moving Average Convergence Divergence</p>
                                             <ul className="space-y-1 text-xs">
@@ -251,19 +241,19 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                     </div>
                                 </div>
                                 <p className={cn(
-                                    "text-sm font-medium",
-                                    (marketSummary?.marketBreadth?.averageMACD || 0) > 0 ? "text-emerald-400" :
-                                    (marketSummary?.marketBreadth?.averageMACD || 0) < 0 ? "text-red-400" :
+                                    "text-m font-medium",
+                                    (data.marketSummary.marketBreadth?.averageMACD || 0) > 0 ? "text-emerald-400" :
+                                    (data.marketSummary.marketBreadth?.averageMACD || 0) < 0 ? "text-red-400" :
                                     "text-blue-400"
                                 )}>
-                                    {marketSummary?.marketBreadth?.averageMACD?.toFixed(2) || '0.00'}
+                                    {data.marketSummary.marketBreadth?.averageMACD?.toFixed(2) || '0.00'}
                                 </p>
                             </div>
                             <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-1">
-                                    <p className="text-sm text-muted-foreground">A/D Ratio</p>
+                                    <p className="text-sm">A/D Ratio</p>
                                     <div className="group relative">
-                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
                                         <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
                                             <p className="font-medium mb-1">Advance/Decline Ratio</p>
                                             <p className="text-xs mb-2">Measures market breadth by comparing advancing vs declining assets.</p>
@@ -276,19 +266,19 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                     </div>
                                 </div>
                                 <p className={cn(
-                                    "text-sm font-medium",
-                                    (marketSummary?.marketBreadth?.advanceDeclineRatio || 1) > 1.5 ? "text-emerald-400" :
-                                    (marketSummary?.marketBreadth?.advanceDeclineRatio || 1) < 0.67 ? "text-red-400" :
+                                    "text-m font-medium",
+                                    (data.marketSummary.marketBreadth?.advanceDeclineRatio || 1) > 1.5 ? "text-emerald-400" :
+                                    (data.marketSummary.marketBreadth?.advanceDeclineRatio || 1) < 0.67 ? "text-red-400" :
                                     "text-blue-400"
                                 )}>
-                                    {marketSummary?.marketBreadth?.advanceDeclineRatio?.toFixed(2) || '-'}
+                                    {data.marketSummary.marketBreadth?.advanceDeclineRatio?.toFixed(2) || '-'}
                                 </p>
                             </div>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-1">
-                                    <p className="text-sm text-muted-foreground">Trends</p>
+                                    <p className="text-sm">Trends</p>
                                     <div className="group relative">
-                                        <span className="cursor-help text-muted-foreground">?</span>
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
                                         <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
                                             <p className="font-medium mb-1">Strong Trend Distribution</p>
                                             <p className="text-xs mb-2">Percentage of assets in strong uptrends vs downtrends based on multiple indicators.</p>
@@ -301,12 +291,142 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-emerald-400">↑{marketSummary?.marketBreadth?.percentStrongUptrend?.toFixed(1) || '0.0'}%</span>
-                                    <span className="text-sm text-muted-foreground">/</span>
-                                    <span className="text-sm text-red-400">↓{marketSummary?.marketBreadth?.percentStrongDowntrend?.toFixed(1) || '0.0'}%</span>
+                                    <span className="text-m text-emerald-400">↑{data.marketSummary.marketBreadth?.percentStrongUptrend?.toFixed(1) || '0.0'}%</span>
+                                    <span className="text-m text-muted-foreground">/</span>
+                                    <span className="text-m text-red-400">↓{data.marketSummary.marketBreadth?.percentStrongDowntrend?.toFixed(1) || '0.0'}%</span>
                                 </div>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
+
+                {/* Technical Signals */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center">
+                            <ChartBarIcon className="w-5 h-5 mr-2 text-blue-400" />
+                            Technical Signals
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ul className="space-y-4">
+                            {/* RSI Distribution Section */}
+                            <div>
+                                <div className="flex items-center gap-1 mb-2">
+                                    <h3 className="text-sm font-medium text-muted-foreground">RSI Distribution:</h3>
+                                    <div className="group relative">
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                        <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-2">Relative Strength Index (RSI) Distribution</p>
+                                            <p className="text-xs mb-2">Shows how many pairs are in each RSI category across the market.</p>
+                                            <ul className="space-y-2 text-xs">
+                                                <li>
+                                                    <span className="text-red-400 font-medium">Overbought (&gt;70):</span>
+                                                    <p>Indicates potential price reversal or correction. High number of overbought pairs suggests market euphoria.</p>
+                                                </li>
+                                                <li>
+                                                    <span className="text-emerald-400 font-medium">Oversold (&lt;30):</span>
+                                                    <p>Indicates potential bounce or recovery. High number of oversold pairs suggests market fear.</p>
+                                                </li>
+                                            </ul>
+                                            <p className="text-xs mt-2 text-muted-foreground">Calculation: 14-period RSI using exponential moving average of gains vs losses.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Overbought (&gt;70)</span>
+                                        <span className="text-m font-medium text-red-400">{data.marketSummary.rsiDistribution.overbought}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Oversold (&lt;30)</span>
+                                        <span className="text-m font-medium text-emerald-400">{data.marketSummary.rsiDistribution.oversold}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* MACD Signals Section */}
+                            <div>
+                                <div className="flex items-center gap-1 mb-2">
+                                    <h3 className="text-sm font-medium text-muted-foreground">MACD Signals:</h3>
+                                    <div className="group relative">
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                        <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-2">Moving Average Convergence Divergence (MACD)</p>
+                                            <p className="text-xs mb-2">Trend-following momentum indicator showing relationship between two moving averages.</p>
+                                            <ul className="space-y-2 text-xs">
+                                                <li>
+                                                    <span className="text-emerald-400 font-medium">Bullish Crossover:</span>
+                                                    <p>MACD line crosses above signal line, indicating potential upward momentum. Count includes both strong and weak uptrends.</p>
+                                                </li>
+                                                <li>
+                                                    <span className="text-red-400 font-medium">Bearish Crossover:</span>
+                                                    <p>MACD line crosses below signal line, indicating potential downward momentum. Count includes both strong and weak downtrends.</p>
+                                                </li>
+                                            </ul>
+                                            <p className="text-xs mt-2 text-muted-foreground">Calculation: Difference between 12-day and 26-day EMAs, with 9-day EMA signal line.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Bullish Crossover</span>
+                                        <span className="text-m font-medium text-emerald-400">
+                                            {data.marketSummary.trendDistribution.strongUptrend + data.marketSummary.trendDistribution.weakUptrend}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Bearish Crossover</span>
+                                        <span className="text-m font-medium text-red-400">
+                                            {data.marketSummary.trendDistribution.strongDowntrend + data.marketSummary.trendDistribution.weakDowntrend}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Trend Strength Section */}
+                            <div>
+                                <div className="flex items-center gap-1 mb-2">
+                                    <h3 className="text-sm font-medium text-muted-foreground">Trend Strength:</h3>
+                                    <div className="group relative">
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                        <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-2">Trend Strength Analysis</p>
+                                            <p className="text-xs mb-2">Composite trend measurement using multiple technical indicators.</p>
+                                            <ul className="space-y-2 text-xs">
+                                                <li>
+                                                    <span className="text-emerald-400 font-medium">Strong Uptrend:</span>
+                                                    <p>Price above key MAs, positive MACD, RSI &gt; 50, and increasing volume. High confidence bullish signal.</p>
+                                                </li>
+                                                <li>
+                                                    <span className="text-red-400 font-medium">Strong Downtrend:</span>
+                                                    <p>Price below key MAs, negative MACD, RSI &lt; 50, and increasing volume. High confidence bearish signal.</p>
+                                                </li>
+                                                <li>
+                                                    <span className="text-blue-400 font-medium">Consolidating:</span>
+                                                    <p>Price moving sideways, neutral MACD, RSI between 40-60. Indicates potential trend transition or accumulation.</p>
+                                                </li>
+                                            </ul>
+                                            <p className="text-xs mt-2 text-muted-foreground">Factors: Moving averages (7, 25, 99), MACD, RSI, Volume, and Price action patterns.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Strong Uptrend</span>
+                                        <span className="text-m font-medium text-emerald-400">{data.marketSummary.trendDistribution.strongUptrend}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Strong Downtrend</span>
+                                        <span className="text-m font-medium text-red-400">{data.marketSummary.trendDistribution.strongDowntrend}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Consolidating</span>
+                                        <span className="text-m font-medium text-blue-400">{data.marketSummary.trendDistribution.neutral}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </ul>
                     </CardContent>
                 </Card>
 
@@ -320,17 +440,21 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-3">
-                            {marketStats.topGainers.map((pair, i) => (
-                                <li key={pair.pair} className="flex justify-between items-center">
-                                    <div className="flex items-center">
-                                        <span className="text-muted-foreground mr-2">{i + 1}.</span>
-                                        <span className="font-medium">{pair.pair}</span>
-                                    </div>
-                                    <span className="text-emerald-400 font-medium">
-                                        {formatPercentage(parseFloat(pair.dailyPriceChange))}
-                                    </span>
-                                </li>
-                            ))}
+                            {data.pairs
+                                .filter(pair => !isNaN(parseFloat(pair.dailyPriceChange)))
+                                .sort((a, b) => parseFloat(b.dailyPriceChange) - parseFloat(a.dailyPriceChange))
+                                .slice(0, 10)
+                                .map((pair, i) => (
+                                    <li key={pair.pair} className="flex justify-between items-center">
+                                        <div className="flex items-center">
+                                            <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                            <span className="font-medium">{pair.pair}</span>
+                                        </div>
+                                        <span className="text-emerald-400 font-medium">
+                                            {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                        </span>
+                                    </li>
+                                ))}
                         </ul>
                     </CardContent>
                 </Card>
@@ -345,23 +469,174 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-3">
-                            {marketStats.topLosers.map((pair, i) => (
-                                <li key={pair.pair} className="flex justify-between items-center">
-                                    <div className="flex items-center">
-                                        <span className="text-muted-foreground mr-2">{i + 1}.</span>
-                                        <span className="font-medium">{pair.pair}</span>
-                                    </div>
-                                    <span className="text-red-400 font-medium">
-                                        {formatPercentage(parseFloat(pair.dailyPriceChange))}
-                                    </span>
-                                </li>
-                            ))}
+                            {data.pairs
+                                .filter(pair => !isNaN(parseFloat(pair.dailyPriceChange)))
+                                .sort((a, b) => parseFloat(a.dailyPriceChange) - parseFloat(b.dailyPriceChange))
+                                .slice(0, 10)
+                                .map((pair, i) => (
+                                    <li key={pair.pair} className="flex justify-between items-center">
+                                        <div className="flex items-center">
+                                            <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                            <span className="font-medium">{pair.pair}</span>
+                                        </div>
+                                        <span className="text-red-400 font-medium">
+                                            {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                        </span>
+                                    </li>
+                                ))}
                         </ul>
                     </CardContent>
                 </Card>
 
-                {/* Pumping Pairs Card */}
+                
+
+
+
+                {/* Add Top Enhanced Score Card */}
                 <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Strong Buy Signals
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Enhanced Composite Score Components:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">RSI (15%):</span> Relative Strength Index measures overbought/oversold conditions</li>
+                                        <li><span className="text-emerald-400">MACD (20%):</span> Moving Average Convergence Divergence for trend strength</li>
+                                        <li><span className="text-emerald-400">Volume (10%):</span> Volume oscillator indicates buying/selling pressure</li>
+                                        <li><span className="text-emerald-400">Price Movement (15%):</span> Recent price action and momentum</li>
+                                        <li><span className="text-emerald-400">Moving Averages (20%):</span> Multiple timeframe trend alignment</li>
+                                        <li><span className="text-emerald-400">Volatility (10%):</span> Risk adjustment based on price stability</li>
+                                        <li><span className="text-emerald-400">Support/Resistance (10%):</span> Position relative to key levels</li>
+                                    </ul>
+                                    <div className="mt-2 text-xs text-muted-foreground">
+                                        Score ranges: <span className="text-emerald-400">&gt;70%</span> Strong Buy • 
+                                        <span className="text-blue-400">30-70%</span> Neutral • 
+                                        <span className="text-red-400">&lt;30%</span> Strong Sell
+                                    </div>
+                                </div>
+                            </div>
+                        </CardTitle>
+                        <CardDescription>
+                            Top 5 pairs by technical analysis score
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {data.pairs
+                                .sort((a, b) => parseFloat(b.enhancedScore) - parseFloat(a.enhancedScore))
+                                .slice(0, 5)
+                                .map((pair, index) => (
+                                    <div key={pair.pair} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-muted-foreground">{index + 1}.</span>
+                                            <span className="font-medium">{pair.pair}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <div className="flex items-center gap-2">
+                                                <span className={cn(
+                                                    "text-sm font-medium",
+                                                    parseFloat(pair.enhancedScore) >= 0.7 ? "text-emerald-400" :
+                                                    parseFloat(pair.enhancedScore) <= 0.3 ? "text-red-400" :
+                                                    "text-blue-400"
+                                                )}>
+                                                    {(parseFloat(pair.enhancedScore) * 100).toFixed(1)}%
+                                                </span>
+                                                <div className="w-24 h-2 bg-secondary/30 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={cn(
+                                                            "h-full rounded-full",
+                                                            parseFloat(pair.enhancedScore) >= 0.7 ? "bg-emerald-400" :
+                                                            parseFloat(pair.enhancedScore) <= 0.3 ? "bg-red-400" :
+                                                            "bg-blue-400"
+                                                        )}
+                                                        style={{ width: `${parseFloat(pair.enhancedScore) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                {pair.macdTrend} • RSI: {pair.rsi}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            {data.pairs.length === 0 && (
+                                <div className="text-sm text-muted-foreground">No pairs available</div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Add Bottom Enhanced Score Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Strong Sell Signals
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Enhanced Composite Score Components:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">RSI (15%):</span> Relative Strength Index measures overbought/oversold conditions</li>
+                                        <li><span className="text-emerald-400">MACD (20%):</span> Moving Average Convergence Divergence for trend strength</li>
+                                        <li><span className="text-emerald-400">Volume (10%):</span> Volume oscillator indicates buying/selling pressure</li>
+                                        <li><span className="text-emerald-400">Price Movement (15%):</span> Recent price action and momentum</li>
+                                        <li><span className="text-emerald-400">Moving Averages (20%):</span> Multiple timeframe trend alignment</li>
+                                        <li><span className="text-emerald-400">Volatility (10%):</span> Risk adjustment based on price stability</li>
+                                        <li><span className="text-emerald-400">Support/Resistance (10%):</span> Position relative to key levels</li>
+                                    </ul>
+                                    <div className="mt-2 text-xs text-muted-foreground">
+                                        Score ranges: <span className="text-emerald-400">&gt;70%</span> Strong Buy • 
+                                        <span className="text-blue-400">30-70%</span> Neutral • 
+                                        <span className="text-red-400">&lt;30%</span> Strong Sell
+                                    </div>
+                                </div>
+                            </div>
+                        </CardTitle>
+                        <CardDescription>
+                            Pairs with lowest technical analysis scores (&lt;30%)
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {data.pairs
+                                .filter(pair => parseFloat(pair.enhancedScore) <= 0.3)
+                                .sort((a, b) => parseFloat(a.enhancedScore) - parseFloat(b.enhancedScore))
+                                .slice(0, 5)
+                                .map((pair, index) => (
+                                    <div key={pair.pair} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-muted-foreground">{index + 1}.</span>
+                                            <span className="font-medium">{pair.pair}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-medium text-red-400">
+                                                    {(parseFloat(pair.enhancedScore) * 100).toFixed(1)}%
+                                                </span>
+                                                <div className="w-24 h-2 bg-secondary/30 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full rounded-full bg-red-400"
+                                                        style={{ width: `${parseFloat(pair.enhancedScore) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                {pair.macdTrend} • RSI: {pair.rsi}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            {data.pairs.filter(pair => parseFloat(pair.enhancedScore) <= 0.3).length === 0 && (
+                                <div className="text-sm text-muted-foreground">No pairs with strong sell signals currently</div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                                {/* Pumping Pairs Card */}
+                                <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-medium flex items-center">
                             <ChartBarIcon className="w-5 h-5 mr-2 text-emerald-400" />
@@ -502,37 +777,6 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardContent>
                 </Card>
 
-                {/* Technical Signals */}
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-medium flex items-center">
-                            <ChartBarIcon className="w-5 h-5 mr-2 text-blue-400" />
-                            Technical Signals
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ul className="space-y-3">
-                            <h3 className="text-sm font-medium text-muted-foreground mb-2">RSI Distribution:</h3>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Overbought (&gt;70)</span>
-                                <span className="text-sm font-medium text-red-400">{marketSummary.rsiDistribution.overbought}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Oversold (&lt;30)</span>
-                                <span className="text-sm font-medium text-emerald-400">{marketSummary.rsiDistribution.oversold}</span>
-                            </div>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-2">Trend Distribution:</h3>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Strong Uptrend</span>
-                                <span className="text-sm font-medium text-emerald-400">{marketSummary.trendDistribution.strongUptrend}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Strong Downtrend</span>
-                                <span className="text-sm font-medium text-red-400">{marketSummary.trendDistribution.strongDowntrend}</span>
-                            </div>
-                        </ul>
-                    </CardContent>
-                </Card>
 
                 {/* New Pairs Widget */}
                 <Card>
@@ -575,81 +819,30 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         ))}
                                     </ul>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground">No new pairs in the last 30 days</p>
+                                    <p className="text-sm text-muted-foreground">No new pairs in the last 7 days</p>
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-2">Added Last 30 Days</h3>
+                                {recentPairs.month.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {recentPairs.month.map(pair => (
+                                            <li key={pair.pair} className="text-sm border-l-2 border-blue-400/30 pl-2">
+                                                <div className="font-medium text-primary">{pair.pair}</div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No new pairs between 7-30 days</p>
                                 )}
                             </div>
                         </div>
                     </CardContent>
-                </Card>
+                </Card>            
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">    
-                      {/* Add Market Sentiment Card */}
-                {marketSummary && (
-                    <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-medium">Market Sentiment</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-xl font-bold mb-4">
-                        {marketSummary.marketSentiment}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-2">Trend Distribution</h3>
-                            <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-sm">Strong Uptrend</span>
-                                <span className="text-sm font-medium text-emerald-400">{marketSummary.trendDistribution.strongUptrend}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Weak Uptrend</span>
-                                <span className="text-sm font-medium text-emerald-400/70">{marketSummary.trendDistribution.weakUptrend}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Neutral</span>
-                                <span className="text-sm font-medium">{marketSummary.trendDistribution.neutral}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Weak Downtrend</span>
-                                <span className="text-sm font-medium text-red-400/70">{marketSummary.trendDistribution.weakDowntrend}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Strong Downtrend</span>
-                                <span className="text-sm font-medium text-red-400">{marketSummary.trendDistribution.strongDowntrend}</span>
-                            </div>
-                            </div>
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-2">RSI Distribution</h3>
-                            <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-sm">Overbought (&gt;70)</span>
-                                <span className="text-sm font-medium text-red-400">{marketSummary.rsiDistribution.overbought}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Neutral</span>
-                                <span className="text-sm font-medium">{marketSummary.rsiDistribution.neutral}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm">Oversold (&lt;30)</span>
-                                <span className="text-sm font-medium text-emerald-400">{marketSummary.rsiDistribution.oversold}</span>
-                            </div>
-                            </div>
-                            <div className="mt-4">
-                            <h3 className="text-sm font-medium text-muted-foreground mb-2">Volume Change</h3>
-                            <div className={cn(
-                                "text-lg font-bold",
-                                marketSummary.volumeChange > 0 ? "text-emerald-400" : "text-red-400"
-                            )}>
-                                {marketSummary.volumeChange > 0 ? '+' : '-'}{marketSummary.volumeChange.toFixed(2)}%
-                            </div>
-                            </div>
-                        </div>
-                        </div>
-                    </CardContent>
-                    </Card>
-                )}
+    
                 
                 {/* Add Recent Trend Changes Card */}
                 {trendChanges.length > 0 && (

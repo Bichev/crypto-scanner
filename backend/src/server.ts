@@ -119,6 +119,15 @@ app.get('/api/crypto/pairs', async (req, res, next) => {
     
     // Analyze only the pairs we have data for
     const analysisResults = await analyzer.analyzePairs(pairsToAnalyze);
+    
+    // Log volume change for verification
+    console.log('Market Summary - Volume Change:', analysisResults.marketSummary.volumeChange);
+    console.log('Sample of current volumes:', analysisResults.pairs.slice(0, 3).map(p => ({
+      pair: p.pair,
+      currentVolume: p.currentVolumeUSD,
+      vma7: p.vma_7
+    })));
+    
     res.json(analysisResults);
   } catch (error) {
     next(error);
@@ -228,13 +237,7 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
     try {
       const today = moment().startOf('day');
       const weekAgo = moment().subtract(7, 'days').startOf('day');
-
-    //   console.log('Fetching recent pairs:', {
-    //     today: today.format(),
-    //     weekAgo: weekAgo.format(),
-    //     todayUnix: today.unix(),
-    //     weekAgoUnix: weekAgo.unix()
-    //   });
+      const thirtyDaysAgo = moment().subtract(30, 'days').startOf('day');
 
       // Find pairs added today
       const todayPairs = await CandleModel.aggregate([
@@ -256,9 +259,7 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
         }
       ]);
 
-      console.log('Today pairs found:', todayPairs.length);
-
-      // Find pairs added in the last 30 days
+      // Find pairs added in the last 7 days
       const weekPairs = await CandleModel.aggregate([
         {
           $group: {
@@ -281,7 +282,28 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
         }
       ]);
 
-      console.log('7-day pairs found:', weekPairs.length);
+      // Find pairs added between 7 and 30 days ago
+      const monthPairs = await CandleModel.aggregate([
+        {
+          $group: {
+            _id: '$pair',
+            firstCandle: { $min: '$timestamp' },
+            lastCandle: { $max: '$timestamp' },
+            candleCount: { $sum: 1 }
+          }
+        },
+        {
+          $match: {
+            firstCandle: { 
+              $gte: thirtyDaysAgo.unix(),
+              $lt: weekAgo.unix()
+            }
+          }
+        },
+        {
+          $sort: { firstCandle: -1 }
+        }
+      ]);
 
       const formatPairInfo = (pair: any) => ({
         pair: pair._id,
@@ -292,7 +314,8 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
 
       res.json({
         today: todayPairs.map(formatPairInfo),
-        week: weekPairs.map(formatPairInfo)
+        week: weekPairs.map(formatPairInfo),
+        month: monthPairs.map(formatPairInfo)
       });
     } catch (error) {
       console.error('Error fetching recent pairs:', error);
@@ -300,43 +323,43 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
     }
   });
 
-// Add new endpoint for pump and dump pairs
-app.get('/api/crypto/market/pump-dump', async (req, res, next) => {
-  try {
-    const pairs = await CandleModel.distinct('pair');
-    const analysis = await analyzer.analyzePairs(pairs);
+// // Add new endpoint for pump and dump pairs
+// app.get('/api/crypto/market/pump-dump', async (req, res, next) => {
+//   try {
+//     const pairs = await CandleModel.distinct('pair');
+//     const analysis = await analyzer.analyzePairs(pairs);
     
-    const pumpingPairs = analysis.pairs
-      .filter(pair => pair.isPumping)
-      .sort((a, b) => b.pumpScore - a.pumpScore)
-      .map(pair => ({
-        pair: pair.pair,
-        score: pair.pumpScore,
-        volumeIncrease: pair.volumeIncrease,
-        priceChange: pair.priceChange,
-        intradayPriceChange: pair.intradayPriceChange
-      }));
+//     const pumpingPairs = analysis.pairs
+//       .filter(pair => pair.isPumping)
+//       .sort((a, b) => b.pumpScore - a.pumpScore)
+//       .map(pair => ({
+//         pair: pair.pair,
+//         score: pair.pumpScore,
+//         volumeIncrease: pair.volumeIncrease,
+//         priceChange: pair.priceChange,
+//         intradayPriceChange: pair.intradayPriceChange
+//       }));
 
-    const dumpingPairs = analysis.pairs
-      .filter(pair => pair.isDumping)
-      .sort((a, b) => b.dumpScore - a.dumpScore)
-      .map(pair => ({
-        pair: pair.pair,
-        score: pair.dumpScore,
-        volumeIncrease: pair.volumeIncrease,
-        priceChange: pair.priceChange,
-        intradayPriceChange: pair.intradayPriceChange
-      }));
+//     const dumpingPairs = analysis.pairs
+//       .filter(pair => pair.isDumping)
+//       .sort((a, b) => b.dumpScore - a.dumpScore)
+//       .map(pair => ({
+//         pair: pair.pair,
+//         score: pair.dumpScore,
+//         volumeIncrease: pair.volumeIncrease,
+//         priceChange: pair.priceChange,
+//         intradayPriceChange: pair.intradayPriceChange
+//       }));
 
-    res.json({
-      timestamp: Date.now(),
-      pumpingPairs,
-      dumpingPairs
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+//     res.json({
+//       timestamp: Date.now(),
+//       pumpingPairs,
+//       dumpingPairs
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// });
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

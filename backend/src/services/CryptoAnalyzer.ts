@@ -109,11 +109,12 @@ export class CryptoAnalyzer {
                 low: c.low,
                 close: c.close,
                 volume: c.volume
-              }))
+              })),
+              pair
             );
                 
-                // Add pump/dump detection
-                const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
+            // Add pump/dump detection
+            const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
             
             results.push({
               pair,
@@ -148,6 +149,10 @@ export class CryptoAnalyzer {
             marketSummary: {
                 timestamp: Date.now(),
                 totalPairs: results.length,
+                totalVolume: results.reduce((sum, p) => {
+                    const volume = parseFloat(p.currentVolumeUSD);
+                    return sum + (isNaN(volume) ? 0 : volume);
+                }, 0),
                 trendDistribution: {
                     strongUptrend: results.filter(p => p.macdTrend === 'Strong Uptrend').length,
                     weakUptrend: results.filter(p => p.macdTrend === 'Weak Uptrend').length,
@@ -184,17 +189,29 @@ export class CryptoAnalyzer {
     }
 
     private calculateTotalVolumeChange(pairs: any[]): number {
-        const totalCurrentVolume = pairs.reduce((sum, p) => sum + parseFloat(p.currentVolumeUSD || '0'), 0);
+        // Calculate total current volume in USD
+        const totalCurrentVolume = pairs.reduce((sum, p) => {
+            const volume = parseFloat(p.currentVolumeUSD);
+            return sum + (isNaN(volume) ? 0 : volume);
+        }, 0);
+
+        // Calculate total previous volume using 7-day moving average (also in USD)
         const totalPrevVolume = pairs.reduce((sum, p) => {
-            const volumeChange = parseFloat(p.volumeOscillator || '0');
-            const currentVolume = parseFloat(p.currentVolumeUSD || '0');
-            const prevVolume = currentVolume / (1 + volumeChange / 100);
-            return sum + prevVolume;
+            const vma7 = parseFloat(p.vma_7); // This is already in USD from calculateIndicators
+            return sum + (isNaN(vma7) ? 0 : vma7);
         }, 0);
         
-        return totalCurrentVolume > 0 && totalPrevVolume > 0 
-            ? ((totalCurrentVolume - totalPrevVolume) / totalPrevVolume) * 100 
-            : 0;
+        console.log('totalCurrentVolume USD:', totalCurrentVolume);
+        console.log('totalPrevVolume USD:', totalPrevVolume);
+        
+        // Calculate percentage change
+        if (totalCurrentVolume > 0 && totalPrevVolume > 0) {
+            const change = ((totalCurrentVolume - totalPrevVolume) / totalPrevVolume) * 100;
+            // Round to 2 decimal places
+            return Math.round(change * 100) / 100;
+        }
+        
+        return 0;
     }
 
     private calculateFibonacciLevels(high: number, low: number): { level: number; price: number }[] {
@@ -306,7 +323,7 @@ export class CryptoAnalyzer {
         };
     }
 
-    private calculateIndicators(longTermCandles: CandleData[], recentCandles: CandleData[]) {
+    private calculateIndicators(longTermCandles: CandleData[], recentCandles: CandleData[], pair: string) {
         const safeToFixed = (value: any, decimals: number): string => {
             if (value === undefined || value === null || isNaN(value)) {
                 return "0";
@@ -333,14 +350,33 @@ export class CryptoAnalyzer {
         });
 
         // Calculate MACD (26 days max)
-        const macd = ti.MACD.calculate({
-            values: longTermClosePrices,  // Use long-term data for MACD
+        type MACDResult = {
+            MACD?: number;
+            signal?: number;
+            histogram?: number;
+        };
+        
+        let macd: MACDResult[] = [];
+        if (longTermClosePrices.length >= 35) { // Minimum required periods: 26 + 9
+            macd = ti.MACD.calculate({
+                values: longTermClosePrices,  // Use long-term data for MACD
             fastPeriod: 12,
             slowPeriod: 26,
             signalPeriod: 9,
             SimpleMAOscillator: false,
             SimpleMASignal: false
-        });
+            });
+            // console.log('MACD calculation successful:', { 
+            //     dataPoints: longTermClosePrices.length,
+            //     macdLength: macd.length,
+            //     lastMACD: macd[macd.length - 1] 
+            // });
+        } else {
+            console.log('Insufficient data for MACD calculation for pair: ', pair, {
+                requiredPoints: 35,
+                availablePoints: longTermClosePrices.length
+            });
+        }
 
         // Calculate recent moving averages
         const sma7 = ti.SMA.calculate({ values: recentClosePrices, period: 7 });
@@ -446,8 +482,9 @@ export class CryptoAnalyzer {
         });
 
         // Volume analysis
-        const vma7 = ti.SMA.calculate({ values: recentVolumes, period: 7 });
-        const vma30 = ti.SMA.calculate({ values: recentVolumes, period: 30 });
+        const recentVolumeUSD = recentCandles.map(candle => candle.volume * candle.close);
+        const vma7 = ti.SMA.calculate({ values: recentVolumeUSD, period: 7 });
+        const vma30 = ti.SMA.calculate({ values: recentVolumeUSD, period: 30 });
         const obv = ti.OBV.calculate({
             close: recentClosePrices,
             volume: recentVolumes
@@ -783,7 +820,7 @@ export class CryptoAnalyzer {
 
     private calculateMACDTrend(macdData: any[]): string {
         if (!macdData || macdData.length < 2) {
-            console.log('Invalid MACD data:', { macdData });
+            // console.log('Invalid MACD data:', { macdData });
             return 'Neutral';
         }
         

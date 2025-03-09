@@ -116,6 +116,17 @@ export interface CryptoPair {
     
     advancedTrend: string;
     enhancedScore: string;
+    // Pump and dump properties
+    isPumping: boolean;
+    isDumping: boolean;
+    pumpScore: number;
+    dumpScore: number;
+    volumeIncrease: number;
+    priceChange: number;
+    intradayPriceChange: number;
+    liquidityType: 'Low' | 'Normal' | 'High';
+    volumeScore: number;
+    movementType: 'Low Liquidity Pump' | 'Volume Driven Pump' | 'Low Liquidity Dump' | 'Volume Driven Dump' | 'Normal';
 }
 
 export interface IndicatorDescription {
@@ -175,6 +186,7 @@ export const INDICATOR_DESCRIPTIONS: Record<string, IndicatorDescription> = {
 export interface MarketSummary {
     timestamp: number;
     totalPairs: number;
+    totalVolume: number;
     trendDistribution: {
         strongUptrend: number;
         weakUptrend: number;

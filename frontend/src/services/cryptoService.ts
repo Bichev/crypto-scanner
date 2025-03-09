@@ -120,6 +120,12 @@ export const cryptoService = {
             lastSeen: string;
             candleCount: number;
         }>;
+        month: Array<{
+            pair: string;
+            firstSeen: string;
+            lastSeen: string;
+            candleCount: number;
+        }>;
     }> {
         try {
             const response = await fetch(`${API_BASE_URL}/crypto/pairs/recent`);
@@ -127,7 +133,7 @@ export const cryptoService = {
             return await response.json();
         } catch (error) {
             console.error('Error fetching recent pairs:', error);
-            return { today: [], week: [] };
+            return { today: [], week: [], month: [] };
         }
     },
 
