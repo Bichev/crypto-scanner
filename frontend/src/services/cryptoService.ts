@@ -1,16 +1,44 @@
 import axios from 'axios';
-import { CryptoPair } from '../types/crypto';
+import { CryptoPair, AnalyzerResponse } from '../types/crypto';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
 export const cryptoService = {
-    async getCryptoPairs(): Promise<CryptoPair[]> {
+    async getCryptoPairs(): Promise<AnalyzerResponse> {
         try {
             const response = await axios.get(`${API_BASE_URL}/crypto/pairs`);
             return response.data;
         } catch (error) {
             console.error('Error fetching crypto pairs:', error);
-            return [];
+            return { pairs: [], marketSummary: {
+                timestamp: Date.now(),
+                totalPairs: 0,
+                trendDistribution: {
+                    strongUptrend: 0,
+                    weakUptrend: 0,
+                    neutral: 0,
+                    weakDowntrend: 0,
+                    strongDowntrend: 0
+                },
+                rsiDistribution: {
+                    overbought: 0,
+                    neutral: 0,
+                    oversold: 0
+                },
+                volumeChange: 0,
+                topGainers: [],
+                topLosers: [],
+                marketSentiment: 'Neutral',
+                marketBreadth: {
+                    advances: 0,
+                    declines: 0,
+                    averageRSI: 0,
+                    advanceDeclineRatio: 0,
+                    percentStrongUptrend: 0,
+                    percentStrongDowntrend: 0,
+                    averageMACD: 0
+                }
+            }};
         }
     },
 

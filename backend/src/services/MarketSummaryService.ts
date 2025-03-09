@@ -49,7 +49,7 @@ export class MarketSummaryService {
     const analyses = await this.analyzer.analyzePairs(pairs);
     
     // Calculate market breadth
-    const marketBreadth = await this.analyzer.calculateMarketBreadth(analyses);
+    const marketBreadth = await this.analyzer.calculateMarketBreadth(analyses.pairs);
     
     // Calculate distributions
     const trendDistribution = {
@@ -70,7 +70,7 @@ export class MarketSummaryService {
     let prevTotalVolume = 0;
     
     // Process each analysis
-    analyses.forEach(analysis => {
+    analyses.pairs.forEach(analysis => {
       // Count trend types
       if (analysis.macdTrend?.includes('Strong Up')) trendDistribution.strongUptrend++;
       else if (analysis.macdTrend?.includes('Weak Up')) trendDistribution.weakUptrend++;
@@ -94,7 +94,7 @@ export class MarketSummaryService {
       ((totalVolume - prevTotalVolume) / prevTotalVolume) * 100 : 0;
     
     // Sort for top gainers/losers
-    const sortedByChange = [...analyses].sort(
+    const sortedByChange = [...analyses.pairs].sort(
       (a, b) => parseFloat(b.dailyPriceChange) - parseFloat(a.dailyPriceChange)
     );
     
@@ -114,7 +114,7 @@ export class MarketSummaryService {
     
     return {
       timestamp: Date.now(),
-      totalPairs: analyses.length,
+      totalPairs: analyses.pairs.length,
       trendDistribution,
       rsiDistribution,
       volumeChange,

@@ -26,7 +26,7 @@ export class TrendMonitorService {
     const currentAnalysis = await this.analyzer.analyzePairs(pairs);
     
     // Compare with previous analysis
-    for (const analysis of currentAnalysis) {
+    for (const analysis of currentAnalysis.pairs) {
       const pair = analysis.pair;
       const previous = this.lastAnalysis.get(pair);
       

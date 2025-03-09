@@ -58,54 +58,43 @@ export class CryptoAnalyzer {
         return this.indicatorDescriptions[indicator] || null;
     }
 
-    async analyzePairs(pairs: string[]): Promise<any[]> {
+    async analyzePairs(pairs: string[]): Promise<{ pairs: any[]; marketSummary: any }> {
+        const startTime = moment();
         const results = [];
+        const thirtyDaysAgo = moment().subtract(30, 'days');
+        const twoHundredDaysAgo = moment().subtract(200, 'days');
         
-        // Calculate optimal time ranges
-        const now = moment();
-        const oneDayAgo = now.clone().subtract(1, 'day');
-        const thirtyDaysAgo = now.clone().subtract(30, 'days');
-        const twoHundredDaysAgo = now.clone().subtract(200, 'days');
-        
+        // Process all pairs
         for (const pair of pairs) {
           try {
-            // Get data in different time ranges for optimization
-            const [recentCandles, longTermCandles] = await Promise.all([
-              // Recent data for most indicators (30 days)
+                // Get data in different time ranges for optimization
+                const [recentCandles, longTermCandles] = await Promise.all([
+                    // Recent data for most indicators (30 days)
               CandleModel.find({ 
                 pair, 
-                timestamp: { $gte: thirtyDaysAgo.unix() } 
+                        timestamp: { $gte: thirtyDaysAgo.unix() } 
               }).sort({ timestamp: 1 }),
               
-              // Long-term data only for 200MA and long-term analysis
+                    // Long-term data only for 200MA and long-term analysis
               CandleModel.find({ 
                 pair, 
-                timestamp: { $gte: twoHundredDaysAgo.unix() } 
+                        timestamp: { $gte: twoHundredDaysAgo.unix() } 
               }).sort({ timestamp: 1 }),
             ]);
             
-            // console.log('Candle data for', pair, {
-            //   thirtyDaysAgo: thirtyDaysAgo.format(),
-            //   twoHundredDaysAgo: twoHundredDaysAgo.format(),
-            //   recentCandlesCount: recentCandles.length,
-            //   longTermCandlesCount: longTermCandles.length,
-            //   firstRecentCandle: recentCandles[0]?.timestamp ? moment.unix(recentCandles[0].timestamp).format() : 'none',
-            //   lastRecentCandle: recentCandles[recentCandles.length - 1]?.timestamp ? moment.unix(recentCandles[recentCandles.length - 1].timestamp).format() : 'none'
-            // });
-            
-            if (recentCandles.length === 0) {
+                if (recentCandles.length === 0) {
               console.log(`No data available for ${pair}. Skipping...`);
               continue;
             }
             
-            // Calculate USD volume using recent data
-            const lastCandle = recentCandles[recentCandles.length - 1];
+                // Calculate USD volume using recent data
+                const lastCandle = recentCandles[recentCandles.length - 1];
             const currentVolumeUSD = lastCandle.volume * lastCandle.close;
             
-            // Calculate indicators with appropriate data ranges
+                // Calculate indicators with appropriate data ranges
             const analysis = this.calculateIndicators(
-              // Map candle data
-              longTermCandles.map((c: CandleData) => ({
+                    // Map candle data
+                    longTermCandles.map((c: CandleData) => ({
                 timestamp: c.timestamp,
                 open: c.open,
                 high: c.high,
@@ -113,7 +102,7 @@ export class CryptoAnalyzer {
                 close: c.close,
                 volume: c.volume
               })), 
-              recentCandles.map((c: CandleData) => ({
+                    recentCandles.map((c: CandleData) => ({
                 timestamp: c.timestamp,
                 open: c.open,
                 high: c.high,
@@ -122,36 +111,91 @@ export class CryptoAnalyzer {
                 volume: c.volume
               }))
             );
-            
-            // Add pump/dump detection
-            const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
+                
+                // Add pump/dump detection
+                const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
             
             results.push({
               pair,
               currentVolumeUSD: currentVolumeUSD.toFixed(2),
-              ...analysis,
-              isPumping: pumpDumpAnalysis.isPumping,
-              isDumping: pumpDumpAnalysis.isDumping,
-              pumpScore: pumpDumpAnalysis.pumpScore,
-              dumpScore: pumpDumpAnalysis.dumpScore,
-              volumeIncrease: pumpDumpAnalysis.volumeIncrease,
-              priceChange: pumpDumpAnalysis.priceChange,
-              intradayPriceChange: pumpDumpAnalysis.intradayPriceChange,
-              liquidityType: pumpDumpAnalysis.liquidityType,
-              volumeScore: pumpDumpAnalysis.volumeScore,
-              movementType: pumpDumpAnalysis.isPumping ? 
-                          (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
-                          pumpDumpAnalysis.isDumping ? 
-                          (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
-                          'Normal'
+                    ...analysis,
+                    isPumping: pumpDumpAnalysis.isPumping,
+                    isDumping: pumpDumpAnalysis.isDumping,
+                    pumpScore: pumpDumpAnalysis.pumpScore,
+                    dumpScore: pumpDumpAnalysis.dumpScore,
+                    volumeIncrease: pumpDumpAnalysis.volumeIncrease,
+                    priceChange: pumpDumpAnalysis.priceChange,
+                    intradayPriceChange: pumpDumpAnalysis.intradayPriceChange,
+                    liquidityType: pumpDumpAnalysis.liquidityType,
+                    volumeScore: pumpDumpAnalysis.volumeScore,
+                    movementType: pumpDumpAnalysis.isPumping ? 
+                                (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
+                                pumpDumpAnalysis.isDumping ? 
+                                (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
+                                'Normal'
             });
           } catch (error) {
             console.error(`Error analyzing ${pair} from database:`, error);
           }
         }
         
-        return results;
-      }
+        // Calculate market breadth metrics after analyzing all pairs
+        const marketBreadth = await this.calculateMarketBreadth(results);
+
+        // Return both individual pair analysis and market breadth
+        return {
+            pairs: results,
+            marketSummary: {
+                timestamp: Date.now(),
+                totalPairs: results.length,
+                trendDistribution: {
+                    strongUptrend: results.filter(p => p.macdTrend === 'Strong Uptrend').length,
+                    weakUptrend: results.filter(p => p.macdTrend === 'Weak Uptrend').length,
+                    neutral: results.filter(p => !p.macdTrend || p.macdTrend === 'Neutral').length,
+                    weakDowntrend: results.filter(p => p.macdTrend === 'Weak Downtrend').length,
+                    strongDowntrend: results.filter(p => p.macdTrend === 'Strong Downtrend').length
+                },
+                rsiDistribution: {
+                    overbought: results.filter(p => parseFloat(p.rsi) > 70).length,
+                    neutral: results.filter(p => parseFloat(p.rsi) >= 30 && parseFloat(p.rsi) <= 70).length,
+                    oversold: results.filter(p => parseFloat(p.rsi) < 30).length
+                },
+                volumeChange: this.calculateTotalVolumeChange(results),
+                topGainers: results
+                    .sort((a, b) => parseFloat(b.dailyPriceChange) - parseFloat(a.dailyPriceChange))
+                    .slice(0, 5)
+                    .map(p => ({ pair: p.pair, change: p.dailyPriceChange })),
+                topLosers: results
+                    .sort((a, b) => parseFloat(a.dailyPriceChange) - parseFloat(b.dailyPriceChange))
+                    .slice(0, 5)
+                    .map(p => ({ pair: p.pair, change: p.dailyPriceChange })),
+                marketSentiment: marketBreadth.marketSentiment,
+                marketBreadth: {
+                    advances: marketBreadth.advances,
+                    declines: marketBreadth.declines,
+                    averageRSI: marketBreadth.averageRSI,
+                    advanceDeclineRatio: marketBreadth.advanceDeclineRatio,
+                    percentStrongUptrend: marketBreadth.percentStrongUptrend,
+                    percentStrongDowntrend: marketBreadth.percentStrongDowntrend,
+                    averageMACD: marketBreadth.averageMACD
+                }
+            }
+        };
+    }
+
+    private calculateTotalVolumeChange(pairs: any[]): number {
+        const totalCurrentVolume = pairs.reduce((sum, p) => sum + parseFloat(p.currentVolumeUSD || '0'), 0);
+        const totalPrevVolume = pairs.reduce((sum, p) => {
+            const volumeChange = parseFloat(p.volumeOscillator || '0');
+            const currentVolume = parseFloat(p.currentVolumeUSD || '0');
+            const prevVolume = currentVolume / (1 + volumeChange / 100);
+            return sum + prevVolume;
+        }, 0);
+        
+        return totalCurrentVolume > 0 && totalPrevVolume > 0 
+            ? ((totalCurrentVolume - totalPrevVolume) / totalPrevVolume) * 100 
+            : 0;
+    }
 
     private calculateFibonacciLevels(high: number, low: number): { level: number; price: number }[] {
         const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
@@ -297,13 +341,6 @@ export class CryptoAnalyzer {
             SimpleMAOscillator: false,
             SimpleMASignal: false
         });
-
-        // console.log('MACD calculation:', {
-        //     recentClosePrices: longTermClosePrices.slice(-5),  // Show last 5 prices from long-term data
-        //     macdLength: macd.length,
-        //     lastMACD: macd[macd.length - 1],
-        //     secondLastMACD: macd[macd.length - 2]
-        // });
 
         // Calculate recent moving averages
         const sma7 = ti.SMA.calculate({ values: recentClosePrices, period: 7 });
@@ -620,12 +657,6 @@ export class CryptoAnalyzer {
             riskAdjustedScore: riskAdjustedScore.toFixed(2),
             enhancedScore: enhancedScore.toFixed(2)
         };
-        // console.log('Response object MACD data:', {
-        //     macd: latestMACD?.MACD,
-        //     signal: latestMACD?.signal,
-        //     histogram: latestMACD?.histogram,
-        //     trend: this.calculateMACDTrend(macd)
-        // });
     }
 
     private calculateVolatility(prices: number[], period: number): number {
@@ -773,25 +804,6 @@ export class CryptoAnalyzer {
         // Detect crossovers
         const bullishCrossover = !prevMacdAboveSignal && macdAboveSignal;
         const bearishCrossover = prevMacdAboveSignal && !macdAboveSignal;
-
-        // console.log('MACD trend calculation:', {
-        //     current: {
-        //         MACD: current.MACD,
-        //         signal: current.signal,
-        //         histogram: current.histogram
-        //     },
-        //     changes: {
-        //         macdChange,
-        //         signalChange,
-        //         histogram
-        //     },
-        //     conditions: {
-        //         macdAboveSignal,
-        //         prevMacdAboveSignal,
-        //         bullishCrossover,
-        //         bearishCrossover
-        //     }
-        // });
 
         // Strong trend conditions
         if (macdAboveSignal && histogram > 0 && macdChange > 0 && signalChange > 0) {

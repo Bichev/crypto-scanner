@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CryptoPair } from '@/types/crypto';
+import { CryptoPair, AnalyzerResponse, MarketSummary } from '@/types/crypto';
 import { formatNumber, formatPercentage, getTrendColor, cn } from '@/lib/utils';
 import { ArrowUpIcon, ArrowDownIcon, ChartBarIcon, PlusCircleIcon } from '@heroicons/react/24/solid';
 import { MarketDistributionChart, RSIDistributionChart, PriceChangeChart } from '@/components/chart-coponent';
@@ -8,50 +8,16 @@ import { cryptoService } from '@/services/cryptoService';
 import { BollingerDistributionChart, VolatilityRadarChart, AdvancedTrendChart } from '@/components/advanced-charts';
 
 interface DashboardProps {
-    data: CryptoPair[];
+    data: AnalyzerResponse;
     lastUpdated: Date | null;
 }
 
-// Add market summary interface
-interface MarketSummary {
-    timestamp: number;
-    totalPairs: number;
-    trendDistribution: {
-      strongUptrend: number;
-      weakUptrend: number;
-      neutral: number;
-      weakDowntrend: number;
-      strongDowntrend: number;
-    };
-    rsiDistribution: {
-      oversold: number;
-      neutral: number;
-      overbought: number;
-    };
-    volumeChange: number;
-    topGainers: { pair: string; change: string }[];
-    topLosers: { pair: string; change: string }[];
-    marketSentiment: string;
-    marketBreadth: {
-        advances: number;
-        declines: number;
-        averageRSI: number;
-        advanceDeclineRatio: number;
-        percentStrongUptrend: number;
-        percentStrongDowntrend: number;
-        averageMACD: number;
-    };
-  }
-
 export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
-    const [marketSummary, setMarketSummary] = useState<MarketSummary | null>(null);
     const [correlations, setCorrelations] = useState<any[]>([]);
     const [trendChanges, setTrendChanges] = useState<any[]>([]);
-    const [loadingSummary, setLoadingSummary] = useState(true);
     const [loadingCorrelations, setLoadingCorrelations] = useState(true);
     const [loadingTrendChanges, setLoadingTrendChanges] = useState(true);
 
-    
     const [recentPairs, setRecentPairs] = React.useState<{
         today: Array<{
             pair: string;
@@ -97,31 +63,24 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
         loadRecentPairs();
     }, []);
 
-
     useEffect(() => {
-        // Fetch market summary
         const fetchMarketData = async () => {
             try {
-                setLoadingSummary(true);
                 setLoadingCorrelations(true);
                 setLoadingTrendChanges(true);
 
-                // Use Promise.all to fetch data in parallel
-                const [summary, correlationData, trendData, pumpDumpInfo] = await Promise.all([
-                    cryptoService.getMarketSummary(),
+                const [correlationData, trendData, pumpDumpInfo] = await Promise.all([
                     cryptoService.getCorrelations(10),
                     cryptoService.getTrendChanges('high'),
                     cryptoService.getPumpDumpPairs()
                 ]);
 
-                setMarketSummary(summary);
                 setCorrelations(correlationData);
                 setTrendChanges(trendData);
                 setPumpDumpData(pumpDumpInfo);
             } catch (error) {
                 console.error('Error fetching market data:', error);
             } finally {
-                setLoadingSummary(false);
                 setLoadingCorrelations(false);
                 setLoadingTrendChanges(false);
             }
@@ -130,22 +89,27 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
         fetchMarketData();
     }, [data]);
 
-    // Calculate aggregated market stats
-    const marketStats = React.useMemo(() => {
-        if (!data.length) return null;
+    // Get market summary from the main data prop
+    const marketSummary = data.marketSummary;
 
+    // Calculate aggregated market stats from pairs data
+    const marketStats = React.useMemo(() => {
+        if (!data.pairs.length) return null;
+
+        const pairs = data.pairs;
+        
         // Get total number of pairs
-        const totalPairs = data.length;
+        const totalPairs = pairs.length;
 
         // Calculate total 24h volume
-        const totalVolume = data.reduce((sum, pair) => {
+        const totalVolume = pairs.reduce((sum: number, pair: CryptoPair) => {
             const volume = parseFloat(pair.currentVolumeUSD || '0');
             return sum + (isNaN(volume) ? 0 : volume);
         }, 0);
 
         // Count positive and negative 24h changes
-        const changes = data.reduce(
-            (acc, pair) => {
+        const changes = pairs.reduce(
+            (acc: { positive: number; negative: number }, pair: CryptoPair) => {
                 const change = parseFloat(pair.dailyPriceChange);
                 if (isNaN(change)) return acc;
                 if (change > 0) acc.positive += 1;
@@ -156,15 +120,15 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
         );
 
         // Calculate average RSI
-        const validRsi = data
-            .map(pair => parseFloat(pair.rsi))
-            .filter(rsi => !isNaN(rsi));
+        const validRsi = pairs
+            .map((pair: CryptoPair) => parseFloat(pair.rsi))
+            .filter((rsi: number) => !isNaN(rsi));
         const avgRsi = validRsi.length
-            ? validRsi.reduce((sum, rsi) => sum + rsi, 0) / validRsi.length
+            ? validRsi.reduce((sum: number, rsi: number) => sum + rsi, 0) / validRsi.length
             : 0;
 
         // Get top gainers and losers
-        const sortedByChange = [...data]
+        const sortedByChange = [...pairs]
             .filter(pair => !isNaN(parseFloat(pair.dailyPriceChange)))
             .sort((a, b) => parseFloat(b.dailyPriceChange) - parseFloat(a.dailyPriceChange));
         
@@ -223,7 +187,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         {/* Market Sentiment */}
                         <div className="mt-4 pb-2 border-b border-border">
                             <div className="flex justify-between items-center">
-                                <p className="text-sm text-muted-foreground">Market Sentiment</p>
+                                <p className="text-sm text-muted-foreground">Sentiment</p>
                                 <p className={cn(
                                     "text-sm font-medium",
                                     marketSummary?.marketSentiment?.includes('Strongly Bullish') ? "text-emerald-400" :
@@ -322,7 +286,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             </div>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-1">
-                                    <p className="text-sm text-muted-foreground">Strong Trends</p>
+                                    <p className="text-sm text-muted-foreground">Trends</p>
                                     <div className="group relative">
                                         <span className="cursor-help text-muted-foreground">?</span>
                                         <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
@@ -548,34 +512,24 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-3">
-                            <li className="flex justify-between items-center">
-                                <span className="text-sm text-muted-foreground">Overbought (&gt;70)</span>
-                                <span className="text-red-400 font-medium">
-                                    {data.filter(p => parseFloat(p.rsi) > 70).length}
-                                </span>
-                            </li>
-                            <li className="flex justify-between items-center">
-                                <span className="text-sm text-muted-foreground">Oversold (&lt;30)</span>
-                                <span className="text-emerald-400 font-medium">
-                                    {data.filter(p => parseFloat(p.rsi) < 30).length}
-                                </span>
-                            </li>
-                            <li className="flex justify-between items-center">
-                                <span className="text-sm text-muted-foreground">Strong Uptrend</span>
-                                <span className="text-2xl font-bold">
-                                {(() => {
-                                    // console.log('All MACD Trends:', data.map(p => p.macdTrend));
-                                    // console.log('Strong Uptrends:', data.filter(p => p.macdTrend === 'Strong Uptrend').length);
-                                    return data.filter(p => p.macdTrend === 'Strong Uptrend').length;
-                                })()}
-                                </span>
-                            </li>
-                            <li className="flex justify-between items-center">
-                                <span className="text-sm text-muted-foreground">Strong Downtrend</span>
-                                <span className="text-2xl font-bold">
-                                {data.filter(p => p.macdTrend === 'Strong Downtrend').length}
-                                </span>
-                            </li>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-2">RSI Distribution:</h3>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Overbought (&gt;70)</span>
+                                <span className="text-sm font-medium text-red-400">{marketSummary.rsiDistribution.overbought}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Oversold (&lt;30)</span>
+                                <span className="text-sm font-medium text-emerald-400">{marketSummary.rsiDistribution.oversold}</span>
+                            </div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-2">Trend Distribution:</h3>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Strong Uptrend</span>
+                                <span className="text-sm font-medium text-emerald-400">{marketSummary.trendDistribution.strongUptrend}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm">Strong Downtrend</span>
+                                <span className="text-sm font-medium text-red-400">{marketSummary.trendDistribution.strongDowntrend}</span>
+                            </div>
                         </ul>
                     </CardContent>
                 </Card>
@@ -688,7 +642,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                 "text-lg font-bold",
                                 marketSummary.volumeChange > 0 ? "text-emerald-400" : "text-red-400"
                             )}>
-                                {marketSummary.volumeChange > 0 ? '+' : ''}{marketSummary.volumeChange.toFixed(2)}%
+                                {marketSummary.volumeChange > 0 ? '+' : '-'}{marketSummary.volumeChange.toFixed(2)}%
                             </div>
                             </div>
                         </div>
@@ -763,16 +717,16 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
 
             {/* Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <PriceChangeChart data={data} />
-                <MarketDistributionChart data={data} />
-                <RSIDistributionChart data={data} />
+                <PriceChangeChart data={data.pairs} />
+                <MarketDistributionChart data={data.pairs} />
+                <RSIDistributionChart data={data.pairs} />
             </div>
 
             {/* New Charts Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <BollingerDistributionChart data={data} />
-                <VolatilityRadarChart data={data} />
-                <AdvancedTrendChart data={data} />
+                <BollingerDistributionChart data={data.pairs} />
+                <VolatilityRadarChart data={data.pairs} />
+                <AdvancedTrendChart data={data.pairs} />
             </div>
 
         </div>

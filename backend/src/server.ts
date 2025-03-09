@@ -167,7 +167,7 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
       let pairsToAnalyze = pairs;
       if (pairs.length > limit) {
         const topPairs = await analyzer.analyzePairs(pairs);
-        pairsToAnalyze = topPairs
+        pairsToAnalyze = topPairs.pairs
           .sort((a, b) => parseFloat(b.currentVolumeUSD) - parseFloat(a.currentVolumeUSD))
           .slice(0, limit)
           .map(p => p.pair);
@@ -192,11 +192,11 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
       
       // Analyze single pair in detail
       const analysis = await analyzer.analyzePairs([pair]);
-      if (analysis.length === 0) {
+      if (analysis.pairs.length === 0) {
         return res.status(404).json({ error: 'Analysis not available' });
       }
       
-      res.json(analysis[0]);
+      res.json(analysis.pairs[0]);
     } catch (error) {
       next(error);
     }
@@ -306,7 +306,7 @@ app.get('/api/crypto/market/pump-dump', async (req, res, next) => {
     const pairs = await CandleModel.distinct('pair');
     const analysis = await analyzer.analyzePairs(pairs);
     
-    const pumpingPairs = analysis
+    const pumpingPairs = analysis.pairs
       .filter(pair => pair.isPumping)
       .sort((a, b) => b.pumpScore - a.pumpScore)
       .map(pair => ({
@@ -317,7 +317,7 @@ app.get('/api/crypto/market/pump-dump', async (req, res, next) => {
         intradayPriceChange: pair.intradayPriceChange
       }));
 
-    const dumpingPairs = analysis
+    const dumpingPairs = analysis.pairs
       .filter(pair => pair.isDumping)
       .sort((a, b) => b.dumpScore - a.dumpScore)
       .map(pair => ({

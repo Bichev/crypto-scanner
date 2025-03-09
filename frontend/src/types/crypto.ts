@@ -171,3 +171,43 @@ export const INDICATOR_DESCRIPTIONS: Record<string, IndicatorDescription> = {
         interpretation: "Strong trend when ADX > 25 and DI+ > DI- (uptrend) or DI- > DI+ (downtrend)"
     }
 };
+
+export interface MarketSummary {
+    timestamp: number;
+    totalPairs: number;
+    trendDistribution: {
+        strongUptrend: number;
+        weakUptrend: number;
+        neutral: number;
+        weakDowntrend: number;
+        strongDowntrend: number;
+    };
+    rsiDistribution: {
+        overbought: number;
+        neutral: number;
+        oversold: number;
+    };
+    volumeChange: number;
+    topGainers: Array<{ pair: string; change: string }>;
+    topLosers: Array<{ pair: string; change: string }>;
+    marketSentiment: string;
+    marketBreadth: {
+        advances: number;
+        declines: number;
+        averageRSI: number;
+        advanceDeclineRatio: number;
+        percentStrongUptrend: number;
+        percentStrongDowntrend: number;
+        averageMACD: number;
+    };
+}
+
+export interface AnalyzerResponse {
+    pairs: CryptoPair[];
+    marketSummary: MarketSummary;
+}
+
+export interface DashboardProps {
+    data: AnalyzerResponse;
+    lastUpdated: Date | null;
+}

@@ -80,7 +80,7 @@ export class CoinbaseDataFetcher {
             );
 
             try {
-                console.log(`Fetching candles for ${pair} from ${startTime.format('YYYY-MM-DD HH:mm:ss')} UTC to ${chunkEndTime.format('YYYY-MM-DD HH:mm:ss')} UTC`);
+                // console.log(`Fetching candles for ${pair} from ${startTime.format('YYYY-MM-DD HH:mm:ss')} UTC to ${chunkEndTime.format('YYYY-MM-DD HH:mm:ss')} UTC`);
                 const response = await axios.get(`${this.BASE_URL}/${pair}/candles`, {
                     params: {
                         granularity: 86400,
@@ -221,7 +221,7 @@ export class CoinbaseDataFetcher {
                     }));
 
                     await CandleModel.bulkWrite(operations);
-                    console.log(`Updated ${recentCandles.length} candles for ${pair}`);
+                    // console.log(`Updated ${recentCandles.length} candles for ${pair}`);
                 }
             } catch (error) {
                 console.error(`Error updating data for ${pair}:`, error);

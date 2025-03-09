@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { CryptoTable } from '../components/CryptoTable';
 import { CryptoDashboard } from '@/components/CryptoDashboard';
 import { cryptoService } from '../services/cryptoService';
-import { CryptoPair } from '../types/crypto';
+import { CryptoPair, AnalyzerResponse } from '../types/crypto';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { MoonIcon, SunIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import { useTheme } from 'next-themes';
@@ -12,7 +12,38 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Home() {
-  const [cryptoPairs, setCryptoPairs] = useState<CryptoPair[]>([]);
+  const [cryptoPairs, setCryptoPairs] = useState<AnalyzerResponse>({ 
+    pairs: [], 
+    marketSummary: {
+      timestamp: Date.now(),
+      totalPairs: 0,
+      trendDistribution: {
+        strongUptrend: 0,
+        weakUptrend: 0,
+        neutral: 0,
+        weakDowntrend: 0,
+        strongDowntrend: 0
+      },
+      rsiDistribution: {
+        overbought: 0,
+        neutral: 0,
+        oversold: 0
+      },
+      volumeChange: 0,
+      topGainers: [],
+      topLosers: [],
+      marketSentiment: 'Neutral',
+      marketBreadth: {
+        advances: 0,
+        declines: 0,
+        averageRSI: 0,
+        advanceDeclineRatio: 0,
+        percentStrongUptrend: 0,
+        percentStrongDowntrend: 0,
+        averageMACD: 0
+      }
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -27,8 +58,8 @@ export default function Home() {
       setError(null);
       const data = await cryptoService.getCryptoPairs();
       setCryptoPairs(data);
-      setTotalPairs(data.length);
-      setAnalyzedPairs(data.length);
+      setTotalPairs(data.pairs.length);
+      setAnalyzedPairs(data.pairs.length);
       setLastUpdated(new Date());
       setLoading(false);
       setManualRefresh(false);
@@ -106,7 +137,7 @@ export default function Home() {
             </div>
           </div>
 
-          {loading && cryptoPairs.length === 0 ? (
+          {loading && cryptoPairs.pairs.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12">
               <LoadingSpinner size="lg" />
               <p className="text-muted-foreground mt-4">Loading cryptocurrency data...</p>
@@ -122,7 +153,7 @@ export default function Home() {
               </TabsContent>
               
               <TabsContent value="scanner" className="mt-0">
-                <CryptoTable data={cryptoPairs} />
+                <CryptoTable data={cryptoPairs.pairs} />
               </TabsContent>
               
               {loading && (
