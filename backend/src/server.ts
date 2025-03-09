@@ -229,12 +229,12 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
       const today = moment().startOf('day');
       const weekAgo = moment().subtract(7, 'days').startOf('day');
 
-      console.log('Fetching recent pairs:', {
-        today: today.format(),
-        weekAgo: weekAgo.format(),
-        todayUnix: today.unix(),
-        weekAgoUnix: weekAgo.unix()
-      });
+    //   console.log('Fetching recent pairs:', {
+    //     today: today.format(),
+    //     weekAgo: weekAgo.format(),
+    //     todayUnix: today.unix(),
+    //     weekAgoUnix: weekAgo.unix()
+    //   });
 
       // Find pairs added today
       const todayPairs = await CandleModel.aggregate([

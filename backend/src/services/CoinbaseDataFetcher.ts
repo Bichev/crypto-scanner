@@ -99,7 +99,7 @@ export class CoinbaseDataFetcher {
                 }));
 
                 allCandles = allCandles.concat(formattedCandles);
-                console.log(`Fetched ${formattedCandles.length} candles for ${pair}`);
+                // console.log(`Fetched ${formattedCandles.length} candles for ${pair}`);
                 await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (error) {
                 if (axios.isAxiosError(error) && error.response?.status === 429) {
@@ -163,7 +163,7 @@ export class CoinbaseDataFetcher {
             }));
             
             await CandleModel.insertMany(candlesToInsert);
-            console.log(`Inserted ${candlesToInsert.length} candles for ${pair}`);
+            // console.log(`Inserted ${candlesToInsert.length} candles for ${pair}`);
             newCandles = newCandles.concat(fetchedCandles);
           }
           
@@ -183,7 +183,7 @@ export class CoinbaseDataFetcher {
         
         for (let i = 0; i < pairs.length; i += this.BATCH_SIZE) {
             const batch = pairs.slice(i, i + this.BATCH_SIZE);
-            console.log(`Processing batch ${i / this.BATCH_SIZE + 1} of ${Math.ceil(pairs.length / this.BATCH_SIZE)}`);
+            // console.log(`Processing batch ${i / this.BATCH_SIZE + 1} of ${Math.ceil(pairs.length / this.BATCH_SIZE)}`);
             
             await this.processBatch(batch, yesterday, today);
             
@@ -198,7 +198,7 @@ export class CoinbaseDataFetcher {
         const batchPromises = pairs.map(async pair => {
             try {
                 const endDate = moment.min(today, moment().utc());
-                console.log(`Fetching recent data for ${pair} from ${yesterday.format('YYYY-MM-DD HH:mm:ss')} UTC to ${endDate.format('YYYY-MM-DD HH:mm:ss')} UTC`);
+                // console.log(`Fetching recent data for ${pair} from ${yesterday.format('YYYY-MM-DD HH:mm:ss')} UTC to ${endDate.format('YYYY-MM-DD HH:mm:ss')} UTC`);
                 
                 const recentCandles = await this.fetchDailyCandles(pair, yesterday, endDate);
                 

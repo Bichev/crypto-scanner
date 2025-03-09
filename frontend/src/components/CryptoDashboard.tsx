@@ -564,8 +564,8 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                 <span className="text-sm text-muted-foreground">Strong Uptrend</span>
                                 <span className="text-2xl font-bold">
                                 {(() => {
-                                    console.log('All MACD Trends:', data.map(p => p.macdTrend));
-                                    console.log('Strong Uptrends:', data.filter(p => p.macdTrend === 'Strong Uptrend').length);
+                                    // console.log('All MACD Trends:', data.map(p => p.macdTrend));
+                                    // console.log('Strong Uptrends:', data.filter(p => p.macdTrend === 'Strong Uptrend').length);
                                     return data.filter(p => p.macdTrend === 'Strong Uptrend').length;
                                 })()}
                                 </span>

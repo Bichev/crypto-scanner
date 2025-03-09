@@ -26,7 +26,7 @@ async function fetchDailyCandles(pair, start, end) {
                 },
             });
             allCandles = allCandles.concat(response.data.reverse()); // Reverse for chronological order
-            console.log(`Fetched ${response.data.length} candles for ${pair} from ${startTime.format()} to ${chunkEndTime.format()}`);
+            // console.log(`Fetched ${response.data.length} candles for ${pair} from ${startTime.format()} to ${chunkEndTime.format()}`);
         } catch (error) {
             console.error(`Error fetching data for ${pair}:`, error.message);
             break;

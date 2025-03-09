@@ -84,14 +84,14 @@ export class CryptoAnalyzer {
               }).sort({ timestamp: 1 }),
             ]);
             
-            console.log('Candle data for', pair, {
-              thirtyDaysAgo: thirtyDaysAgo.format(),
-              twoHundredDaysAgo: twoHundredDaysAgo.format(),
-              recentCandlesCount: recentCandles.length,
-              longTermCandlesCount: longTermCandles.length,
-              firstRecentCandle: recentCandles[0]?.timestamp ? moment.unix(recentCandles[0].timestamp).format() : 'none',
-              lastRecentCandle: recentCandles[recentCandles.length - 1]?.timestamp ? moment.unix(recentCandles[recentCandles.length - 1].timestamp).format() : 'none'
-            });
+            // console.log('Candle data for', pair, {
+            //   thirtyDaysAgo: thirtyDaysAgo.format(),
+            //   twoHundredDaysAgo: twoHundredDaysAgo.format(),
+            //   recentCandlesCount: recentCandles.length,
+            //   longTermCandlesCount: longTermCandles.length,
+            //   firstRecentCandle: recentCandles[0]?.timestamp ? moment.unix(recentCandles[0].timestamp).format() : 'none',
+            //   lastRecentCandle: recentCandles[recentCandles.length - 1]?.timestamp ? moment.unix(recentCandles[recentCandles.length - 1].timestamp).format() : 'none'
+            // });
             
             if (recentCandles.length === 0) {
               console.log(`No data available for ${pair}. Skipping...`);
@@ -298,12 +298,12 @@ export class CryptoAnalyzer {
             SimpleMASignal: false
         });
 
-        console.log('MACD calculation:', {
-            recentClosePrices: longTermClosePrices.slice(-5),  // Show last 5 prices from long-term data
-            macdLength: macd.length,
-            lastMACD: macd[macd.length - 1],
-            secondLastMACD: macd[macd.length - 2]
-        });
+        // console.log('MACD calculation:', {
+        //     recentClosePrices: longTermClosePrices.slice(-5),  // Show last 5 prices from long-term data
+        //     macdLength: macd.length,
+        //     lastMACD: macd[macd.length - 1],
+        //     secondLastMACD: macd[macd.length - 2]
+        // });
 
         // Calculate recent moving averages
         const sma7 = ti.SMA.calculate({ values: recentClosePrices, period: 7 });
@@ -620,12 +620,12 @@ export class CryptoAnalyzer {
             riskAdjustedScore: riskAdjustedScore.toFixed(2),
             enhancedScore: enhancedScore.toFixed(2)
         };
-        console.log('Response object MACD data:', {
-            macd: latestMACD?.MACD,
-            signal: latestMACD?.signal,
-            histogram: latestMACD?.histogram,
-            trend: this.calculateMACDTrend(macd)
-        });
+        // console.log('Response object MACD data:', {
+        //     macd: latestMACD?.MACD,
+        //     signal: latestMACD?.signal,
+        //     histogram: latestMACD?.histogram,
+        //     trend: this.calculateMACDTrend(macd)
+        // });
     }
 
     private calculateVolatility(prices: number[], period: number): number {
@@ -774,46 +774,46 @@ export class CryptoAnalyzer {
         const bullishCrossover = !prevMacdAboveSignal && macdAboveSignal;
         const bearishCrossover = prevMacdAboveSignal && !macdAboveSignal;
 
-        console.log('MACD trend calculation:', {
-            current: {
-                MACD: current.MACD,
-                signal: current.signal,
-                histogram: current.histogram
-            },
-            changes: {
-                macdChange,
-                signalChange,
-                histogram
-            },
-            conditions: {
-                macdAboveSignal,
-                prevMacdAboveSignal,
-                bullishCrossover,
-                bearishCrossover
-            }
-        });
+        // console.log('MACD trend calculation:', {
+        //     current: {
+        //         MACD: current.MACD,
+        //         signal: current.signal,
+        //         histogram: current.histogram
+        //     },
+        //     changes: {
+        //         macdChange,
+        //         signalChange,
+        //         histogram
+        //     },
+        //     conditions: {
+        //         macdAboveSignal,
+        //         prevMacdAboveSignal,
+        //         bullishCrossover,
+        //         bearishCrossover
+        //     }
+        // });
 
         // Strong trend conditions
         if (macdAboveSignal && histogram > 0 && macdChange > 0 && signalChange > 0) {
-            console.log('Strong Uptrend detected');
+            // console.log('Strong Uptrend detected');
             return 'Strong Uptrend';
         }
         if (!macdAboveSignal && histogram < 0 && macdChange < 0 && signalChange < 0) {
-            console.log('Strong Downtrend detected');
+            // console.log('Strong Downtrend detected');
             return 'Strong Downtrend';
         }
 
         // Weak trend conditions
         if (bullishCrossover || (macdAboveSignal && histogram > 0)) {
-            console.log('Weak Uptrend detected');
+            // console.log('Weak Uptrend detected');
             return 'Weak Uptrend';
         }
         if (bearishCrossover || (!macdAboveSignal && histogram < 0)) {
-            console.log('Weak Downtrend detected');
+            // console.log('Weak Downtrend detected');
             return 'Weak Downtrend';
         }
 
-        console.log('No trend detected - Neutral');
+        // console.log('No trend detected - Neutral');
         return 'Neutral';
     }
 
@@ -1165,7 +1165,7 @@ export class CryptoAnalyzer {
         const avgMACD = pairs.reduce((sum, pair) => sum + parseFloat(pair.macd || '0'), 0) / pairs.length;
 
         // Calculate the percentage of assets in strong trends
-        console.log('Sample of MACD trends:', pairs.slice(0, 5).map((pair, index) => ({ index, trend: pair.macdTrend })));
+        // console.log('Sample of MACD trends:', pairs.slice(0, 5).map((pair, index) => ({ index, trend: pair.macdTrend })));
         const strongUptrends = pairs.filter(pair => pair.macdTrend === 'Strong Uptrend').length;
         const strongDowntrends = pairs.filter(pair => pair.macdTrend === 'Strong Downtrend').length;
         console.log('Strong trends counts:', { strongUptrends, strongDowntrends });

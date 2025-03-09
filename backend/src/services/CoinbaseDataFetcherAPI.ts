@@ -60,7 +60,7 @@ export class CoinbaseDataFetcher {
                 }));
 
                 allCandles = allCandles.concat(formattedCandles);
-                console.log(`Fetched ${formattedCandles.length} candles for ${pair} from ${startTime.format()} to ${chunkEndTime.format()}`);
+                // console.log(`Fetched ${formattedCandles.length} candles for ${pair} from ${startTime.format()} to ${chunkEndTime.format()}`);
             } catch (error) {
                 console.error(`Error fetching data for ${pair}:`, error);
                 break;
