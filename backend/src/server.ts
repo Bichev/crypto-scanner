@@ -169,7 +169,7 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
   app.get('/api/crypto/market/correlations', async (req, res, next) => {
     try {
       const pairs = await CandleModel.distinct('pair');
-      const period = req.query.period ? parseInt(req.query.period as string) : 30;
+      const timeframe = req.query.timeframe as '7d' | '30d' | '90d' || '30d';  // Default to 30d
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       
       // Get top pairs by volume if limit specified
@@ -182,8 +182,16 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
           .map(p => p.pair);
       }
       
-      const correlations = await correlationService.analyzeCorrelations(pairsToAnalyze, period);
-      res.json(correlations);
+      const correlations = await correlationService.analyzeCorrelations(pairsToAnalyze);
+      
+      // Map correlations to use the selected timeframe
+      const timeframeCorrelations = correlations.map(corr => ({
+        ...corr,
+        correlation: corr.timeframes[timeframe],  // Use correlation from selected timeframe
+        selectedTimeframe: timeframe
+      }));
+
+      res.json(timeframeCorrelations);
     } catch (error) {
       next(error);
     }
@@ -323,43 +331,43 @@ app.get('/api/crypto/pairs/:pair/history', async (req, res, next) => {
     }
   });
 
-// // Add new endpoint for pump and dump pairs
-// app.get('/api/crypto/market/pump-dump', async (req, res, next) => {
-//   try {
-//     const pairs = await CandleModel.distinct('pair');
-//     const analysis = await analyzer.analyzePairs(pairs);
+// Add new endpoint for pump and dump pairs
+app.get('/api/crypto/market/pump-dump', async (req, res, next) => {
+  try {
+    const pairs = await CandleModel.distinct('pair');
+    const analysis = await analyzer.analyzePairs(pairs);
     
-//     const pumpingPairs = analysis.pairs
-//       .filter(pair => pair.isPumping)
-//       .sort((a, b) => b.pumpScore - a.pumpScore)
-//       .map(pair => ({
-//         pair: pair.pair,
-//         score: pair.pumpScore,
-//         volumeIncrease: pair.volumeIncrease,
-//         priceChange: pair.priceChange,
-//         intradayPriceChange: pair.intradayPriceChange
-//       }));
+    const pumpingPairs = analysis.pairs
+      .filter(pair => pair.isPumping)
+      .sort((a, b) => b.pumpScore - a.pumpScore)
+      .map(pair => ({
+        pair: pair.pair,
+        score: pair.pumpScore,
+        volumeIncrease: pair.volumeIncrease,
+        priceChange: pair.priceChange,
+        intradayPriceChange: pair.intradayPriceChange
+      }));
 
-//     const dumpingPairs = analysis.pairs
-//       .filter(pair => pair.isDumping)
-//       .sort((a, b) => b.dumpScore - a.dumpScore)
-//       .map(pair => ({
-//         pair: pair.pair,
-//         score: pair.dumpScore,
-//         volumeIncrease: pair.volumeIncrease,
-//         priceChange: pair.priceChange,
-//         intradayPriceChange: pair.intradayPriceChange
-//       }));
+    const dumpingPairs = analysis.pairs
+      .filter(pair => pair.isDumping)
+      .sort((a, b) => b.dumpScore - a.dumpScore)
+      .map(pair => ({
+        pair: pair.pair,
+        score: pair.dumpScore,
+        volumeIncrease: pair.volumeIncrease,
+        priceChange: pair.priceChange,
+        intradayPriceChange: pair.intradayPriceChange
+      }));
 
-//     res.json({
-//       timestamp: Date.now(),
-//       pumpingPairs,
-//       dumpingPairs
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// });
+    res.json({
+      timestamp: Date.now(),
+      pumpingPairs,
+      dumpingPairs
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

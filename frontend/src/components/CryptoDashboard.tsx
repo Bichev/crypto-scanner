@@ -6,6 +6,7 @@ import { ArrowUpIcon, ArrowDownIcon, ChartBarIcon, PlusCircleIcon, QuestionMarkC
 import { MarketDistributionChart, RSIDistributionChart, PriceChangeChart } from '@/components/chart-coponent';
 import { cryptoService } from '@/services/cryptoService';
 import { BollingerDistributionChart, VolatilityRadarChart, AdvancedTrendChart } from '@/components/advanced-charts';
+import { CorrelationWidget } from '@/components/CorrelationWidget';
 
 interface DashboardProps {
     data: AnalyzerResponse;
@@ -845,7 +846,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
     
                 
                 {/* Add Recent Trend Changes Card */}
-                {trendChanges.length > 0 && (
+                {/* {trendChanges.length > 0 && (
                     <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-medium">Recent Significant Changes</CardTitle>
@@ -874,17 +875,17 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         </div>
                     </CardContent>
                     </Card>
-                )}
+                )} */}
                 
                 {/* Add Correlations Card */}
-                {correlations.length > 0 && (
+                {/* {correlations.length > 0 && (
                     <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-medium">Strong Market Correlations</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                        {correlations.slice(0, 5).map((correlation, index) => (
+                        {correlations.slice(0, 10).map((correlation, index) => (
                             <div key={index} className="flex justify-between items-center">
                             <div>
                                 <span className="font-medium">{correlation.pair1}</span>
@@ -905,7 +906,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         </div>
                     </CardContent>
                     </Card>
-                )}
+                )} */}
             </div>
 
             {/* Charts */}
@@ -921,6 +922,11 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                 <VolatilityRadarChart data={data.pairs} />
                 <AdvancedTrendChart data={data.pairs} />
             </div>
+
+            {/* Correlation Analysis */}
+            {/* <div className="mt-6">
+                <CorrelationWidget />
+            </div> */}
 
         </div>
     );

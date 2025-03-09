@@ -10,6 +10,7 @@ import { MoonIcon, SunIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CorrelationMatrix } from '@/components/CorrelationMatrix';
 
 export default function Home() {
   const [cryptoPairs, setCryptoPairs] = useState<AnalyzerResponse>({ 
@@ -17,6 +18,7 @@ export default function Home() {
     marketSummary: {
       timestamp: Date.now(),
       totalPairs: 0,
+      totalVolume: 0,
       trendDistribution: {
         strongUptrend: 0,
         weakUptrend: 0,
@@ -52,6 +54,10 @@ export default function Home() {
   const [manualRefresh, setManualRefresh] = useState<boolean>(false);
   const { theme, setTheme } = useTheme();
 
+  // Add new state for correlations
+  const [correlationsData, setCorrelationsData] = useState<any[]>([]);
+  const [correlationsLoading, setCorrelationsLoading] = useState(false);
+
   const fetchData = async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
@@ -70,9 +76,25 @@ export default function Home() {
     }
   };
 
+  const fetchCorrelations = async () => {
+    try {
+      setCorrelationsLoading(true);
+      const data = await cryptoService.getCorrelations(20);
+      setCorrelationsData(data);
+    } catch (error) {
+      console.error('Error fetching correlations:', error);
+    } finally {
+      setCorrelationsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(false), 5 * 60 * 1000);
+    fetchCorrelations();
+    const interval = setInterval(() => {
+      fetchData(false);
+      fetchCorrelations();
+    }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -120,9 +142,10 @@ export default function Home() {
       <div className="container mx-auto px-4 md:px-8 mt-6">
         <Tabs defaultValue="dashboard" className="w-full">
           <div className="flex justify-between items-center mb-6">
-            <TabsList className="grid grid-cols-2 w-[280px]">
+            <TabsList className="grid grid-cols-3 w-[400px]">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="scanner">Scanner</TabsTrigger>
+              <TabsTrigger value="correlations">Correlations</TabsTrigger>
             </TabsList>
             
             <div className="flex flex-col text-right">
@@ -154,6 +177,10 @@ export default function Home() {
               
               <TabsContent value="scanner" className="mt-0">
                 <CryptoTable data={cryptoPairs.pairs} />
+              </TabsContent>
+              
+              <TabsContent value="correlations" className="mt-0">
+                <CorrelationMatrix data={correlationsData} loading={correlationsLoading} />
               </TabsContent>
               
               {loading && (

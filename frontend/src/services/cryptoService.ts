@@ -13,6 +13,7 @@ export const cryptoService = {
             return { pairs: [], marketSummary: {
                 timestamp: Date.now(),
                 totalPairs: 0,
+                totalVolume: 0,
                 trendDistribution: {
                     strongUptrend: 0,
                     weakUptrend: 0,
