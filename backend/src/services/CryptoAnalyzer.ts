@@ -501,7 +501,7 @@ export class CryptoAnalyzer {
             .map(level => ({
                 price: level.price,
                 strength: Math.round(level.strength * 100),
-                description: level.description
+                description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 support`) || ''
             }))
             .sort((a, b) => b.price - a.price) // Sort from highest to lowest
             .slice(0, 3); // Take top 3
@@ -519,7 +519,7 @@ export class CryptoAnalyzer {
             .map(level => ({
                 price: level.price,
                 strength: Math.round(level.strength * 100),
-                description: level.description
+                description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 resistance`) || ''
             }))
             .sort((a, b) => a.price - b.price) // Sort from lowest to highest
             .slice(0, 3); // Take top 3
@@ -541,7 +541,7 @@ export class CryptoAnalyzer {
                     .map(level => ({
                         price: level.price,
                         strength: Math.round(level.strength * 100),
-                        description: level.description
+                        description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 support`) || ''
                     }))
                     .sort((a, b) => b.price - a.price)
                     .slice(0, 3);
@@ -550,7 +550,7 @@ export class CryptoAnalyzer {
                     .map(level => ({
                         price: level.price,
                         strength: Math.round(level.strength * 100),
-                        description: level.description
+                        description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 resistance`) || ''
                     }))
                     .sort((a, b) => a.price - b.price)
                     .slice(0, 3);
@@ -563,7 +563,7 @@ export class CryptoAnalyzer {
                     .map(level => ({
                         price: level.price,
                         strength: Math.round(level.strength * 100),
-                        description: `${level.description} (price classification)`
+                        description: `${level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 support`) || ''} (price classification)`
                     }))
                     .sort((a, b) => b.price - a.price)
                     .slice(0, 3);
@@ -572,7 +572,7 @@ export class CryptoAnalyzer {
                     .map(level => ({
                         price: level.price,
                         strength: Math.round(level.strength * 100),
-                        description: `${level.description} (price classification)`
+                        description: `${level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 resistance`) || ''} (price classification)`
                     }))
                     .sort((a, b) => a.price - b.price)
                     .slice(0, 3);
@@ -1354,10 +1354,10 @@ export class CryptoAnalyzer {
             displacement: 26
         });
 
-        console.log('Ichimoku calculation result:', {
-            resultLength: ichimoku.length,
-            latest: ichimoku[ichimoku.length - 1]
-        });
+        // console.log('Ichimoku calculation result:', {
+        //     resultLength: ichimoku.length,
+        //     latest: ichimoku[ichimoku.length - 1]
+        // });
 
         const latest = ichimoku[ichimoku.length - 1] || {};
         
@@ -1393,7 +1393,7 @@ export class CryptoAnalyzer {
             tkCross
         };
 
-        console.log('Final Ichimoku values:', result);
+        // console.log('Final Ichimoku values:', result);
         
         return result;
     }
