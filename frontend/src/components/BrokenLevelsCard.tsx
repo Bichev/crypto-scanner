@@ -1,4 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
+import { CryptoPair } from '@/types/crypto';
+import { formatPrice } from '@/lib/support-resistance-helpers';
+import { cn } from '@/lib/utils';
 
 interface BrokenLevel {
     price: number;
@@ -7,15 +10,6 @@ interface BrokenLevel {
     priceAtBreak: number;
     volume24hAtBreak: number;
     description?: string;
-}
-
-interface CryptoPair {
-    pair: string;
-    currentPrice: string;
-    brokenLevels?: {
-        brokenSupports: BrokenLevel[];
-        brokenResistances: BrokenLevel[];
-    };
 }
 
 interface BrokenLevelsCardProps {
@@ -174,6 +168,148 @@ export function BrokenLevelsCard({ pairs }: BrokenLevelsCardProps) {
                         </div>
                     </div>
                 </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+export function BrokenResistancesCard({ pairs }: BrokenLevelsCardProps) {
+    const recentBreaks = pairs
+        .filter(pair => pair.brokenLevels)
+        .flatMap(pair => (pair.brokenLevels?.brokenResistances || []).map(level => ({
+            ...level,
+            pair: pair.pair,
+            type: 'resistance' as const,
+            currentPrice: parseFloat(pair.currentPrice)
+        })));
+
+    const filteredBreaks = recentBreaks
+        .filter(level => {
+            const timeDiff = Math.floor(Date.now() / 1000) - level.breakTime;
+            return timeDiff < 2 * 24 * 60 * 60; // 48 hours
+        })
+        .sort((a, b) => b.breakTime - a.breakTime);
+
+    const totalBreaks = filteredBreaks.length;
+    const displayBreaks = filteredBreaks.slice(0, 10); // Show top 10
+
+    return (
+        <Card>
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-medium flex items-center justify-between">
+                    Broken Resistances
+                    <span className="text-sm text-muted-foreground">
+                        ({totalBreaks})
+                    </span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                {displayBreaks.length > 0 ? (
+                    <ul className="space-y-3">
+                        {displayBreaks.map((level, i) => (
+                            <li key={`${level.pair}-${level.breakTime}`} className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                    <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                    <div>
+                                        <span className="font-medium">{level.pair}</span>
+                                        {/* <div className="text-xs text-muted-foreground">
+                                            Break: ${formatPrice(level.priceAtBreak)}
+                                        </div> */}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+
+                                    <span className="text-emerald-400 font-medium block">
+                                        New:  ${formatPrice(level.price)}
+                                    </span>
+
+                                    {/* <span className="text-emerald-400 font-medium block">
+                                        Vol: ${formatPrice(level.volume24hAtBreak)}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Level: ${formatPrice(level.price)}
+                                    </span> */}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className="text-muted-foreground text-sm">
+                        No resistance breaks detected recently
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+export function BrokenSupportsCard({ pairs }: BrokenLevelsCardProps) {
+    const recentBreaks = pairs
+        .filter(pair => pair.brokenLevels)
+        .flatMap(pair => (pair.brokenLevels?.brokenSupports || []).map(level => ({
+            ...level,
+            pair: pair.pair,
+            type: 'support' as const,
+            currentPrice: parseFloat(pair.currentPrice)
+        })));
+
+    const filteredBreaks = recentBreaks
+        .filter(level => {
+            const timeDiff = Math.floor(Date.now() / 1000) - level.breakTime;
+            return timeDiff < 2 * 24 * 60 * 60; // 48 hours
+        })
+        .sort((a, b) => b.breakTime - a.breakTime);
+
+    const totalBreaks = filteredBreaks.length;
+    const displayBreaks = filteredBreaks.slice(0, 10); // Show top 10
+
+    return (
+        <Card>
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-medium flex items-center justify-between">
+                    Broken Supports
+                    <span className="text-sm text-muted-foreground">
+                        ({totalBreaks})
+                    </span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                {displayBreaks.length > 0 ? (
+                    <ul className="space-y-3">
+                        {displayBreaks.map((level, i) => (
+                            <li key={`${level.pair}-${level.breakTime}`} className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                    <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                    <div>
+                                        <span className="font-medium">{level.pair}</span>
+                                        {/* <div className="text-xs text-muted-foreground">
+                                            Break: ${formatPrice(level.priceAtBreak)}
+                                        </div> */}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+
+                                    <span className="text-red-400 font-medium block">
+                                        New: ${formatPrice(level.price)}
+                                    </span>
+
+
+
+                                    {/* <span className="text-red-400 font-medium block">
+                                        Vol: ${formatPrice(level.volume24hAtBreak)}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Level: ${formatPrice(level.price)}
+                                    </span> */}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className="text-muted-foreground text-sm">
+                        No support breaks detected recently
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

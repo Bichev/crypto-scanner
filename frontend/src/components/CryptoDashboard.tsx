@@ -7,7 +7,7 @@ import { MarketDistributionChart, RSIDistributionChart, PriceChangeChart } from 
 import { cryptoService } from '@/services/cryptoService';
 import { BollingerDistributionChart, VolatilityRadarChart, AdvancedTrendChart } from '@/components/advanced-charts';
 import { CorrelationWidget } from '@/components/CorrelationWidget';
-import { BrokenLevelsCard } from '@/components/BrokenLevelsCard';
+import { BrokenResistancesCard, BrokenSupportsCard } from '@/components/BrokenLevelsCard';
 
 interface DashboardProps {
     data: AnalyzerResponse;
@@ -428,14 +428,56 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Broken Levels Section */}
+                            <div>
+                                <div className="flex items-center gap-1 mb-2">
+                                    <h3 className="text-sm font-medium text-muted-foreground">Broken Levels:</h3>
+                                    <div className="group relative">
+                                        <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                        <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg">
+                                            <p className="font-medium mb-2">Support & Resistance Level Breaks</p>
+                                            <p className="text-xs mb-2">Shows the number of pairs that have broken through their support or resistance levels in the last 48 hours.</p>
+                                            <ul className="space-y-2 text-xs">
+                                                <li>
+                                                    <span className="text-emerald-400 font-medium">Lost Resistance:</span>
+                                                    <p>Price has broken above previous resistance level, indicating potential upward momentum.</p>
+                                                </li>
+                                                <li>
+                                                    <span className="text-red-400 font-medium">Lost Support:</span>
+                                                    <p>Price has broken below previous support level, indicating potential downward momentum.</p>
+                                                </li>
+                                            </ul>
+                                            <p className="text-xs mt-2 text-muted-foreground">Breaks are confirmed using price action and volume analysis.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Lost Resistance</span>
+                                        <span className="text-m font-medium text-emerald-400">
+                                            {data.pairs.reduce((count, pair) => 
+                                                count + (pair.brokenLevels?.brokenResistances?.filter(level => 
+                                                    Math.floor(Date.now() / 1000) - level.breakTime < 2 * 24 * 60 * 60
+                                                ).length || 0), 0
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm">Lost Support</span>
+                                        <span className="text-m font-medium text-red-400">
+                                            {data.pairs.reduce((count, pair) => 
+                                                count + (pair.brokenLevels?.brokenSupports?.filter(level => 
+                                                    Math.floor(Date.now() / 1000) - level.breakTime < 2 * 24 * 60 * 60
+                                                ).length || 0), 0
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </ul>
                     </CardContent>
                 </Card>
-
-                {/* Add BrokenLevelsCard */}
-                <div className="col-span-2">
-                    <BrokenLevelsCard pairs={data.pairs} />
-                </div>
 
                 {/* Top Gainers Card */}
                 <Card>
@@ -841,7 +883,12 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             </div>
                         </div>
                     </CardContent>
-                </Card>            
+                </Card>    
+
+                {/* Replace the BrokenLevelsCard with the two new cards */}
+                <BrokenResistancesCard pairs={data.pairs} />
+                <BrokenSupportsCard pairs={data.pairs} />
+
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">    

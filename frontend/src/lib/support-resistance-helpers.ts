@@ -41,22 +41,22 @@ export const isSameLevel = (price1: number, price2: number, percentThreshold: nu
 };
 
 /**
- * Get fallback support level when none detected
+ * Get fallback support level from backend data
  * @param pair Crypto pair object
- * @returns Support level price and description
+ * @returns Support level price and description from backend
  */
 export const getFallbackSupport = (pair: CryptoPair): { price: number; description: string } => {
-  if (!pair || !pair.fallbackSupport) return { price: 0, description: 'No data available' };
+  if (!pair?.fallbackSupport) return { price: 0, description: 'No data available' };
   return pair.fallbackSupport;
 };
 
 /**
- * Get fallback resistance level when none detected
+ * Get fallback resistance level from backend data
  * @param pair Crypto pair object
- * @returns Resistance level price and description
+ * @returns Resistance level price and description from backend
  */
 export const getFallbackResistance = (pair: CryptoPair): { price: number; description: string } => {
-  if (!pair || !pair.fallbackResistance) return { price: 0, description: 'No data available' };
+  if (!pair?.fallbackResistance) return { price: 0, description: 'No data available' };
   return pair.fallbackResistance;
 };
 
@@ -65,7 +65,7 @@ export const getFallbackResistance = (pair: CryptoPair): { price: number; descri
  * @param timestamp Unix timestamp in seconds
  * @returns Formatted string like "2h ago" or "3d ago"
  */
-const formatTimeAgo = (timestamp: number): string => {
+export const formatTimeAgo = (timestamp: number): string => {
   const now = Date.now() / 1000;
   const diff = now - timestamp;
 
