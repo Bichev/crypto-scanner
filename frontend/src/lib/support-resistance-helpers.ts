@@ -46,11 +46,8 @@ export const isSameLevel = (price1: number, price2: number, percentThreshold: nu
  * @returns Support level price and description
  */
 export const getFallbackSupport = (pair: CryptoPair): { price: number; description: string } => {
-  if (!pair) return { price: 0, description: 'No data available' };
-  return pair.fallbackSupport || { 
-    price: parseFloat(pair.currentPrice || '0') * 0.85,
-    description: 'No data available'
-  };
+  if (!pair || !pair.fallbackSupport) return { price: 0, description: 'No data available' };
+  return pair.fallbackSupport;
 };
 
 /**
@@ -59,11 +56,8 @@ export const getFallbackSupport = (pair: CryptoPair): { price: number; descripti
  * @returns Resistance level price and description
  */
 export const getFallbackResistance = (pair: CryptoPair): { price: number; description: string } => {
-  if (!pair) return { price: 0, description: 'No data available' };
-  return pair.fallbackResistance || {
-    price: parseFloat(pair.currentPrice || '0') * 1.15,
-    description: 'No data available'
-  };
+  if (!pair || !pair.fallbackResistance) return { price: 0, description: 'No data available' };
+  return pair.fallbackResistance;
 };
 
 /**

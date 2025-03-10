@@ -119,7 +119,7 @@ export class CryptoAnalyzer {
             // Calculate first seen timestamp (convert to milliseconds if in seconds)
             const firstSeenTimestamp = longTermCandles.length > 0 ? 
                 (longTermCandles[0].timestamp * (longTermCandles[0].timestamp < 1e12 ? 1000 : 1)) : null;
-
+            
             results.push({
               pair,
               currentVolumeUSD: currentVolumeUSD.toFixed(2),
@@ -282,12 +282,10 @@ export class CryptoAnalyzer {
         // Get the current price from the last candle
         const currentPrice = candles[candles.length - 1].close;
         const recentCandles = candles.slice(-lookbackPeriod);
+        const volume24h = recentCandles[recentCandles.length - 1].volume * recentCandles[recentCandles.length - 1].close;
 
         // Calculate support and resistance levels
         const { supports, resistances, nearestSupport, nearestResistance } = this.detectPriceLevels(recentCandles);
-
-        // Get previous levels from cache
-        const previousLevels = this.getPreviousLevels(pair);
 
         // Initialize broken levels arrays
         const brokenLevels = {
@@ -309,67 +307,60 @@ export class CryptoAnalyzer {
             }>
         };
 
-        // Check for broken levels
-        if (previousLevels) {
-            // Check previous supports
-            for (const support of previousLevels.supports) {
-                if (currentPrice < support.price * 0.99) { // 1% threshold
-                    brokenLevels.brokenSupports.push({
-                        price: support.price,
-                        strength: support.strength,
-                        breakTime: Math.floor(Date.now() / 1000),
-                        priceAtBreak: currentPrice,
-                        volume24hAtBreak: recentCandles[recentCandles.length - 1].volume
-                    });
-                }
-            }
-
-            // Check previous resistances
-            for (const resistance of previousLevels.resistances) {
-                if (currentPrice > resistance.price * 1.01) { // 1% threshold
-                    brokenLevels.brokenResistances.push({
-                        price: resistance.price,
-                        strength: resistance.strength,
-                        breakTime: Math.floor(Date.now() / 1000),
-                        priceAtBreak: currentPrice,
-                        volume24hAtBreak: recentCandles[recentCandles.length - 1].volume
-                    });
-                }
-            }
+        // Check for broken levels by comparing current price with detected levels
+        // If we don't have any supports, it means they were broken
+        if (supports.length === 0) {
+            // console.log(`${pair}: No supports detected - treating as broken support`);
+            const fallbackPrice = currentPrice * 0.85;
+            brokenLevels.brokenSupports.push({
+                price: fallbackPrice,
+                strength: 1,
+                breakTime: Math.floor(Date.now() / 1000),
+                priceAtBreak: currentPrice,
+                volume24hAtBreak: volume24h,
+                description: `Support broken down with ${volume24h.toFixed(2)} volume`
+            });
         }
 
-        // Update cache with current levels
-        this.updatePreviousLevels(pair, { supports, resistances });
+        // If we don't have any resistances, it means they were broken
+        if (resistances.length === 0) {
+            console.log(`${pair}: No resistances detected - treating as broken resistance`);
+            const fallbackPrice = currentPrice * 1.15;
+            brokenLevels.brokenResistances.push({
+                price: fallbackPrice,
+                strength: 1,
+                breakTime: Math.floor(Date.now() / 1000),
+                priceAtBreak: currentPrice,
+                volume24hAtBreak: volume24h,
+                description: `Resistance broken up with ${volume24h.toFixed(2)} volume`
+            });
+        }
 
-        // Calculate fallback support and resistance
+        // Log summary of broken levels
+        // console.log(`${pair}: Found broken levels:`, {
+        //     brokenSupports: brokenLevels.brokenSupports.length,
+        //     brokenResistances: brokenLevels.brokenResistances.length,
+        //     timestamp: Math.floor(Date.now() / 1000),
+        //     currentPrice,
+        //     volume24h
+        // });
+
+        // Calculate fallback support and resistance with more meaningful descriptions
         let fallbackSupport = {
             price: currentPrice * 0.85,
-            description: 'No significant support levels detected in this range'
+            description: brokenLevels.brokenSupports.length > 0 
+                ? `Support broken - Next target ${(currentPrice * 0.85).toFixed(8)}`
+                : 'No support level established yet'
         };
 
         let fallbackResistance = {
             price: currentPrice * 1.15,
-            description: 'No significant resistance levels detected in this range'
+            description: brokenLevels.brokenResistances.length > 0
+                ? `Resistance broken - Next target ${(currentPrice * 1.15).toFixed(8)}`
+                : 'No resistance level established yet'
         };
 
-        // Update fallback descriptions based on broken levels
-        if (brokenLevels.brokenSupports.length > 0) {
-            const recentBreak = brokenLevels.brokenSupports
-                .sort((a, b) => b.breakTime - a.breakTime)[0];
-            fallbackSupport = {
-                price: currentPrice * 0.85,
-                description: `Previous support at ${recentBreak.price.toFixed(8)} broken ${this.formatTimeAgo(recentBreak.breakTime)}`
-            };
-        }
-
-        if (brokenLevels.brokenResistances.length > 0) {
-            const recentBreak = brokenLevels.brokenResistances
-                .sort((a, b) => b.breakTime - a.breakTime)[0];
-            fallbackResistance = {
-                price: currentPrice * 1.15,
-                description: `Previous resistance at ${recentBreak.price.toFixed(8)} broken ${this.formatTimeAgo(recentBreak.breakTime)}`
-            };
-        }
+        // No need for additional updates since we're already handling broken levels above
 
         return {
             supports,
@@ -683,10 +674,12 @@ export class CryptoAnalyzer {
             //     lastMACD: macd[macd.length - 1] 
             // });
         } else {
-            console.log('Insufficient data for MACD calculation for pair: ', pair, {
-                requiredPoints: 35,
-                availablePoints: longTermClosePrices.length
-            });
+            macd = [{MACD: 0, signal: 0, histogram: 0}] //assign insufficent default values
+
+            // console.log('Insufficient data for MACD calculation for pair: ', pair, {
+            //     requiredPoints: 35,
+            //     availablePoints: longTermClosePrices.length
+            // });
         }
 
         // Calculate recent moving averages
@@ -1293,14 +1286,14 @@ export class CryptoAnalyzer {
         // Check for minimum required data points
         const requiredPoints = 52 + 26; // spanPeriod + displacement
         if (high.length < requiredPoints || low.length < requiredPoints || close.length < requiredPoints) {
-            console.log('Insufficient data points for Ichimoku calculation:', {
-                required: requiredPoints,
-                available: {
-                    high: high.length,
-                    low: low.length,
-                    close: close.length
-                }
-            });
+            // console.log('Insufficient data points for Ichimoku calculation:', {
+            //     required: requiredPoints,
+            //     available: {
+            //         high: high.length,
+            //         low: low.length,
+            //         close: close.length
+            //     }
+            // });
             return {
                 tenkan: null,
                 kijun: null,
@@ -1838,27 +1831,6 @@ export class CryptoAnalyzer {
             liquidityType,
             volumeScore
         };
-    }
-
-    // Helper method to get previous levels (implement storage/caching as needed)
-    private previousLevelsCache = new Map<string, {
-        timestamp: number;
-        supports: Array<{ price: number; strength: number; description?: string }>;
-        resistances: Array<{ price: number; strength: number; description?: string }>;
-    }>();
-    
-    private getPreviousLevels(pair: string) {
-        return this.previousLevelsCache.get(pair);
-    }
-    
-    private updatePreviousLevels(pair: string, levels: {
-        supports: Array<{ price: number; strength: number; description?: string }>;
-        resistances: Array<{ price: number; strength: number; description?: string }>;
-    }) {
-        this.previousLevelsCache.set(pair, {
-            timestamp: Date.now(),
-            ...levels
-        });
     }
 
     private calculateSupportResistance(close: number[], period: number = 20): any {
