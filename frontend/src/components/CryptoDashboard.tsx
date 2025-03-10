@@ -497,7 +497,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-medium flex items-center justify-between">
-                            Strong Buy Signals
+                            Buy Signals
                             <div className="group relative">
                                 <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
                                 <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
@@ -520,7 +520,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             </div>
                         </CardTitle>
                         <CardDescription>
-                            Top 5 pairs by technical analysis score
+                            Pairs with highest technical analysis scores
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -573,7 +573,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-medium flex items-center justify-between">
-                            Strong Sell Signals
+                            Sell Signals
                             <div className="group relative">
                                 <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
                                 <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
@@ -596,7 +596,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             </div>
                         </CardTitle>
                         <CardDescription>
-                            Pairs with lowest technical analysis scores (&lt;30%)
+                            Pairs with lowest technical analysis scores
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
