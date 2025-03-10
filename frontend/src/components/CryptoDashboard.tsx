@@ -185,15 +185,15 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                     {data.marketSummary.marketBreadth.averageRSI.toFixed(1)}
                                 </p>
                             </div>
-                            <div className="w-full bg-secondary/30 rounded-full h-2.5 overflow-hidden">
-                                <div
-                                    className={`h-full rounded-full ${
+                                <div className="w-full bg-secondary/30 rounded-full h-2.5 overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full ${
                                         data.marketSummary.marketBreadth.averageRSI >= 70 ? 'bg-red-400' : 
                                         data.marketSummary.marketBreadth.averageRSI <= 30 ? 'bg-emerald-400' : 
-                                        'bg-blue-400'
-                                    }`}
+                                            'bg-blue-400'
+                                        }`}
                                     style={{ width: `${Math.min(100, data.marketSummary.marketBreadth.averageRSI)}%` }}
-                                ></div>
+                                    ></div>
                             </div>
                         </div>
 
@@ -446,16 +446,16 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                 .sort((a, b) => parseFloat(b.dailyPriceChange) - parseFloat(a.dailyPriceChange))
                                 .slice(0, 10)
                                 .map((pair, i) => (
-                                    <li key={pair.pair} className="flex justify-between items-center">
-                                        <div className="flex items-center">
-                                            <span className="text-muted-foreground mr-2">{i + 1}.</span>
-                                            <span className="font-medium">{pair.pair}</span>
-                                        </div>
-                                        <span className="text-emerald-400 font-medium">
-                                            {formatPercentage(parseFloat(pair.dailyPriceChange))}
-                                        </span>
-                                    </li>
-                                ))}
+                                <li key={pair.pair} className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                        <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                        <span className="font-medium">{pair.pair}</span>
+                                    </div>
+                                    <span className="text-emerald-400 font-medium">
+                                        {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                    </span>
+                                </li>
+                            ))}
                         </ul>
                     </CardContent>
                 </Card>
@@ -475,16 +475,16 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                 .sort((a, b) => parseFloat(a.dailyPriceChange) - parseFloat(b.dailyPriceChange))
                                 .slice(0, 10)
                                 .map((pair, i) => (
-                                    <li key={pair.pair} className="flex justify-between items-center">
-                                        <div className="flex items-center">
-                                            <span className="text-muted-foreground mr-2">{i + 1}.</span>
-                                            <span className="font-medium">{pair.pair}</span>
-                                        </div>
-                                        <span className="text-red-400 font-medium">
-                                            {formatPercentage(parseFloat(pair.dailyPriceChange))}
-                                        </span>
-                                    </li>
-                                ))}
+                                <li key={pair.pair} className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                        <span className="text-muted-foreground mr-2">{i + 1}.</span>
+                                        <span className="font-medium">{pair.pair}</span>
+                                    </div>
+                                    <span className="text-red-400 font-medium">
+                                        {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                    </span>
+                                </li>
+                            ))}
                         </ul>
                     </CardContent>
                 </Card>
@@ -731,7 +731,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                                     "bg-blue-500/20 text-blue-500"
                                                 )}>
                                                     {pair.liquidityType} Liquidity
-                                                </span>
+                                </span>
                                                 <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-2 text-sm bg-secondary/90 rounded-md shadow-lg">
                                                     <p className="font-medium mb-1">Understanding Liquidity:</p>
                                                     <ul className="space-y-1 text-xs">
@@ -757,9 +757,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                             {pair.intradayPriceChange > Math.abs(pair.priceChange) && (
                                                 <span className="text-xs ml-1">
                                                     (Spike: {formatPercentage(-pair.intradayPriceChange)})
-                                                </span>
+                                </span>
                                             )}
-                                        </span>
+                                </span>
                                         <span className={cn(
                                             "text-xs",
                                             pair.volumeScore >= 15 ? "text-emerald-400" :
@@ -767,9 +767,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                             "text-muted-foreground"
                                         )}>
                                             Vol: +{pair.volumeIncrease.toFixed(0)}% ({pair.volumeScore} pts)
-                                        </span>
+                                </span>
                                     </div>
-                                </li>
+                            </li>
                             ))}
                             {pumpDumpData.dumpingPairs.length === 0 && (
                                 <li className="text-muted-foreground text-sm">No dumping pairs detected</li>

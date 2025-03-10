@@ -117,6 +117,119 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
             </Card>
           </div>
         </div>
+
+
+
+        {/* Add Support/Resistance section */}
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                Support & Resistance Levels
+                <div className="relative group">
+                  <button className="text-muted-foreground hover:text-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.75 2.75 0 013.82 0 .75.75 0 01-1.06 1.06 1.25 1.25 0 00-1.7 0zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[400px] hidden group-hover:block z-50">
+                    <div className="bg-black/95 backdrop-blur-sm border border-border/50 text-white px-4 py-3 rounded-lg shadow-xl text-sm">
+                      <h4 className="font-semibold mb-3 text-base border-b border-border/50 pb-2">How Support & Resistance Levels Work</h4>
+                      <div className="space-y-3">
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="mb-2"><span className="font-medium text-primary">Detection Method:</span> Levels are identified using price action, volume, and historical touches. Each level's strength is calculated based on:</p>
+                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                            <li>Volume at the level (30%)</li>
+                            <li>Number of touches (30%)</li>
+                            <li>Recency of touches (20%)</li>
+                            <li>Behavior consistency (20%)</li>
+                          </ul>
+                        </div>
+                        
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="mb-2"><span className="font-medium text-primary">Level Classification:</span></p>
+                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                            <li>Support levels can be up to 5% above current price</li>
+                            <li>Historical levels remain valid if price returns to that area</li>
+                            <li className="text-emerald-400">Strength ≥ 75%: Strong level with multiple confirmations</li>
+                            <li className="text-emerald-400/80">Strength 50-74%: Moderate level with some confirmations</li>
+                            <li className="text-emerald-400/60">Strength &lt; 50%: Weak level needing more confirmation</li>
+                          </ul>
+                        </div>
+                        
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="mb-2"><span className="font-medium text-primary">Important Notes:</span></p>
+                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                            <li>ATR (Average True Range) is used for adaptive thresholds</li>
+                            <li>Higher timeframe levels (180 days) are considered for major pairs</li>
+                            <li>Volume profile helps confirm level significance</li>
+                            <li>Levels are dynamically updated as new price action develops</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Support Levels</h3>
+                  <ul className="space-y-3">
+                    {pair.supports?.map((level, index) => (
+                      <li key={index} className="flex flex-col space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="font-mono text-emerald-400">${level.price.toFixed(8)}</span>
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 rounded-full",
+                            level.strength >= 75 ? "bg-emerald-400/20 text-emerald-400" :
+                            level.strength >= 50 ? "bg-emerald-400/15 text-emerald-400/90" :
+                            "bg-emerald-400/10 text-emerald-400/80"
+                          )}>
+                            Strength: {level.strength}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-secondary/30 rounded-full h-1">
+                          <div 
+                            className="bg-emerald-400/50 h-full rounded-full" 
+                            style={{ width: `${level.strength}%` }}
+                          />
+                        </div>
+                      </li>
+                    )) || <li className="text-muted-foreground">No significant levels detected</li>}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Resistance Levels</h3>
+                  <ul className="space-y-3">
+                    {pair.resistances?.map((level, index) => (
+                      <li key={index} className="flex flex-col space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="font-mono text-red-400">${level.price.toFixed(8)}</span>
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 rounded-full",
+                            level.strength >= 75 ? "bg-red-400/20 text-red-400" :
+                            level.strength >= 50 ? "bg-red-400/15 text-red-400/90" :
+                            "bg-red-400/10 text-red-400/80"
+                          )}>
+                            Strength: {level.strength}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-secondary/30 rounded-full h-1">
+                          <div 
+                            className="bg-red-400/50 h-full rounded-full" 
+                            style={{ width: `${level.strength}%` }}
+                          />
+                        </div>
+                      </li>
+                    )) || <li className="text-muted-foreground">No significant levels detected</li>}
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>            
         
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="col-span-2">
@@ -287,11 +400,14 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                   </div>
                   <div className="flex items-center mt-2">
                     <span className="text-muted-foreground mr-2">Signal:</span>
-                    <span className={`font-medium ${
-                      pair.bollingerBands?.signal === 'Overbought' ? 'text-red-400' :
-                      pair.bollingerBands?.signal === 'Oversold' ? 'text-emerald-400' :
-                      'text-gray-400'
-                    }`}>
+                    <span className={cn(
+                      "font-medium",
+                      pair.bollingerBands?.signal === 'Strong Overbought' || pair.bollingerBands?.signal === 'Overbought' ? "text-red-400" :
+                      pair.bollingerBands?.signal === 'Strong Oversold' || pair.bollingerBands?.signal === 'Oversold' ? "text-emerald-400" :
+                      pair.bollingerBands?.signal?.includes('Above Middle Band') ? "text-emerald-400/70" :
+                      pair.bollingerBands?.signal?.includes('Below Middle Band') ? "text-red-400/70" :
+                      "text-gray-400"
+                    )}>
                       {pair.bollingerBands?.signal || 'Neutral'}
                     </span>
                   </div>
@@ -475,44 +591,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
           </div>
         </div>
         
-        {/* Add Support/Resistance section */}
-        <div className="grid grid-cols-1 gap-4 mb-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Support & Resistance Levels</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Support Levels</h3>
-                  <ul className="space-y-2">
-                    {pair.supportResistance?.supports?.map((level, index) => (
-                      <li key={index} className="flex justify-between items-center">
-                        <span className="font-mono text-emerald-400">${level.price.toFixed(8)}</span>
-                        <span className="text-xs bg-secondary/50 px-2 py-1 rounded-full">
-                          Strength: {level.strength}
-                        </span>
-                      </li>
-                    )) || <li className="text-muted-foreground">No levels detected</li>}
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Resistance Levels</h3>
-                  <ul className="space-y-2">
-                    {pair.supportResistance?.resistances?.map((level, index) => (
-                      <li key={index} className="flex justify-between items-center">
-                        <span className="font-mono text-red-400">${level.price.toFixed(8)}</span>
-                        <span className="text-xs bg-secondary/50 px-2 py-1 rounded-full">
-                          Strength: {level.strength}
-                        </span>
-                      </li>
-                    )) || <li className="text-muted-foreground">No levels detected</li>}
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>        
+    
 
         {/* Add Advanced Technical Analysis section */}
         <div className="grid grid-cols-1 gap-4 mb-4">

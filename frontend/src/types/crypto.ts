@@ -97,10 +97,8 @@ export interface CryptoPair {
         normalizedATR: string;
         volatility: string;
     };
-    supportResistance?: {
-        supports: Array<{price: number; type: string; strength: number}>;
-        resistances: Array<{price: number; type: string; strength: number}>;
-    };
+    supports: Array<{price: number; strength: number}>;
+    resistances: Array<{price: number; strength: number}>;
     bollingerBands?: {
         upper: string;
         middle: string;

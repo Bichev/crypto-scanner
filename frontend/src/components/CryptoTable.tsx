@@ -202,7 +202,7 @@ export function CryptoTable({ data }: CryptoTableProps) {
                 return true;
             }
         }),
-        columnHelper.accessor(row => row.pricePositionAnalysis.bbPosition, {
+        columnHelper.accessor(row => row.bollingerBands?.signal || 'Neutral', {
             id: 'pricePosition',
             header: () => (
                 <TooltipProvider>
@@ -218,7 +218,14 @@ export function CryptoTable({ data }: CryptoTableProps) {
                 </TooltipProvider>
             ),
             cell: info => (
-                <div className="font-medium">
+                <div className={cn(
+                    "font-medium",
+                    info.getValue() === 'Strong Overbought' || info.getValue() === 'Overbought' ? "text-red-400" :
+                    info.getValue() === 'Strong Oversold' || info.getValue() === 'Oversold' ? "text-emerald-400" :
+                    info.getValue()?.includes('Above Middle Band') ? "text-emerald-400/70" :
+                    info.getValue()?.includes('Below Middle Band') ? "text-red-400/70" :
+                    "text-gray-400"
+                )}>
                     {info.getValue()}
                 </div>
             ),

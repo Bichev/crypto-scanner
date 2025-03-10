@@ -3,11 +3,11 @@ import { CandleModel } from '../models/Candle';
 import { CryptoAnalyzer } from './CryptoAnalyzer';
 
 interface TimeframedTrendChange {
-    pair: string;
-    indicator: string;
-    previousValue: string;
-    newValue: string;
-    timestamp: number;
+  pair: string;
+  indicator: string;
+  previousValue: string;
+  newValue: string;
+  timestamp: number;
     timeframe: 'intraday' | '1d' | '7d' | '30d';  // Modified timeframes
     intradayUpdate: {  // Added intraday tracking
         lastUpdate: number;
@@ -18,7 +18,7 @@ interface TimeframedTrendChange {
             volume: number;
         }[];
     };
-    significance: 'low' | 'medium' | 'high';
+  significance: 'low' | 'medium' | 'high';
     confirmation: {
         shorterTimeframe: string;
         longerTimeframe: string;
@@ -82,7 +82,7 @@ interface SignalConfirmation {
 }
 
 export class TrendMonitorService {
-    private readonly analyzer: CryptoAnalyzer;
+  private readonly analyzer: CryptoAnalyzer;
     private readonly RSI_CONFIRMATION_PERIODS = 3;
     private readonly VOLUME_SIGNIFICANCE_THRESHOLD = 50;
     private readonly BATCH_SIZE = 10;
@@ -91,11 +91,11 @@ export class TrendMonitorService {
         lastValue: string;
         updates: Array<{ timestamp: number; value: string; volume: number }>;
     }> = new Map();
-
-    constructor() {
-        this.analyzer = new CryptoAnalyzer();
-    }
-
+  
+  constructor() {
+    this.analyzer = new CryptoAnalyzer();
+  }
+  
     private isSignificantIntradayChange(
         previousValue: string,
         newValue: string,
@@ -139,7 +139,7 @@ export class TrendMonitorService {
         
         if (isSignificant) {
             current.updates.push({
-                timestamp: Date.now(),
+            timestamp: Date.now(),
                 value,
                 volume
             });
@@ -421,5 +421,5 @@ export class TrendMonitorService {
             chunks.push(array.slice(i, i + size));
         }
         return chunks;
-    }
+  }
 }
