@@ -116,24 +116,29 @@ export class CryptoAnalyzer {
             // Add pump/dump detection
             const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
             
+            // Calculate first seen timestamp (convert to milliseconds if in seconds)
+            const firstSeenTimestamp = longTermCandles.length > 0 ? 
+                (longTermCandles[0].timestamp * (longTermCandles[0].timestamp < 1e12 ? 1000 : 1)) : null;
+
             results.push({
               pair,
               currentVolumeUSD: currentVolumeUSD.toFixed(2),
-                    ...analysis,
-                    isPumping: pumpDumpAnalysis.isPumping,
-                    isDumping: pumpDumpAnalysis.isDumping,
-                    pumpScore: pumpDumpAnalysis.pumpScore,
-                    dumpScore: pumpDumpAnalysis.dumpScore,
-                    volumeIncrease: pumpDumpAnalysis.volumeIncrease,
-                    priceChange: pumpDumpAnalysis.priceChange,
-                    intradayPriceChange: pumpDumpAnalysis.intradayPriceChange,
-                    liquidityType: pumpDumpAnalysis.liquidityType,
-                    volumeScore: pumpDumpAnalysis.volumeScore,
-                    movementType: pumpDumpAnalysis.isPumping ? 
-                                (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
-                                pumpDumpAnalysis.isDumping ? 
-                                (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
-                                'Normal'
+              firstSeenTimestamp,
+              ...analysis,
+              isPumping: pumpDumpAnalysis.isPumping,
+              isDumping: pumpDumpAnalysis.isDumping,
+              pumpScore: pumpDumpAnalysis.pumpScore,
+              dumpScore: pumpDumpAnalysis.dumpScore,
+              volumeIncrease: pumpDumpAnalysis.volumeIncrease,
+              priceChange: pumpDumpAnalysis.priceChange,
+              intradayPriceChange: pumpDumpAnalysis.intradayPriceChange,
+              liquidityType: pumpDumpAnalysis.liquidityType,
+              volumeScore: pumpDumpAnalysis.volumeScore,
+              movementType: pumpDumpAnalysis.isPumping ? 
+                                  (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
+                                  pumpDumpAnalysis.isDumping ? 
+                                  (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
+                                  'Normal'
             });
           } catch (error) {
             console.error(`Error analyzing ${pair} from database:`, error);
@@ -229,436 +234,404 @@ export class CryptoAnalyzer {
         resistances: Array<{ price: number; strength: number; description?: string }>;
         nearestSupport: number;
         nearestResistance: number;
+        fallbackSupport: { price: number; description: string };
+        fallbackResistance: { price: number; description: string };
+        brokenLevels?: {
+            brokenSupports: Array<{
+                price: number;
+                strength: number;
+                breakTime: number;
+                priceAtBreak: number;
+                volume24hAtBreak: number;
+                description?: string;
+            }>;
+            brokenResistances: Array<{
+                price: number;
+                strength: number;
+                breakTime: number;
+                priceAtBreak: number;
+                volume24hAtBreak: number;
+                description?: string;
+            }>;
+        };
+        isNewPair?: boolean;
     } {
-        const recentCandles = candles.slice(-lookbackPeriod);
+        if (candles.length < 7) {
+            const currentPrice = candles[candles.length - 1].close;
+            return {
+                supports: [],
+                resistances: [],
+                nearestSupport: currentPrice * 0.85,
+                nearestResistance: currentPrice * 1.15,
+                fallbackSupport: {
+                    price: currentPrice * 0.85,
+                    description: 'New pair - establishing support levels'
+                },
+                fallbackResistance: {
+                    price: currentPrice * 1.15,
+                    description: 'New pair - establishing resistance levels'
+                },
+                brokenLevels: {
+                    brokenSupports: [],
+                    brokenResistances: []
+                },
+                isNewPair: true
+            };
+        }
+
+        // Get the current price from the last candle
         const currentPrice = candles[candles.length - 1].close;
-        const currentTimestamp = Date.now() / 1000;
+        const recentCandles = candles.slice(-lookbackPeriod);
+
+        // Calculate support and resistance levels
+        const { supports, resistances, nearestSupport, nearestResistance } = this.detectPriceLevels(recentCandles);
+
+        // Get previous levels from cache
+        const previousLevels = this.getPreviousLevels(pair);
+
+        // Initialize broken levels arrays
+        const brokenLevels = {
+            brokenSupports: [] as Array<{
+                price: number;
+                strength: number;
+                breakTime: number;
+                priceAtBreak: number;
+                volume24hAtBreak: number;
+                description?: string;
+            }>,
+            brokenResistances: [] as Array<{
+                price: number;
+                strength: number;
+                breakTime: number;
+                priceAtBreak: number;
+                volume24hAtBreak: number;
+                description?: string;
+            }>
+        };
+
+        // Check for broken levels
+        if (previousLevels) {
+            // Check previous supports
+            for (const support of previousLevels.supports) {
+                if (currentPrice < support.price * 0.99) { // 1% threshold
+                    brokenLevels.brokenSupports.push({
+                        price: support.price,
+                        strength: support.strength,
+                        breakTime: Math.floor(Date.now() / 1000),
+                        priceAtBreak: currentPrice,
+                        volume24hAtBreak: recentCandles[recentCandles.length - 1].volume
+                    });
+                }
+            }
+
+            // Check previous resistances
+            for (const resistance of previousLevels.resistances) {
+                if (currentPrice > resistance.price * 1.01) { // 1% threshold
+                    brokenLevels.brokenResistances.push({
+                        price: resistance.price,
+                        strength: resistance.strength,
+                        breakTime: Math.floor(Date.now() / 1000),
+                        priceAtBreak: currentPrice,
+                        volume24hAtBreak: recentCandles[recentCandles.length - 1].volume
+                    });
+                }
+            }
+        }
+
+        // Update cache with current levels
+        this.updatePreviousLevels(pair, { supports, resistances });
+
+        // Calculate fallback support and resistance
+        let fallbackSupport = {
+            price: currentPrice * 0.85,
+            description: 'No significant support levels detected in this range'
+        };
+
+        let fallbackResistance = {
+            price: currentPrice * 1.15,
+            description: 'No significant resistance levels detected in this range'
+        };
+
+        // Update fallback descriptions based on broken levels
+        if (brokenLevels.brokenSupports.length > 0) {
+            const recentBreak = brokenLevels.brokenSupports
+                .sort((a, b) => b.breakTime - a.breakTime)[0];
+            fallbackSupport = {
+                price: currentPrice * 0.85,
+                description: `Previous support at ${recentBreak.price.toFixed(8)} broken ${this.formatTimeAgo(recentBreak.breakTime)}`
+            };
+        }
+
+        if (brokenLevels.brokenResistances.length > 0) {
+            const recentBreak = brokenLevels.brokenResistances
+                .sort((a, b) => b.breakTime - a.breakTime)[0];
+            fallbackResistance = {
+                price: currentPrice * 1.15,
+                description: `Previous resistance at ${recentBreak.price.toFixed(8)} broken ${this.formatTimeAgo(recentBreak.breakTime)}`
+            };
+        }
+
+        return {
+            supports,
+            resistances,
+            nearestSupport,
+            nearestResistance,
+            fallbackSupport,
+            fallbackResistance,
+            brokenLevels,
+            isNewPair: false
+        };
+    }
+
+    private formatTimeAgo(timestamp: number): string {
+        const now = Math.floor(Date.now() / 1000);
+        const diff = now - timestamp;
+
+        if (diff < 3600) {
+            return `${Math.floor(diff / 60)}m ago`;
+        }
+        if (diff < 86400) {
+            return `${Math.floor(diff / 3600)}h ago`;
+        }
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
+
+    private detectPriceLevels(candles: CandleData[]): {
+        supports: Array<{ price: number; strength: number }>;
+        resistances: Array<{ price: number; strength: number }>;
+        nearestSupport: number;
+        nearestResistance: number;
+    } {
+        const currentPrice = candles[candles.length - 1].close;
+        const high = Math.max(...candles.map(c => c.high));
+        const low = Math.min(...candles.map(c => c.low));
         
-        // Prepare price points with volume in USD terms
-        const pricePoints = recentCandles.map(c => ({
+        // Initialize arrays for supports and resistances
+        let supports: Array<{ price: number; strength: number }> = [];
+        let resistances: Array<{ price: number; strength: number }> = [];
+        
+        // Calculate ATR for adaptive thresholds
+        const atr = this.calculateATR(candles, 14);
+        const priceThreshold = atr * 0.5; // Use half ATR as threshold
+        
+        // Find potential levels by looking for price clusters
+        const pricePoints = candles.map(c => ({
             high: c.high,
             low: c.low,
-            close: c.close,
-            volume: c.volume * c.close, // Convert volume to USD
-            timestamp: c.timestamp
+            volume: c.volume
         }));
-    
-        // Calculate average true range for adaptive threshold
-        const atr = ti.ATR.calculate({
-            high: recentCandles.map(c => c.high),
-            low: recentCandles.map(c => c.low),
-            close: recentCandles.map(c => c.close),
-            period: 14
-        });
-        const currentATR = atr[atr.length - 1];
         
-        // Use ATR-based threshold for grouping similar price levels (adjusted for BTCUSD vs small altcoins)
-        // For very low-priced assets (like GYEN), we need a slightly different approach
-        let priceThreshold: number;
-        if (currentPrice < 0.01) {
-            // For very low-priced assets, use percentage-based threshold
-            priceThreshold = currentPrice * 0.01; // 1% of current price
-        } else {
-            // Otherwise use ATR-based threshold
-            priceThreshold = currentATR * 0.5;
-        }
-    
-        // Check if level aligns with significant psychological levels or round numbers
-        const isSignificantLevel = (price: number): number => {
-            // Handle different ranges based on price magnitude
-            const priceLog = Math.floor(Math.log10(price));
-            const priceMagnitude = Math.pow(10, priceLog);
-            
-            // For very low-priced assets like GYEN
-            if (price < 0.01) {
-                if (price % 0.001 === 0) return 0.3; // 0.001, 0.002, etc.
-                if (price % 0.0001 === 0) return 0.2; // 0.0001, 0.0002, etc.
-                return 0;
-            }
-            
-            // For normal price ranges
-            if (price % priceMagnitude === 0) return 0.3; // Major round number (e.g., 10000, 1000)
-            if (price % (priceMagnitude / 2) === 0) return 0.2; // Half round number (e.g., 5000, 500)
-            if (price % (priceMagnitude / 10) === 0) return 0.1; // Minor round number (e.g., 1000, 100)
-            
-            return 0;
-        };
+        // Group price points into clusters
+        const highClusters = this.findPriceClusters(pricePoints.map(p => p.high), priceThreshold);
+        const lowClusters = this.findPriceClusters(pricePoints.map(p => p.low), priceThreshold);
         
-        // Group similar price levels
-        const levels = new Map<number, { 
-            count: number; 
-            volumeUSD: number;
-            touches: Array<{ 
-                price: number; 
-                volumeUSD: number; 
-                timestamp: number;
-                behavior: 'support' | 'resistance' | 'unknown';
-                rejectionStrength: number; // Added: measure the strength of rejections
-            }> 
-        }>();
-    
-        // Helper function to determine if a price level acted as support or resistance
-        const determineBehavior = (price: number, index: number): { 
-            behavior: 'support' | 'resistance' | 'unknown'; 
-            rejectionStrength: number;
-        } => {
-            if (index <= 0 || index >= pricePoints.length - 1) return { behavior: 'unknown', rejectionStrength: 0 };
-            
-            const prevCandle = pricePoints[index - 1];
-            const currentCandle = pricePoints[index];
-            const nextCandle = pricePoints[index + 1];
-            
-            // Look ahead a few candles to measure rejection strength
-            const futureCandles = pricePoints.slice(index + 1, Math.min(index + 6, pricePoints.length));
-            
-            // Calculate price movement percentages
-            const preTouchMove = (price - prevCandle.low) / prevCandle.low;
-            const postTouchMove = (nextCandle.close - price) / price;
-            
-            // Measure rejection strength by looking at post-touch movement
-            let rejectionStrength = 0;
-            
-            // Check for support behavior
-            if (Math.abs(currentCandle.low - price) < priceThreshold) {
-                if (preTouchMove < 0 && postTouchMove > 0) {
-                    // Measure the strength of bounce (upward movement after touching support)
-                    // Calculate average movement over next few candles
-                    let avgUpMove = 0;
-                    if (futureCandles.length > 0) {
-                        const maxFuturePrice = Math.max(...futureCandles.map(c => c.high));
-                        avgUpMove = (maxFuturePrice - price) / price;
-                        rejectionStrength = Math.min(1, avgUpMove / (currentATR / price)); // Normalize by ATR
-                    }
-                    
-                    return { behavior: 'support', rejectionStrength };
-                }
+        // Convert clusters to support/resistance levels
+        for (const cluster of highClusters) {
+            if (cluster.price > currentPrice) {
+                resistances.push({
+                    price: cluster.price,
+                    strength: this.calculateLevelStrength(cluster, candles, 'resistance')
+                });
             }
-            
-            // Check for resistance behavior
-            if (Math.abs(currentCandle.high - price) < priceThreshold) {
-                if (preTouchMove > 0 && postTouchMove < 0) {
-                    // Measure the strength of bounce (downward movement after touching resistance)
-                    let avgDownMove = 0;
-                    if (futureCandles.length > 0) {
-                        const minFuturePrice = Math.min(...futureCandles.map(c => c.low));
-                        avgDownMove = (price - minFuturePrice) / price;
-                        rejectionStrength = Math.min(1, avgDownMove / (currentATR / price)); // Normalize by ATR
-                    }
-                    
-                    return { behavior: 'resistance', rejectionStrength };
-                }
-            }
-            
-            return { behavior: 'unknown', rejectionStrength: 0 };
-        };
-    
-        // Analyze each price point
-        pricePoints.forEach((point, index) => {
-            [point.high, point.low].forEach(price => {
-                let found = false;
-                for (const [level, data] of levels) {
-                    if (Math.abs(price - level) <= priceThreshold) {
-                        // Update existing level with volume-weighted average
-                        const newLevel = (level * data.volumeUSD + price * point.volume) / (data.volumeUSD + point.volume);
-                        const { behavior, rejectionStrength } = determineBehavior(price, index);
-                        levels.set(newLevel, {
-                            count: data.count + 1,
-                            volumeUSD: data.volumeUSD + point.volume,
-                            touches: [...data.touches, { 
-                                price, 
-                                volumeUSD: point.volume, 
-                                timestamp: point.timestamp,
-                                behavior,
-                                rejectionStrength
-                            }]
-                        });
-                        levels.delete(level);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    const { behavior, rejectionStrength } = determineBehavior(price, index);
-                    levels.set(price, { 
-                        count: 1, 
-                        volumeUSD: point.volume,
-                        touches: [{ 
-                            price, 
-                            volumeUSD: point.volume, 
-                            timestamp: point.timestamp,
-                            behavior,
-                            rejectionStrength
-                        }]
-                    });
-                }
-            });
-        });
-    
-        const averageVolumeUSD = pricePoints.reduce((sum, point) => sum + point.volume, 0) / pricePoints.length;
-    
-        // Calculate strength with enhanced metrics
-        const calculateEnhancedStrength = (levelData: { 
-            count: number; 
-            volumeUSD: number; 
-            touches: Array<{ 
-                price: number; 
-                volumeUSD: number; 
-                timestamp: number; 
-                behavior: string;
-                rejectionStrength: number;
-            }> 
-        }): { 
-            strength: number; 
-            type: 'support' | 'resistance';
-            behaviorScore: number; // Added: normalized score from -1 (resistance) to +1 (support)
-            description?: string;
-        } => {
-            if (!levelData) return { strength: 0, type: 'support', behaviorScore: 0 };
-    
-            // Enhanced volume strength with USD normalization (25%)
-            const volumeStrength = Math.min(1, Math.sqrt(levelData.volumeUSD / (averageVolumeUSD * levelData.count)));
-            
-            // Touch count strength (20%)
-            const touchesStrength = Math.min(1, levelData.count / 5);
-            
-            // Enhanced recency with exponential time decay (20%)
-            const timeDecayTouches = levelData.touches.map(touch => {
-                const ageInDays = (currentTimestamp - touch.timestamp) / (24 * 60 * 60);
-                const decayFactor = Math.exp(-0.1 * ageInDays); // Exponential decay
-                return {
-                    ...touch,
-                    weight: decayFactor
-                };
-            });
-            
-            const recencyScore = timeDecayTouches.reduce((sum, touch) => sum + touch.weight, 0) / 
-                                Math.max(1, timeDecayTouches.length);
-            
-            // Behavior consistency and quality (25%)
-            const supportCount = levelData.touches.filter(t => t.behavior === 'support').length;
-            const resistanceCount = levelData.touches.filter(t => t.behavior === 'resistance').length;
-            const type = supportCount > resistanceCount ? 'support' : 'resistance';
-            
-            // Calculate rejection quality - how strong were the bounces?
-            const avgRejectionStrength = levelData.touches.reduce((sum, touch) => 
-                sum + (touch.rejectionStrength || 0), 0) / Math.max(1, levelData.touches.length);
-            
-            // Normalized behavior score from -1 (pure resistance) to +1 (pure support)
-            const behaviorScore = (supportCount - resistanceCount) / Math.max(1, supportCount + resistanceCount);
-            
-            // Psychological level bonus (10%)
-            const psychologicalBonus = isSignificantLevel(levelData.touches[0].price);
-            
-            // Combined strength calculation
-            const strength = Math.min(1, (
-                volumeStrength * 0.25 + 
-                touchesStrength * 0.20 + 
-                recencyScore * 0.20 +
-                avgRejectionStrength * 0.25 +
-                psychologicalBonus * 0.10
-            ));
-            
-            // Generate descriptive text for the level
-            let description = '';
-            if (strength >= 0.75) {
-                description = `Strong ${type} with ${levelData.count} touches`;
-                if (psychologicalBonus > 0) description += ', psychological level';
-                if (recencyScore > 0.7) description += ', recent activity';
-            } else if (strength >= 0.5) {
-                description = `Moderate ${type} level`;
-                if (psychologicalBonus > 0) description += ', psychological importance';
-            } else {
-                description = `Weak ${type} level, needs confirmation`;
-            }
-            
-            return { strength, type, behaviorScore, description };
-        };
-    
-        // Filter and sort levels
-        const significantLevels = Array.from(levels.entries())
-            .filter(([_, data]) => data.count >= 2)
-            .map(([price, data]) => {
-                const { strength, type, behaviorScore, description } = calculateEnhancedStrength(data);
-                return { price, strength, type, behaviorScore, description };
-            })
-            .filter(level => level.strength > 0.15)
-            .sort((a, b) => b.strength - a.strength);
-    
-        // Special handling for assets with tight trading ranges (like GYEN)
-        const isTightRangeAsset = currentPrice < 0.01 || (currentATR / currentPrice) < 0.01;
-   
-        // Improved classification with buffer zone and behavioral score
-        let supports = significantLevels
-            .filter(level => {
-                // For tight-range assets, be more lenient with classification
-                if (isTightRangeAsset) {
-                    return level.behaviorScore > 0 || level.price <= currentPrice;
-                } else {
-                    return level.price < currentPrice || 
-                        (level.behaviorScore > 0.3 && level.price < currentPrice * 1.05);
-                }
-            })
-            .map(level => ({
-                price: level.price,
-                strength: Math.round(level.strength * 100),
-                description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 support`) || ''
-            }))
-            .sort((a, b) => b.price - a.price) // Sort from highest to lowest
-            .slice(0, 3); // Take top 3
-    
-        let resistances = significantLevels
-            .filter(level => {
-                // For tight-range assets, be more lenient with classification
-                if (isTightRangeAsset) {
-                    return level.behaviorScore < 0 || level.price >= currentPrice;
-                } else {
-                    return level.price > currentPrice || 
-                          (level.behaviorScore < -0.3 && level.price > currentPrice * 0.95);
-                }
-            })
-            .map(level => ({
-                price: level.price,
-                strength: Math.round(level.strength * 100),
-                description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 resistance`) || ''
-            }))
-            .sort((a, b) => a.price - b.price) // Sort from lowest to highest
-            .slice(0, 3); // Take top 3
-
-            // For tight trading ranges, make sure levels make sense (e.g., all supports below all resistances)
-        if (isTightRangeAsset) {
-            // Fix overlapping levels by classifying them based on position to current price
-            const allLevels = [...significantLevels].sort((a, b) => a.price - b.price);
-            
-            // For close trading pairs like GYEN, separate levels by their relation to current price
-            const belowLevels = allLevels.filter(level => level.price < currentPrice);
-            const aboveLevels = allLevels.filter(level => level.price > currentPrice);
-            const atLevels = allLevels.filter(level => Math.abs(level.price - currentPrice) / currentPrice < 0.005);
-            
-            // Re-classify levels
-            if (belowLevels.length > 0 && aboveLevels.length > 0) {
-                // We have both below and above levels, so classify normally
-                supports = belowLevels
-                    .map(level => ({
-                        price: level.price,
-                        strength: Math.round(level.strength * 100),
-                        description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 support`) || ''
-                    }))
-                    .sort((a, b) => b.price - a.price)
-                    .slice(0, 3);
-                    
-                resistances = aboveLevels
-                    .map(level => ({
-                        price: level.price,
-                        strength: Math.round(level.strength * 100),
-                        description: level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 resistance`) || ''
-                    }))
-                    .sort((a, b) => a.price - b.price)
-                    .slice(0, 3);
-            } else if (allLevels.length > 0) {
-                // We have only levels on one side of current price
-                // In this case, use the nearest levels on either side of current price
-                const middleIndex = Math.floor(allLevels.length / 2);
-                
-                supports = allLevels.slice(0, middleIndex)
-                    .map(level => ({
-                        price: level.price,
-                        strength: Math.round(level.strength * 100),
-                        description: `${level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 support`) || ''} (price classification)`
-                    }))
-                    .sort((a, b) => b.price - a.price)
-                    .slice(0, 3);
-                    
-                resistances = allLevels.slice(middleIndex)
-                    .map(level => ({
-                        price: level.price,
-                        strength: Math.round(level.strength * 100),
-                        description: `${level.description?.replace(/^(Strong|Moderate|Weak) (support|resistance)/, `$1 resistance`) || ''} (price classification)`
-                    }))
-                    .sort((a, b) => a.price - b.price)
-                    .slice(0, 3);
-            }
+        }
         
-            // If we have a current price level, mark it as both support and resistance
-            if (atLevels.length > 0) {
-                const currentLevel = atLevels[0];
-                if (supports.length < 3) {
-                    supports.push({
-                        price: currentLevel.price,
-                        strength: Math.round(currentLevel.strength * 100),
-                        description: "Current price level"
-                    });
-                }
-                if (resistances.length < 3) {
-                    resistances.push({
-                        price: currentLevel.price,
-                        strength: Math.round(currentLevel.strength * 100),
-                        description: "Current price level"
-                    });
-                }
-            }  
+        for (const cluster of lowClusters) {
+            if (cluster.price < currentPrice) {
+                supports.push({
+                    price: cluster.price,
+                    strength: this.calculateLevelStrength(cluster, candles, 'support')
+                });
+            }
         }
-    
-        // Find nearest levels with fallbacks
-        let nearestSupport = currentPrice * 0.85; // Default fallback
-        if (supports.length > 0) {
-            nearestSupport = supports.reduce((prev, curr) => 
-                Math.abs(curr.price - currentPrice) < Math.abs(prev.price - currentPrice) ? curr : prev
-            ).price;
-        }
-    
-        let nearestResistance = currentPrice * 1.15; // Default fallback
-        if (resistances.length > 0) {
-            nearestResistance = resistances.reduce((prev, curr) => 
-                Math.abs(curr.price - currentPrice) < Math.abs(prev.price - currentPrice) ? curr : prev
-            ).price;
-        }
-    
+        
+        // Sort by strength
+        supports = supports.sort((a, b) => b.strength - a.strength);
+        resistances = resistances.sort((a, b) => b.strength - a.strength);
+        
+        // Find nearest levels
+        const nearestSupport = supports.length > 0 
+            ? Math.max(...supports.map(s => s.price))
+            : currentPrice * 0.85;
+            
+        const nearestResistance = resistances.length > 0
+            ? Math.min(...resistances.map(r => r.price))
+            : currentPrice * 1.15;
+        
         return {
             supports,
             resistances,
             nearestSupport,
             nearestResistance
         };
-    }   
+    }
 
-    private calculatePriceLevels(candles: CandleData[], pair: string): {
-        fibonacci: { level: number; price: number }[];
-        supports: Array<{ price: number; strength: number }>;
-        resistances: Array<{ price: number; strength: number }>;
-        nearestSupport: number;
-        nearestResistance: number;
-        distanceToSupport: number;
-        distanceToResistance: number;
-        priceChannelWidth: number;
-    } {
-        const currentPrice = candles[candles.length - 1].close;
-        const high = Math.max(...candles.map(c => c.high));
-        const low = Math.min(...candles.map(c => c.low));
+    private calculateATR(
+        input: CandleData[] | { high: number[]; low: number[]; close: number[] },
+        period: number = 14
+    ): number {
+        let trueRanges: number[] = [];
 
-        // Calculate Fibonacci levels from the high to low
-        const fibLevels = this.calculateFibonacciLevels(high, low);
-
-        // Find support and resistance levels
-        const { supports, resistances, nearestSupport, nearestResistance } = 
-            this.findSupportResistanceLevels(candles, pair);
-
-        // Calculate distances as percentages
-        const distanceToSupport = ((currentPrice - nearestSupport) / currentPrice) * 100;
-        const distanceToResistance = ((nearestResistance - currentPrice) / currentPrice) * 100;
+        if (Array.isArray(input)) {
+            // Handle CandleData[] input
+            if (input.length < 2) return 0;
+            
+            trueRanges = input.slice(1).map((candle, i) => {
+                const prev = input[i];
+                return Math.max(
+                    candle.high - candle.low,
+                    Math.abs(candle.high - prev.close),
+                    Math.abs(candle.low - prev.close)
+                );
+            });
+        } else {
+            // Handle separate arrays input
+            const { high, low, close } = input;
+            if (high.length < 2 || low.length < 2 || close.length < 2) return 0;
+            
+            trueRanges = high.slice(1).map((h, i) => {
+                const prevClose = close[i];
+                return Math.max(
+                    h - low[i + 1],
+                    Math.abs(h - prevClose),
+                    Math.abs(low[i + 1] - prevClose)
+                );
+            });
+        }
         
-        // Calculate price channel width as percentage of current price
-        const priceChannelWidth = ((nearestResistance - nearestSupport) / currentPrice) * 100;
+        // Calculate simple moving average of true ranges
+        const sum = trueRanges.slice(-period).reduce((a, b) => a + b, 0);
+        return sum / period;
+    }
 
+    private calculateEnhancedATR(candles: CandleData[]): {
+        atr: number;
+        normalizedATR: number;
+        volatility: string;
+    } {
+        const atr = this.calculateATR(candles);
+        const latestClose = candles[candles.length - 1].close;
+        
+        // Normalize ATR as percentage of price
+        const normalizedATR = (atr / latestClose) * 100;
+        
+        // Volatility interpretation
+        let volatility = 'Medium';
+        if (normalizedATR > 5) volatility = 'Very High';
+        else if (normalizedATR > 3) volatility = 'High';
+        else if (normalizedATR < 1) volatility = 'Low';
+        else if (normalizedATR < 0.5) volatility = 'Very Low';
+        
         return {
-            fibonacci: fibLevels,
-            supports,
-            resistances,
-            nearestSupport,
-            nearestResistance,
-            distanceToSupport,
-            distanceToResistance,
-            priceChannelWidth
+            atr,
+            normalizedATR,
+            volatility
         };
+    }
+
+    private findPriceClusters(prices: number[], threshold: number): Array<{ price: number; touches: number }> {
+        const clusters: Array<{ price: number; touches: number }> = [];
+        
+        for (const price of prices) {
+            // Find existing cluster or create new one
+            let found = false;
+            for (const cluster of clusters) {
+                if (Math.abs(cluster.price - price) <= threshold) {
+                    // Update cluster average price
+                    cluster.price = (cluster.price * cluster.touches + price) / (cluster.touches + 1);
+                    cluster.touches++;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                clusters.push({ price, touches: 1 });
+            }
+        }
+        
+        return clusters;
+    }
+
+    private calculateLevelStrength(
+        cluster: { price: number; touches: number },
+        candles: CandleData[],
+        type: 'support' | 'resistance'
+    ): number {
+        const currentPrice = candles[candles.length - 1].close;
+        
+        // Base strength on number of touches (20%)
+        let strength = Math.min(100, (cluster.touches / 3) * 20);
+        
+        // Volume component (25%)
+        const volumeAtLevel = this.calculateVolumeAtLevel(candles, cluster.price);
+        const avgVolume = candles.reduce((sum, c) => sum + c.volume, 0) / candles.length;
+        strength += Math.min(25, (volumeAtLevel / avgVolume) * 25);
+        
+        // Recency component (20%)
+        const lastTouch = this.findLastTouch(candles, cluster.price, type);
+        if (lastTouch > 0) {
+            const recencyScore = Math.max(0, 20 - (candles.length - lastTouch) / 10);
+            strength += recencyScore;
+        }
+        
+        // Rejection strength (25%)
+        const rejectionStrength = this.calculateRejectionStrength(candles, cluster.price, type);
+        strength += Math.min(25, rejectionStrength * 25);
+        
+        // Psychological level bonus (10%)
+        if (this.isPsychologicalLevel(cluster.price)) {
+            strength += 10;
+        }
+        
+        return Math.min(100, Math.max(0, strength));
+    }
+
+    private calculateVolumeAtLevel(candles: CandleData[], price: number): number {
+        const threshold = price * 0.005; // 0.5% threshold
+        return candles.reduce((sum, candle) => {
+            if (Math.abs(candle.close - price) <= threshold) {
+                return sum + candle.volume;
+            }
+            return sum;
+        }, 0);
+    }
+
+    private findLastTouch(candles: CandleData[], price: number, type: 'support' | 'resistance'): number {
+        const threshold = price * 0.005; // 0.5% threshold
+        for (let i = candles.length - 1; i >= 0; i--) {
+            const candle = candles[i];
+            if (type === 'support' && Math.abs(candle.low - price) <= threshold) {
+                return i;
+            }
+            if (type === 'resistance' && Math.abs(candle.high - price) <= threshold) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private calculateRejectionStrength(candles: CandleData[], price: number, type: 'support' | 'resistance'): number {
+        const touches = candles.filter((candle, i) => {
+            if (i === 0) return false;
+            const prev = candles[i - 1];
+            const threshold = price * 0.005;
+            
+            if (type === 'support') {
+                return Math.abs(candle.low - price) <= threshold && candle.close > prev.close;
+            } else {
+                return Math.abs(candle.high - price) <= threshold && candle.close < prev.close;
+            }
+        });
+        
+        return touches.length / candles.length;
+    }
+
+    private isPsychologicalLevel(price: number): boolean {
+        // Check for round numbers
+        const priceStr = price.toString();
+        return /[0-9]0{4,}/.test(priceStr) || // e.g. 10000, 20000
+               /[0-9]5{4,}/.test(priceStr) || // e.g. 15555, 25555
+               /[0-9]{1,2}000/.test(priceStr); // e.g. 1000, 2000, etc
     }
 
     private calculateIndicators(longTermCandles: CandleData[], recentCandles: CandleData[], pair: string) {
@@ -725,7 +698,7 @@ export class CryptoAnalyzer {
         const sma200 = ti.SMA.calculate({ values: longTermClosePrices, period: 200 });
 
         // Calculate price levels
-        const priceLevels = this.calculatePriceLevels(recentCandles, pair);
+        const priceLevels = this.findSupportResistanceLevels(recentCandles, pair);
 
         // Calculate Stochastic Oscillator
         const stoch = ti.Stochastic.calculate({
@@ -792,13 +765,8 @@ export class CryptoAnalyzer {
         // Calculate Bollinger Bands using the enhanced method
         const bollingerBands = this.calculateBollingerBands(recentClosePrices);
 
-        // Calculate ATR (Average True Range)
-        const atr = ti.ATR.calculate({
-            high: recentHighs,
-            low: recentLows,
-            close: recentClosePrices,
-            period: 14
-        });
+        // Replace the ATR calculation with:
+        const advancedATR = this.calculateEnhancedATR(recentCandles);
 
         // Calculate Stochastic RSI
         const stochRsi = ti.StochasticRSI.calculate({
@@ -828,7 +796,7 @@ export class CryptoAnalyzer {
         const latestMACD = macd[macd.length - 1] || { MACD: 0, signal: 0, histogram: 0 };
         const latestStochRSI = stochRsi[stochRsi.length - 1] || { k: 50, d: 50 };
         const latestROC = roc[roc.length - 1] || 0;
-        const latestATR = atr[atr.length - 1] || 0;
+        const latestATR = advancedATR.atr || 0;
         const volumeOscillator = ((vma7[vma7.length - 1] - vma30[vma30.length - 1]) / vma30[vma30.length - 1]) * 100;
 
         // Calculate historical highs and lows
@@ -881,7 +849,6 @@ export class CryptoAnalyzer {
             longTermClosePrices
         );
         const stochastic = this.calculateStochastic(recentHighs, recentLows, recentClosePrices);
-        const advancedATR = this.calculateATR(recentHighs, recentLows, recentClosePrices);
         const supportResistance = this.calculateSupportResistance(recentClosePrices);
         // Make sure all the inputs to calculateAdvancedTrend have values
         const advancedTrend = macd && macd.length > 0 && rsi && rsi.length > 0 
@@ -1439,99 +1406,6 @@ export class CryptoAnalyzer {
         };
     }
 
-    // Enhanced ATR calculation with interpretations
-    private calculateATR(high: number[], low: number[], close: number[], period: number = 14): any {
-        const atr = ti.ATR.calculate({ high, low, close, period });
-        const latestATR = atr[atr.length - 1];
-        const latestClose = close[close.length - 1];
-        
-        // Normalize ATR as percentage of price
-        const normalizedATR = (latestATR / latestClose) * 100;
-        
-        // Volatility interpretation
-        let volatility = 'Medium';
-        if (normalizedATR > 5) volatility = 'Very High';
-        else if (normalizedATR > 3) volatility = 'High';
-        else if (normalizedATR < 1) volatility = 'Low';
-        else if (normalizedATR < 0.5) volatility = 'Very Low';
-        
-        return {
-        atr: latestATR,
-        normalizedATR,
-        volatility
-        };
-    }
-
-    
-
-    private calculateSupportResistance(close: number[], period: number = 20): any {
-        const levels = [];
-        
-        // Use a rolling window approach
-        for (let i = period; i < close.length - period; i++) {
-        const leftWindow = close.slice(i - period, i);
-        const rightWindow = close.slice(i + 1, i + period + 1);
-        const currentPrice = close[i];
-        
-        // Check if this point is a local maximum
-        if (currentPrice > Math.max(...leftWindow) && currentPrice > Math.max(...rightWindow)) {
-            levels.push({ price: currentPrice, type: 'resistance', strength: 1 });
-        }
-        // Check if this point is a local minimum
-        else if (currentPrice < Math.min(...leftWindow) && currentPrice < Math.min(...rightWindow)) {
-            levels.push({ price: currentPrice, type: 'support', strength: 1 });
-        }
-        }
-        
-        // Cluster and consolidate close levels
-        const clusteredLevels = this.clusterLevels(levels, close[close.length - 1] * 0.01); // 1% threshold
-        
-        // Sort by strength (descending)
-        return clusteredLevels.sort((a, b) => b.strength - a.strength);
-    }
-    
-    // Helper to cluster nearby levels
-    private clusterLevels(levels: any[], threshold: number): any[] {
-        if (levels.length === 0) return [];
-        
-        // Sort by price
-        const sortedLevels = [...levels].sort((a, b) => a.price - b.price);
-        const clusters = [];
-        
-        let currentCluster = [sortedLevels[0]];
-        let clusterType = sortedLevels[0].type;
-        
-        for (let i = 1; i < sortedLevels.length; i++) {
-        const lastLevel = currentCluster[currentCluster.length - 1];
-        
-        // If this level is close to the previous one and the same type, add to cluster
-        if (sortedLevels[i].price - lastLevel.price < threshold && sortedLevels[i].type === clusterType) {
-            currentCluster.push(sortedLevels[i]);
-        } else {
-            // Complete current cluster and start a new one
-            clusters.push({
-            price: currentCluster.reduce((sum, level) => sum + level.price, 0) / currentCluster.length,
-            type: clusterType,
-            strength: currentCluster.length
-            });
-            
-            currentCluster = [sortedLevels[i]];
-            clusterType = sortedLevels[i].type;
-        }
-        }
-        
-        // Add the last cluster
-        if (currentCluster.length > 0) {
-        clusters.push({
-            price: currentCluster.reduce((sum, level) => sum + level.price, 0) / currentCluster.length,
-            type: clusterType,
-            strength: currentCluster.length
-        });
-        }
-        
-        return clusters;
-    }
-
     // Advanced trend identification using multiple indicators
     private calculateAdvancedTrend(close: number[], macdData: any[], rsi: number[], ema50: number[], ema200: number[]): string {
 
@@ -1964,5 +1838,93 @@ export class CryptoAnalyzer {
             liquidityType,
             volumeScore
         };
+    }
+
+    // Helper method to get previous levels (implement storage/caching as needed)
+    private previousLevelsCache = new Map<string, {
+        timestamp: number;
+        supports: Array<{ price: number; strength: number; description?: string }>;
+        resistances: Array<{ price: number; strength: number; description?: string }>;
+    }>();
+    
+    private getPreviousLevels(pair: string) {
+        return this.previousLevelsCache.get(pair);
+    }
+    
+    private updatePreviousLevels(pair: string, levels: {
+        supports: Array<{ price: number; strength: number; description?: string }>;
+        resistances: Array<{ price: number; strength: number; description?: string }>;
+    }) {
+        this.previousLevelsCache.set(pair, {
+            timestamp: Date.now(),
+            ...levels
+        });
+    }
+
+    private calculateSupportResistance(close: number[], period: number = 20): any {
+        const levels = [];
+        
+        // Use a rolling window approach
+        for (let i = period; i < close.length - period; i++) {
+            const leftWindow = close.slice(i - period, i);
+            const rightWindow = close.slice(i + 1, i + period + 1);
+            const currentPrice = close[i];
+            
+            // Check if this point is a local maximum
+            if (currentPrice > Math.max(...leftWindow) && currentPrice > Math.max(...rightWindow)) {
+                levels.push({ price: currentPrice, type: 'resistance', strength: 1 });
+            }
+            // Check if this point is a local minimum
+            else if (currentPrice < Math.min(...leftWindow) && currentPrice < Math.min(...rightWindow)) {
+                levels.push({ price: currentPrice, type: 'support', strength: 1 });
+            }
+        }
+        
+        // Cluster and consolidate close levels
+        const clusteredLevels = this.clusterLevels(levels, close[close.length - 1] * 0.01); // 1% threshold
+        
+        // Sort by strength (descending)
+        return clusteredLevels.sort((a, b) => b.strength - a.strength);
+    }
+
+    private clusterLevels(levels: any[], threshold: number): any[] {
+        if (levels.length === 0) return [];
+        
+        // Sort by price
+        const sortedLevels = [...levels].sort((a, b) => a.price - b.price);
+        const clusters = [];
+        
+        let currentCluster = [sortedLevels[0]];
+        let clusterType = sortedLevels[0].type;
+        
+        for (let i = 1; i < sortedLevels.length; i++) {
+            const lastLevel = currentCluster[currentCluster.length - 1];
+            
+            // If this level is close to the previous one and the same type, add to cluster
+            if (sortedLevels[i].price - lastLevel.price < threshold && sortedLevels[i].type === clusterType) {
+                currentCluster.push(sortedLevels[i]);
+            } else {
+                // Complete current cluster and start a new one
+                clusters.push({
+                    price: currentCluster.reduce((sum, level) => sum + level.price, 0) / currentCluster.length,
+                    type: clusterType,
+                    strength: currentCluster.length
+                });
+                
+                currentCluster = [sortedLevels[i]];
+                clusterType = sortedLevels[i].type;
+            }
+        }
+        
+        // Add the last cluster
+        if (currentCluster.length > 0) {
+            clusters.push({
+                price: currentCluster.reduce((sum, level) => sum + level.price, 0) / currentCluster.length,
+                type: clusterType,
+                strength: currentCluster.length
+            });
+        }
+        
+        return clusters;
     }
 }

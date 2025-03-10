@@ -223,14 +223,14 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                 <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-emerald-400/80">
-                      ${formatPrice(getFallbackSupport(pair))}
+                      ${formatPrice(getFallbackSupport(pair).price)}
                     </span>
                     <span className="bg-emerald-400/10 text-emerald-400/70 text-xs px-2 py-0.5 rounded-full">
                       Estimated
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
-                    No significant support levels detected in this range.
+                    {getFallbackSupport(pair).description}
                   </div>
                 </div>
               )}
@@ -276,14 +276,14 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                 <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-red-400/80">
-                      ${formatPrice(getFallbackResistance(pair))}
+                      ${formatPrice(getFallbackResistance(pair).price)}
                     </span>
                     <span className="bg-red-400/10 text-red-400/70 text-xs px-2 py-0.5 rounded-full">
                       Estimated
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
-                    No significant resistance levels detected in this range.
+                    {getFallbackResistance(pair).description}
                   </div>
                 </div>
               )}

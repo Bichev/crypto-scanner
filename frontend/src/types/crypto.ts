@@ -125,6 +125,29 @@ export interface CryptoPair {
     liquidityType: 'Low' | 'Normal' | 'High';
     volumeScore: number;
     movementType: 'Low Liquidity Pump' | 'Volume Driven Pump' | 'Low Liquidity Dump' | 'Volume Driven Dump' | 'Normal';
+    // Add tracking for when pair was first seen
+    firstSeenTimestamp?: number;
+    // Add broken levels tracking
+    brokenLevels?: {
+        brokenSupports: Array<{
+            price: number;
+            strength: number;
+            breakTime: number;
+            priceAtBreak: number;
+            volume24hAtBreak: number;
+            description?: string;
+        }>;
+        brokenResistances: Array<{
+            price: number;
+            strength: number;
+            breakTime: number;
+            priceAtBreak: number;
+            volume24hAtBreak: number;
+            description?: string;
+        }>;
+    };
+    fallbackSupport?: { price: number; description: string };
+    fallbackResistance?: { price: number; description: string };
 }
 
 export interface IndicatorDescription {

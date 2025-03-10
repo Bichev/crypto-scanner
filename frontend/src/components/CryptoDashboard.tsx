@@ -7,6 +7,7 @@ import { MarketDistributionChart, RSIDistributionChart, PriceChangeChart } from 
 import { cryptoService } from '@/services/cryptoService';
 import { BollingerDistributionChart, VolatilityRadarChart, AdvancedTrendChart } from '@/components/advanced-charts';
 import { CorrelationWidget } from '@/components/CorrelationWidget';
+import { BrokenLevelsCard } from '@/components/BrokenLevelsCard';
 
 interface DashboardProps {
     data: AnalyzerResponse;
@@ -431,6 +432,11 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardContent>
                 </Card>
 
+                {/* Add BrokenLevelsCard */}
+                <div className="col-span-2">
+                    <BrokenLevelsCard pairs={data.pairs} />
+                </div>
+
                 {/* Top Gainers Card */}
                 <Card>
                     <CardHeader className="pb-2">
@@ -488,10 +494,6 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                         </ul>
                     </CardContent>
                 </Card>
-
-                
-
-
 
                 {/* Add Top Enhanced Score Card */}
                 <Card>
@@ -636,8 +638,8 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardContent>
                 </Card>
 
-                                {/* Pumping Pairs Card */}
-                                <Card>
+                {/* Pumping Pairs Card */}
+                <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-medium flex items-center">
                             <ChartBarIcon className="w-5 h-5 mr-2 text-emerald-400" />
