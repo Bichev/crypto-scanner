@@ -871,7 +871,15 @@ export class CryptoAnalyzer {
         );
 
         // New indicators
-        const ichimoku = this.calculateIchimoku(recentHighs, recentLows, recentClosePrices);
+        const longTermHighs = longTermCandles.map(c => c.high);
+        const longTermLows = longTermCandles.map(c => c.low);
+        // const longTermClosePrices = longTermCandles.map(c => c.close);
+        
+        const ichimoku = this.calculateIchimoku(
+            longTermHighs,
+            longTermLows,
+            longTermClosePrices
+        );
         const stochastic = this.calculateStochastic(recentHighs, recentLows, recentClosePrices);
         const advancedATR = this.calculateATR(recentHighs, recentLows, recentClosePrices);
         const supportResistance = this.calculateSupportResistance(recentClosePrices);
@@ -999,6 +1007,8 @@ export class CryptoAnalyzer {
                 cloudSignal: ichimoku.cloudSignal || 'Unknown',
                 tkCross: ichimoku.tkCross || 'None'
             },
+
+ 
             stochastic: {
                 k: stochastic.k?.toFixed(2),
                 d: stochastic.d?.toFixed(2),
@@ -1313,6 +1323,28 @@ export class CryptoAnalyzer {
 
     // Add Ichimoku Cloud calculation
     private calculateIchimoku(high: number[], low: number[], close: number[]): any {
+        // Check for minimum required data points
+        const requiredPoints = 52 + 26; // spanPeriod + displacement
+        if (high.length < requiredPoints || low.length < requiredPoints || close.length < requiredPoints) {
+            console.log('Insufficient data points for Ichimoku calculation:', {
+                required: requiredPoints,
+                available: {
+                    high: high.length,
+                    low: low.length,
+                    close: close.length
+                }
+            });
+            return {
+                tenkan: null,
+                kijun: null,
+                senkouA: null,
+                senkouB: null,
+                currentPrice: close[close.length - 1],
+                cloudSignal: 'Insufficient Data',
+                tkCross: 'None'
+            };
+        }
+
         const ichimoku = ti.IchimokuCloud.calculate({
             high,
             low,
@@ -1320,6 +1352,11 @@ export class CryptoAnalyzer {
             basePeriod: 26,
             spanPeriod: 52,
             displacement: 26
+        });
+
+        console.log('Ichimoku calculation result:', {
+            resultLength: ichimoku.length,
+            latest: ichimoku[ichimoku.length - 1]
         });
 
         const latest = ichimoku[ichimoku.length - 1] || {};
@@ -1346,7 +1383,7 @@ export class CryptoAnalyzer {
             tkCross = 'Bearish TK Cross';
         }
         
-        return {
+        const result = {
             tenkan: latest.conversion,
             kijun: latest.base,
             senkouA: latest.spanA,
@@ -1355,6 +1392,10 @@ export class CryptoAnalyzer {
             cloudSignal: signal,
             tkCross
         };
+
+        console.log('Final Ichimoku values:', result);
+        
+        return result;
     }
 
     // Add Stochastic Oscillator
