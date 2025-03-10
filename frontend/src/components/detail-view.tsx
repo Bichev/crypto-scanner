@@ -5,6 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from './ui/button';
 import { formatNumber, formatPercentage, cn } from '@/lib/utils';
 import { XCircleIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
+import { 
+  formatPrice, 
+  isSameLevel, 
+  getFallbackSupport, 
+  getFallbackResistance,
+  getPriceChannelWidth,
+  hasOverlappingLevels
+} from '../lib/support-resistance-helpers';
 
 interface DetailViewProps {
   pair: CryptoPair | null;
@@ -118,10 +126,226 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
           </div>
         </div>
 
+    {/* Add Support/Resistance section */}
+    <div className="grid grid-cols-1 gap-4 mb-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            Support & Resistance Levels
+            <div className="relative group">
+              <button className="text-muted-foreground hover:text-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.75 2.75 0 013.82 0 .75.75 0 01-1.06 1.06 1.25 1.25 0 00-1.7 0zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <div className="absolute left-full top-0 ml-2 w-[400px] hidden group-hover:block z-50">
+                <div className="bg-black/95 backdrop-blur-sm border border-border/50 text-white px-4 py-3 rounded-lg shadow-xl text-sm max-h-[calc(100vh-4rem)] overflow-y-auto">
+                  <h4 className="font-semibold mb-3 text-base border-b border-border/50 pb-2">How Support & Resistance Levels Work</h4>
+                  <div className="space-y-3">
+                    <div className="bg-white/5 rounded-md p-3">
+                      <p className="mb-2"><span className="font-medium text-primary">Detection Method:</span> Levels are identified using price action, volume, and historical touches. Each level's strength is calculated based on:</p>
+                      <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                        <li>Volume at the level (25%)</li>
+                        <li>Number of touches (20%)</li>
+                        <li>Recency of touches (20%)</li>
+                        <li>Rejection strength (25%)</li>
+                        <li>Psychological level bonus (10%)</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-white/5 rounded-md p-3">
+                      <p className="mb-2"><span className="font-medium text-primary">Level Classification:</span></p>
+                      <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                        <li>Support levels can be up to 5% above current price</li>
+                        <li>Historical levels remain valid if price returns to that area</li>
+                        <li className="text-emerald-400">Strength ≥ 75%: Strong level with multiple confirmations</li>
+                        <li className="text-emerald-400/80">Strength 50-74%: Moderate level with some confirmations</li>
+                        <li className="text-emerald-400/60">Strength &lt; 50%: Weak level needing more confirmation</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-white/5 rounded-md p-3">
+                      <p className="mb-2"><span className="font-medium text-primary">Important Notes:</span></p>
+                      <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                        <li>ATR (Average True Range) is used for adaptive thresholds</li>
+                        <li>Higher timeframe levels (180 days) are considered for major pairs</li>
+                        <li>Volume profile helps confirm level significance</li>
+                        <li>Levels are dynamically updated as new price action develops</li>
+                        <li>Overlapping levels can occur in tightly-trading pairs</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Support Levels</h3>
+              {pair.supports && pair.supports.length > 0 ? (
+                <ul className="space-y-3">
+                  {pair.supports.map((level, index) => (
+                    <li key={index} className="flex flex-col space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono text-emerald-400">
+                          ${formatPrice(level.price)}
+                        </span>
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded-full",
+                          level.strength >= 75 ? "bg-emerald-400/20 text-emerald-400" :
+                          level.strength >= 50 ? "bg-emerald-400/15 text-emerald-400/90" :
+                          "bg-emerald-400/10 text-emerald-400/80"
+                        )}>
+                          Strength: {level.strength}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary/30 rounded-full h-1">
+                        <div 
+                          className="bg-emerald-400/50 h-full rounded-full" 
+                          style={{ width: `${Math.max(15, level.strength)}%` }}
+                        />
+                      </div>
+                      {level.description && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{level.description}</div>
+                      )}
+                      {isSameLevel(level.price, parseFloat(pair.currentPrice), 0.5) && (
+                        <div className="text-xs text-amber-400 mt-0.5 flex items-center">
+                          <span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>
+                          Current price level
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-emerald-400/80">
+                      ${formatPrice(getFallbackSupport(pair))}
+                    </span>
+                    <span className="bg-emerald-400/10 text-emerald-400/70 text-xs px-2 py-0.5 rounded-full">
+                      Estimated
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    No significant support levels detected in this range.
+                  </div>
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Resistance Levels</h3>
+              {pair.resistances && pair.resistances.length > 0 ? (
+                <ul className="space-y-3">
+                  {pair.resistances.map((level, index) => (
+                    <li key={index} className="flex flex-col space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono text-red-400">
+                          ${formatPrice(level.price)}
+                        </span>
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded-full",
+                          level.strength >= 75 ? "bg-red-400/20 text-red-400" :
+                          level.strength >= 50 ? "bg-red-400/15 text-red-400/90" :
+                          "bg-red-400/10 text-red-400/80"
+                        )}>
+                          Strength: {level.strength}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary/30 rounded-full h-1">
+                        <div 
+                          className="bg-red-400/50 h-full rounded-full" 
+                          style={{ width: `${Math.max(15, level.strength)}%` }}
+                        />
+                      </div>
+                      {level.description && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{level.description}</div>
+                      )}
+                      {isSameLevel(level.price, parseFloat(pair.currentPrice), 0.5) && (
+                        <div className="text-xs text-amber-400 mt-0.5 flex items-center">
+                          <span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>
+                          Current price level
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-red-400/80">
+                      ${formatPrice(getFallbackResistance(pair))}
+                    </span>
+                    <span className="bg-red-400/10 text-red-400/70 text-xs px-2 py-0.5 rounded-full">
+                      Estimated
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    No significant resistance levels detected in this range.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
+          {/* Price Channel Width Indicator */}
+          {(getPriceChannelWidth(pair) > 0) && (
+            <div className="mt-4 pt-3 border-t border-secondary/30">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Price Channel Width:</span>
+                <span className={cn(
+                  "font-mono",
+                  getPriceChannelWidth(pair) < 1 ? "text-blue-400" :
+                  getPriceChannelWidth(pair) > 10 ? "text-red-400" :
+                  "text-amber-400"
+                )}>
+                  {getPriceChannelWidth(pair).toFixed(2)}%
+                </span>
+              </div>
+              <div className="mt-2 relative">
+                <div className="w-full bg-secondary/30 rounded-full h-1">
+                  <div 
+                    className={cn(
+                      "h-full rounded-full",
+                      getPriceChannelWidth(pair) < 1 ? "bg-blue-400/50" :
+                      getPriceChannelWidth(pair) > 10 ? "bg-red-400/50" :
+                      "bg-amber-400/50"
+                    )}
+                    style={{ 
+                      width: `${Math.min(100, Math.max(15, getPriceChannelWidth(pair) * 5))}%` 
+                    }}
+                  />
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground text-center">
+                  {getPriceChannelWidth(pair) < 1 ? "Very tight range" :
+                  getPriceChannelWidth(pair) < 3 ? "Tight range" :
+                  getPriceChannelWidth(pair) < 7 ? "Normal range" :
+                  getPriceChannelWidth(pair) < 15 ? "Wide range" :
+                  "Very wide range"}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Overlapping Levels Warning - Show when levels overlap */}
+          {hasOverlappingLevels(pair) && (
+            <div className="mt-4 pt-3 border-t border-secondary/30">
+              <div className="flex items-center gap-2 text-amber-400/90 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                <span>Some support/resistance levels overlap due to tight trading range.</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
 
         {/* Add Support/Resistance section */}
-        <div className="grid grid-cols-1 gap-4 mb-4">
+        {/* <div className="grid grid-cols-1 gap-4 mb-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -172,6 +396,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                 </div>
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <div className="grid grid-cols-2 gap-6">
                 <div>
@@ -229,7 +454,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
               </div>
             </CardContent>
           </Card>
-        </div>            
+        </div>             */}
         
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="col-span-2">
