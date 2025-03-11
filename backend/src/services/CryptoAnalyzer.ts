@@ -228,12 +228,27 @@ export class CryptoAnalyzer {
     }
 
     private calculateFibonacciLevels(high: number, low: number): { level: number; price: number }[] {
-        const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
-        const range = high - low;
+        const diff = high - low;
         
-        return fibLevels.map(level => ({
-            level,
-            price: high - (range * level)
+        // Standard Fibonacci ratios
+        const levels = [
+            { level: 0, price: low },
+            { level: 0.236, price: low + diff * 0.236 },
+            { level: 0.382, price: low + diff * 0.382 },
+            { level: 0.5, price: low + diff * 0.5 },
+            { level: 0.618, price: low + diff * 0.618 },
+            { level: 0.786, price: low + diff * 0.786 },
+            { level: 1, price: high },
+            // Extension levels
+            { level: 1.272, price: low + diff * 1.272 },
+            { level: 1.618, price: low + diff * 1.618 },
+            { level: 2.618, price: low + diff * 2.618 }
+        ];
+
+        // Add support/resistance strength to each level
+        return levels.map(level => ({
+            ...level,
+            price: parseFloat(level.price.toFixed(8))
         }));
     }
 
@@ -880,6 +895,14 @@ export class CryptoAnalyzer {
             percentChangeFromHigh: ((currentPrice - allTimeHigh) / allTimeHigh) * 100
         });
 
+        // Calculate Fibonacci levels
+        const recentSwingHigh = Math.max(...recentHighs.slice(-30));
+        const recentSwingLow = Math.min(...recentLows.slice(-30));
+        const fibLevels = this.calculateFibonacciLevels(recentSwingHigh, recentSwingLow);
+        
+        // Calculate current price position relative to Fibonacci levels
+        const fibPosition = this.calculateFibonacciPosition(currentPrice, fibLevels);
+
         return {
             currentPrice: currentPrice.toFixed(8),
             dailyPriceChange: this.calculateDailyPriceChange(recentCandles),
@@ -887,6 +910,19 @@ export class CryptoAnalyzer {
             percentChangeFromLow: percentFromLow.toFixed(2),
             percentChangeLastThreeMonths: threeMonthChange.toFixed(2),
             
+            // Add Fibonacci analysis
+            fibonacciAnalysis: {
+                levels: fibLevels,
+                currentPosition: fibPosition.type, // This will be 'Retracement' or 'Extension'
+                description: fibPosition.description, // This will be the detailed description
+                swingPoints: {
+                    high: recentSwingHigh,
+                    low: recentSwingLow,
+                    highTime: recentCandles[recentHighs.indexOf(recentSwingHigh)]?.timestamp,
+                    lowTime: recentCandles[recentLows.indexOf(recentSwingLow)]?.timestamp
+                }
+            },
+
             // Volume indicators
             vma_7: vma7[vma7.length - 1]?.toFixed(2),
             vma_30: vma30[vma30.length - 1]?.toFixed(2),
@@ -1906,5 +1942,42 @@ export class CryptoAnalyzer {
         }
         
         return clusters;
+    }
+
+    private calculateFibonacciPosition(currentPrice: number, fibLevels: Array<{ level: number; price: number }>): { type: string; description: string } {
+        // Sort levels by price in descending order
+        const sortedLevels = [...fibLevels].sort((a, b) => b.price - a.price);
+        
+        // Find the levels the price is between
+        for (let i = 0; i < sortedLevels.length - 1; i++) {
+            if (currentPrice <= sortedLevels[i].price && currentPrice >= sortedLevels[i + 1].price) {
+                const upperLevel = sortedLevels[i].level;
+                const lowerLevel = sortedLevels[i + 1].level;
+                
+                // Calculate how far between the levels the price is
+                const range = sortedLevels[i].price - sortedLevels[i + 1].price;
+                const position = currentPrice - sortedLevels[i + 1].price;
+                const percentage = (position / range * 100).toFixed(1);
+                
+                const description = `Between ${(lowerLevel * 100).toFixed(1)}% and ${(upperLevel * 100).toFixed(1)}% (${percentage}% from ${(lowerLevel * 100).toFixed(1)}%)`;
+                
+                // Determine if this is a retracement or extension level
+                const type = upperLevel <= 1 ? 'Retracement' : 'Extension';
+                
+                return { type, description };
+            }
+        }
+        
+        // If price is above or below all levels
+        if (currentPrice > sortedLevels[0].price) {
+            return {
+                type: 'Extension',
+                description: `Above ${(sortedLevels[0].level * 100).toFixed(1)}%`
+            };
+        }
+        return {
+            type: 'Retracement',
+            description: `Below ${(sortedLevels[sortedLevels.length - 1].level * 100).toFixed(1)}%`
+        };
     }
 }

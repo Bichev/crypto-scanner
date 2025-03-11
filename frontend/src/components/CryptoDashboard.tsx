@@ -675,7 +675,100 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             )}
                         </div>
                     </CardContent>
+                </Card>                
+
+                {/* Trend Reversal Signals Card */}
+                {/* Temporarily disabled */}
+                {false && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Trend Reversal Signals
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Trend Reversal Indicators:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">Bullish Reversal:</span> Potential upward trend change</li>
+                                        <li><span className="text-red-400">Bearish Reversal:</span> Potential downward trend change</li>
+                                        <li><span className="text-blue-400">Confirmation Needed:</span> Early reversal signs</li>
+                                    </ul>
+                                    <p className="text-xs mt-2 text-muted-foreground">Based on RSI divergence, MACD crossover, and price action patterns</p>
+                                </div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {/* Bullish Reversals */}
+                            <div>
+                                <h3 className="text-sm font-medium text-emerald-400 mb-2">Bullish Reversal Signals</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => 
+                                            parseFloat(pair.rsi) < 30 && 
+                                            pair.macdTrend.includes('Bullish') &&
+                                            parseFloat(pair.dailyPriceChange) > -0.5
+                                        )
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground">RSI: {parseFloat(pair.rsi).toFixed(1)}</div>
+                                                    <div className="text-xs text-emerald-400">{pair.macdTrend}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        parseFloat(pair.rsi) < 30 && 
+                                        pair.macdTrend.includes('Bullish') &&
+                                        parseFloat(pair.dailyPriceChange) > -0.5
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No bullish reversal signals</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Bearish Reversals */}
+                            <div>
+                                <h3 className="text-sm font-medium text-red-400 mb-2">Bearish Reversal Signals</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => 
+                                            parseFloat(pair.rsi) > 70 && 
+                                            pair.macdTrend.includes('Bearish') &&
+                                            parseFloat(pair.dailyPriceChange) < 0.5
+                                        )
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground">RSI: {parseFloat(pair.rsi).toFixed(1)}</div>
+                                                    <div className="text-xs text-red-400">{pair.macdTrend}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        parseFloat(pair.rsi) > 70 && 
+                                        pair.macdTrend.includes('Bearish') &&
+                                        parseFloat(pair.dailyPriceChange) < 0.5
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No bearish reversal signals</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
                 </Card>
+                )}
 
                 {/* Pumping Pairs Card */}
                 <Card>
@@ -817,6 +910,496 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             )}
                         </ul>
                     </CardContent>
+                </Card>                
+
+                {/* Volume Analysis Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Volume Analysis
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Volume Indicators:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">Volume Spike:</span> Sudden increase in trading activity</li>
+                                        <li><span className="text-blue-400">Volume Trend:</span> Direction of volume movement</li>
+                                        <li><span className="text-yellow-400">Volume/Price Divergence:</span> Volume not confirming price movement</li>
+                                    </ul>
+                                    <p className="text-xs mt-2 text-muted-foreground">Analyzing volume patterns helps confirm price movements and trend strength</p>
+                                </div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {/* High Volume Movers */}
+                            <div>
+                                <h3 className="text-sm font-medium text-emerald-400 mb-2">High Volume Movers</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => parseFloat(pair.volumeOscillator) > 50)
+                                        .sort((a, b) => parseFloat(b.volumeOscillator) - parseFloat(a.volumeOscillator))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-emerald-400">
+                                                        Vol: +{parseFloat(pair.volumeOscillator).toFixed(1)}%
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Price: {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+
+                            {/* Volume/Price Divergence */}
+                            <div>
+                                <h3 className="text-sm font-medium text-yellow-400 mb-2">Volume/Price Divergence</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const priceChange = parseFloat(pair.dailyPriceChange);
+                                            const volumeChange = parseFloat(pair.volumeOscillator);
+                                            return (
+                                                (priceChange > 2 && volumeChange < -20) || // Price up, volume down
+                                                (priceChange < -2 && volumeChange < -20)    // Price down, volume down
+                                            );
+                                        })
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Vol: {parseFloat(pair.volumeOscillator).toFixed(1)}%
+                                                    </div>
+                                                    <div className={cn(
+                                                        "text-xs",
+                                                        parseFloat(pair.dailyPriceChange) > 0 ? "text-emerald-400" : "text-red-400"
+                                                    )}>
+                                                        Price: {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+
+                            {/* Declining Volume */}
+                            <div>
+                                <h3 className="text-sm font-medium text-red-400 mb-2">Declining Volume</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => parseFloat(pair.volumeOscillator) < -50)
+                                        .sort((a, b) => parseFloat(a.volumeOscillator) - parseFloat(b.volumeOscillator))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-red-400">
+                                                        Vol: {parseFloat(pair.volumeOscillator).toFixed(1)}%
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Price: {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+
+                {/* Volatility Analysis Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Volatility Analysis
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Volatility Indicators:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">High Volatility:</span> Large price swings, potential for significant moves</li>
+                                        <li><span className="text-blue-400">Low Volatility:</span> Price consolidation, potential for breakout</li>
+                                        <li><span className="text-yellow-400">Volatility Change:</span> Comparison to historical average</li>
+                                    </ul>
+                                    <p className="text-xs mt-2 text-muted-foreground">Based on ATR, Bollinger Band width, and historical volatility patterns</p>
+                                </div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {/* High Volatility */}
+                            <div>
+                                <h3 className="text-sm font-medium text-emerald-400 mb-2">Increasing Volatility</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const bbWidth = parseFloat(pair.bollingerBands?.bandwidth || '0');
+                                            const atr = parseFloat(pair.atrAnalysis?.normalizedATR || '0');
+                                            return bbWidth > 0.1 && atr > 0.02 && pair.volatilityIndex?.trend === 'Increasing';
+                                        })
+                                        .sort((a, b) => parseFloat(b.atrAnalysis?.normalizedATR || '0') - parseFloat(a.atrAnalysis?.normalizedATR || '0'))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-emerald-400">
+                                                        ATR: {(parseFloat(pair.atrAnalysis?.normalizedATR || '0') * 100).toFixed(1)}%
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        BB Width: {(parseFloat(pair.bollingerBands?.bandwidth || '0') * 100).toFixed(1)}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+
+                            {/* Low Volatility */}
+                            <div>
+                                <h3 className="text-sm font-medium text-blue-400 mb-2">Decreasing Volatility (Potential Breakout)</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const bbWidth = parseFloat(pair.bollingerBands?.bandwidth || '0');
+                                            const atr = parseFloat(pair.atrAnalysis?.normalizedATR || '0');
+                                            return bbWidth < 0.05 && atr < 0.01 && pair.volatilityIndex?.trend === 'Decreasing';
+                                        })
+                                        .sort((a, b) => parseFloat(a.bollingerBands?.bandwidth || '0') - parseFloat(b.bollingerBands?.bandwidth || '0'))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-blue-400">
+                                                        BB Squeeze: {(parseFloat(pair.bollingerBands?.bandwidth || '0') * 100).toFixed(1)}%
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Trend: {pair.advancedTrend}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+
+                            {/* Historical Comparison */}
+                            <div>
+                                <h3 className="text-sm font-medium text-yellow-400 mb-2">Abnormal Volatility</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const volValue = parseFloat(pair.volatilityIndex?.value || '0');
+                                            return volValue > 2; // More than 2x historical average
+                                        })
+                                        .sort((a, b) => 
+                                            parseFloat(b.volatilityIndex?.value || '0') - parseFloat(a.volatilityIndex?.value || '0')
+                                        )
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-yellow-400">
+                                                        {parseFloat(pair.volatilityIndex?.value || '0').toFixed(1)}x avg
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {pair.volatilityIndex?.trend}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Fibonacci Retracement Levels Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Fibonacci Retracement Levels
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Fibonacci Level Analysis:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">Support Levels:</span> Key levels where price might find support during retracements</li>
+                                        <li><span className="text-red-400">Resistance Levels:</span> Key levels where price might find resistance during rallies</li>
+                                        <li><span className="text-yellow-400">Extension Levels:</span> Potential price targets beyond the trend</li>
+                                    </ul>
+                                    <p className="text-xs mt-2 text-muted-foreground">Based on recent swing high/low points and Fibonacci ratios</p>
+                                </div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {/* Retracement Levels */}
+                            <div>
+                                <h3 className="text-sm font-medium text-emerald-400 mb-2">At Key Retracement Levels</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => pair.fibonacciAnalysis?.currentPosition?.includes('Retracement'))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-emerald-400">
+                                                        {pair.fibonacciAnalysis?.currentPosition}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Price: ${formatPrice(parseFloat(pair.currentPrice))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        pair.fibonacciAnalysis?.currentPosition?.includes('Retracement')
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No pairs at key retracement levels</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Extension Levels */}
+                            <div>
+                                <h3 className="text-sm font-medium text-red-400 mb-2">At Extension Levels</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => pair.fibonacciAnalysis?.currentPosition?.includes('Extension'))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-red-400">
+                                                        {pair.fibonacciAnalysis?.currentPosition}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Price: ${formatPrice(parseFloat(pair.currentPrice))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        pair.fibonacciAnalysis?.currentPosition?.includes('Extension')
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No pairs at extension levels</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Recent Swing Points */}
+                            <div>
+                                <h3 className="text-sm font-medium text-blue-400 mb-2">Recent Swing Points</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => pair.fibonacciAnalysis?.swingPoints)
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs">
+                                                        <span className="text-emerald-400">H: ${formatPrice(pair.fibonacciAnalysis?.swingPoints.high || 0)}</span>
+                                                        {' • '}
+                                                        <span className="text-red-400">L: ${formatPrice(pair.fibonacciAnalysis?.swingPoints.low || 0)}</span>
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Range: {formatPercentage((pair.fibonacciAnalysis?.swingPoints.high || 0) - 
+                                                                               (pair.fibonacciAnalysis?.swingPoints.low || 0) / 
+                                                                               (pair.fibonacciAnalysis?.swingPoints.low || 1) * 100)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Ichimoku Cloud Signals Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Ichimoku Cloud Signals
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Ichimoku Cloud Components:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">Strong Bullish:</span> Price above cloud, cloud green</li>
+                                        <li><span className="text-red-400">Strong Bearish:</span> Price below cloud, cloud red</li>
+                                        <li><span className="text-yellow-400">Potential Reversal:</span> TK Cross or price crossing cloud</li>
+                                        <li><span className="text-blue-400">Cloud Thickness:</span> Indicates trend strength</li>
+                                    </ul>
+                                    <p className="text-xs mt-2 text-muted-foreground">Cloud thickness and color indicate trend strength and direction</p>
+                                </div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {/* Strong Bullish Trends */}
+                            <div>
+                                <h3 className="text-sm font-medium text-emerald-400 mb-2">Strong Bullish Trends</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => 
+                                            pair.ichimoku?.cloudSignal === 'Strong Bullish' &&
+                                            parseFloat(pair.enhancedScore) > 0.6
+                                        )
+                                        .sort((a, b) => parseFloat(b.enhancedScore) - parseFloat(a.enhancedScore))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-emerald-400">
+                                                        {pair.ichimoku?.tkCross}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Cloud: {Math.abs(parseFloat(pair.ichimoku?.senkouA || '0') - 
+                                                            parseFloat(pair.ichimoku?.senkouB || '0')).toFixed(2)}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        pair.ichimoku?.cloudSignal === 'Strong Bullish' &&
+                                        parseFloat(pair.enhancedScore) > 0.6
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No strong bullish trends</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Strong Bearish Trends */}
+                            <div>
+                                <h3 className="text-sm font-medium text-red-400 mb-2">Strong Bearish Trends</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => 
+                                            pair.ichimoku?.cloudSignal === 'Strong Bearish' &&
+                                            parseFloat(pair.enhancedScore) < 0.4
+                                        )
+                                        .sort((a, b) => parseFloat(a.enhancedScore) - parseFloat(b.enhancedScore))
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-red-400">
+                                                        {pair.ichimoku?.tkCross}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Cloud: {Math.abs(parseFloat(pair.ichimoku?.senkouA || '0') - 
+                                                            parseFloat(pair.ichimoku?.senkouB || '0')).toFixed(2)}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        pair.ichimoku?.cloudSignal === 'Strong Bearish' &&
+                                        parseFloat(pair.enhancedScore) < 0.4
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No strong bearish trends</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Potential Reversals */}
+                            <div>
+                                <h3 className="text-sm font-medium text-yellow-400 mb-2">Potential Trend Reversals</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const tkCross = pair.ichimoku?.tkCross || '';
+                                            return (tkCross.includes('Bullish Cross') || tkCross.includes('Bearish Cross')) &&
+                                                   pair.ichimoku?.cloudSignal !== 'Strong Bullish' &&
+                                                   pair.ichimoku?.cloudSignal !== 'Strong Bearish';
+                                        })
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={cn(
+                                                        "text-xs",
+                                                        pair.ichimoku?.tkCross?.includes('Bullish') ? "text-emerald-400" : "text-red-400"
+                                                    )}>
+                                                        {pair.ichimoku?.tkCross}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Signal: {pair.ichimoku?.cloudSignal}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => {
+                                        const tkCross = pair.ichimoku?.tkCross || '';
+                                        return (tkCross.includes('Bullish Cross') || tkCross.includes('Bearish Cross')) &&
+                                               pair.ichimoku?.cloudSignal !== 'Strong Bullish' &&
+                                               pair.ichimoku?.cloudSignal !== 'Strong Bearish';
+                                    }).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No potential reversals detected</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
                 </Card>
 
                 {/* Recently Added Pairs Card */}
@@ -866,26 +1449,175 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                     <p className="text-sm text-muted-foreground">No new pairs in the last 7 days</p>
                                 )}
                             </div>
-                            <div>
+                            {/* <div>
                                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Added Last 30 Days</h3>
                                 {recentPairs.month.length > 0 ? (
                                     <ul className="space-y-2">
                                         {recentPairs.month.map(pair => (
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400/30 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
-                                                {/* <div className="text-xs text-muted-foreground">
-                                                    First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
-                                                </div> */}
                                             </li>
                                         ))}
                                     </ul>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">No new pairs between 7-30 days</p>
                                 )}
-                            </div>
+                            </div> */}
                         </div>
                     </CardContent>
                 </Card>    
+
+
+                {/* Moving Average Crossovers Card */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium flex items-center justify-between">
+                            Moving Average Crossovers
+                            <div className="group relative">
+                                <QuestionMarkCircleIcon className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary" />
+                                <div className="invisible group-hover:visible absolute z-50 w-72 p-3 mt-1 text-sm bg-secondary/90 rounded-md shadow-lg right-0">
+                                    <p className="font-medium mb-2">Moving Average Signals:</p>
+                                    <ul className="space-y-1 text-xs">
+                                        <li><span className="text-emerald-400">Golden Cross:</span> 50MA crosses above 200MA (Strong bullish)</li>
+                                        <li><span className="text-red-400">Death Cross:</span> 50MA crosses below 200MA (Strong bearish)</li>
+                                        <li><span className="text-yellow-400">Approaching Cross:</span> MAs within 1% of crossing</li>
+                                    </ul>
+                                    <p className="text-xs mt-2 text-muted-foreground">Moving average crossovers often signal major trend changes</p>
+                                </div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {/* Golden Cross */}
+                            <div>
+                                <h3 className="text-sm font-medium text-emerald-400 mb-2">Recent Golden Cross</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const sma50 = parseFloat(pair.sma_50);
+                                            const sma200 = parseFloat(pair.sma_200);
+                                            const ema50 = parseFloat(pair.ema_50);
+                                            const ema200 = parseFloat(pair.ema_200);
+                                            return pair.smaTrend_50_200 === 'Golden Cross' || 
+                                                   (sma50 > sma200 && 
+                                                    ((sma50 - sma200) / sma200 * 100 < 1) && 
+                                                    pair.longTermCrossover === 'Bullish');
+                                        })
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-emerald-400">
+                                                        {pair.smaTrend_50_200}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Price: {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        pair.smaTrend_50_200 === 'Golden Cross' ||
+                                        (parseFloat(pair.sma_50) > parseFloat(pair.sma_200) && 
+                                         ((parseFloat(pair.sma_50) - parseFloat(pair.sma_200)) / parseFloat(pair.sma_200) * 100 < 1) &&
+                                         pair.longTermCrossover === 'Bullish')
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No recent golden crosses</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Death Cross */}
+                            <div>
+                                <h3 className="text-sm font-medium text-red-400 mb-2">Recent Death Cross</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const sma50 = parseFloat(pair.sma_50);
+                                            const sma200 = parseFloat(pair.sma_200);
+                                            const ema50 = parseFloat(pair.ema_50);
+                                            const ema200 = parseFloat(pair.ema_200);
+                                            return pair.smaTrend_50_200 === 'Death Cross' || 
+                                                   (sma50 < sma200 && 
+                                                    ((sma200 - sma50) / sma200 * 100 < 1) && 
+                                                    pair.longTermCrossover === 'Bearish');
+                                        })
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-red-400">
+                                                        {pair.smaTrend_50_200}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Price: {formatPercentage(parseFloat(pair.dailyPriceChange))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => 
+                                        pair.smaTrend_50_200 === 'Death Cross' ||
+                                        (parseFloat(pair.sma_50) < parseFloat(pair.sma_200) && 
+                                         ((parseFloat(pair.sma_200) - parseFloat(pair.sma_50)) / parseFloat(pair.sma_200) * 100 < 1) &&
+                                         pair.longTermCrossover === 'Bearish')
+                                    ).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No recent death crosses</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Approaching Crossovers */}
+                            <div>
+                                <h3 className="text-sm font-medium text-yellow-400 mb-2">Approaching Crossovers</h3>
+                                <div className="space-y-2">
+                                    {data.pairs
+                                        .filter(pair => {
+                                            const sma50 = parseFloat(pair.sma_50);
+                                            const sma200 = parseFloat(pair.sma_200);
+                                            const percentDiff = Math.abs((sma50 - sma200) / sma200 * 100);
+                                            return percentDiff < 0.5 && percentDiff > 0;
+                                        })
+                                        .slice(0, 3)
+                                        .map((pair, index) => (
+                                            <div key={pair.pair} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground">{index + 1}.</span>
+                                                    <span className="font-medium">{pair.pair}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-yellow-400">
+                                                        {parseFloat(pair.sma_50) > parseFloat(pair.sma_200) ? 
+                                                            'Potential Death Cross' : 'Potential Golden Cross'}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Gap: {(Math.abs((parseFloat(pair.sma_50) - parseFloat(pair.sma_200)) / 
+                                                               parseFloat(pair.sma_200) * 100)).toFixed(2)}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    {data.pairs.filter(pair => {
+                                        const sma50 = parseFloat(pair.sma_50);
+                                        const sma200 = parseFloat(pair.sma_200);
+                                        const percentDiff = Math.abs((sma50 - sma200) / sma200 * 100);
+                                        return percentDiff < 0.5 && percentDiff > 0;
+                                    }).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No approaching crossovers</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>                
 
                 {/* Replace the BrokenLevelsCard with the two new cards */}
                 <BrokenResistancesCard pairs={data.pairs} />
@@ -912,7 +1644,6 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">{change.previousValue}</span>
-                                <span className="font-bold">→</span>
                                 <span className={cn(
                                 "text-sm font-medium",
                                 change.newValue.includes('Up') || change.newValue.includes('Oversold') ? "text-emerald-400" :
@@ -961,18 +1692,18 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
             </div>
 
             {/* Charts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <PriceChangeChart data={data.pairs} />
                 <MarketDistributionChart data={data.pairs} />
                 <RSIDistributionChart data={data.pairs} />
-            </div>
+            </div> */}
 
             {/* New Charts Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <BollingerDistributionChart data={data.pairs} />
                 <VolatilityRadarChart data={data.pairs} />
                 <AdvancedTrendChart data={data.pairs} />
-            </div>
+            </div> */}
 
             {/* Correlation Analysis */}
             {/* <div className="mt-6">

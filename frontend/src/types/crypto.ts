@@ -6,6 +6,20 @@ export interface CryptoPair {
     percentChangeFromLow: string;
     percentChangeFromHigh: string;
     percentChangeLastThreeMonths: string;
+    // Add Fibonacci analysis
+    fibonacciAnalysis?: {
+        levels: Array<{
+            level: number;
+            price: number;
+        }>;
+        currentPosition: string;
+        swingPoints: {
+            high: number;
+            low: number;
+            highTime?: number;
+            lowTime?: number;
+        };
+    };
     // Price position analysis
     pricePositionAnalysis: {
         bbPosition: string;
