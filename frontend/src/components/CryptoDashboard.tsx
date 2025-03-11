@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CryptoPair, AnalyzerResponse, MarketSummary } from '@/types/crypto';
 import { formatNumber, formatPercentage, getTrendColor, cn } from '@/lib/utils';
+import { formatPrice } from '@/lib/support-resistance-helpers';
 import { ArrowUpIcon, ArrowDownIcon, ChartBarIcon, PlusCircleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid';
 import { MarketDistributionChart, RSIDistributionChart, PriceChangeChart } from '@/components/chart-coponent';
 import { cryptoService } from '@/services/cryptoService';
 import { BollingerDistributionChart, VolatilityRadarChart, AdvancedTrendChart } from '@/components/advanced-charts';
 import { CorrelationWidget } from '@/components/CorrelationWidget';
 import { BrokenResistancesCard, BrokenSupportsCard } from '@/components/BrokenLevelsCard';
+import moment from 'moment';
 
 interface DashboardProps {
     data: AnalyzerResponse;
@@ -19,26 +21,29 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
     const [trendChanges, setTrendChanges] = useState<any[]>([]);
     const [loadingCorrelations, setLoadingCorrelations] = useState(true);
     const [loadingTrendChanges, setLoadingTrendChanges] = useState(true);
-    const [recentPairs, setRecentPairs] = React.useState<{
-        today: Array<{
-            pair: string;
-            firstSeen: string;
-            lastSeen: string;
-            candleCount: number;
-        }>;
-        week: Array<{
-            pair: string;
-            firstSeen: string;
-            lastSeen: string;
-            candleCount: number;
-        }>;
-        month: Array<{
-            pair: string;
-            firstSeen: string;
-            lastSeen: string;
-            candleCount: number;
-        }>;
-    }>({ today: [], week: [], month: [] });
+
+    // Calculate time boundaries using moment
+    const now = moment();
+    const todayStart = moment().startOf('day');
+    const weekAgo = moment().subtract(7, 'days').startOf('day');
+    const monthAgo = moment().subtract(30, 'days').startOf('day');
+
+    // Filter pairs based on firstSeenTimestamp using moment
+    const recentPairs = {
+        today: data.pairs
+            .filter(pair => pair.firstSeenTimestamp && moment(pair.firstSeenTimestamp).isSameOrAfter(todayStart))
+            .sort((a, b) => (b.firstSeenTimestamp || 0) - (a.firstSeenTimestamp || 0)),
+        week: data.pairs
+            .filter(pair => pair.firstSeenTimestamp && 
+                moment(pair.firstSeenTimestamp).isSameOrAfter(weekAgo) && 
+                moment(pair.firstSeenTimestamp).isBefore(todayStart))
+            .sort((a, b) => (b.firstSeenTimestamp || 0) - (a.firstSeenTimestamp || 0)),
+        month: data.pairs
+            .filter(pair => pair.firstSeenTimestamp && 
+                moment(pair.firstSeenTimestamp).isSameOrAfter(monthAgo) && 
+                moment(pair.firstSeenTimestamp).isBefore(weekAgo))
+            .sort((a, b) => (b.firstSeenTimestamp || 0) - (a.firstSeenTimestamp || 0))
+    };
 
     // Process pump/dump data directly from the main data
     const pumpDumpData = React.useMemo(() => {
@@ -70,14 +75,6 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
 
         return { pumpingPairs, dumpingPairs };
     }, [data.pairs]);
-
-    useEffect(() => {
-        const loadRecentPairs = async () => {
-            const pairs = await cryptoService.fetchRecentPairs();
-            setRecentPairs(pairs);
-        };
-        loadRecentPairs();
-    }, []);
 
     useEffect(() => {
         const fetchMarketData = async () => {
@@ -822,8 +819,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     </CardContent>
                 </Card>
 
-
-                {/* New Pairs Widget */}
+                {/* Recently Added Pairs Card */}
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg font-medium flex items-center">
@@ -841,10 +837,10 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    First seen: {new Date(pair.firstSeen).toLocaleString()}
+                                                    First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    Candles: {pair.candleCount}
+                                                    Current price: ${formatPrice(parseFloat(pair.currentPrice))}
                                                 </div>
                                             </li>
                                         ))}
@@ -860,6 +856,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         {recentPairs.week.map(pair => (
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400/50 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
@@ -874,6 +873,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         {recentPairs.month.map(pair => (
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400/30 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>

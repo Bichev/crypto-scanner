@@ -116,9 +116,17 @@ export class CryptoAnalyzer {
             // Add pump/dump detection
             const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
             
-            // Calculate first seen timestamp (convert to milliseconds if in seconds)
+            // Calculate first seen timestamp using moment
             const firstSeenTimestamp = longTermCandles.length > 0 ? 
-                (longTermCandles[0].timestamp * (longTermCandles[0].timestamp < 1e12 ? 1000 : 1)) : null;
+                moment.unix(longTermCandles[0].timestamp).valueOf() : null;
+            
+            // Add debug logging with moment formatting
+            // console.log(`[${pair}] First seen analysis:`, {
+            //     originalTimestamp: longTermCandles[0]?.timestamp,
+            //     convertedTimestamp: firstSeenTimestamp,
+            //     date: firstSeenTimestamp ? moment(firstSeenTimestamp).format('YYYY-MM-DD HH:mm:ss') : 'N/A',
+            //     isRecent: firstSeenTimestamp && moment(firstSeenTimestamp).isAfter(moment().subtract(30, 'days')) ? 'Yes' : 'No'
+            // });
             
             results.push({
               pair,
