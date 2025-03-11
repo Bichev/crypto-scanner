@@ -836,9 +836,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         {recentPairs.today.map(pair => (
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
-                                                <div className="text-xs text-muted-foreground">
+                                                {/* <div className="text-xs text-muted-foreground">
                                                     First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
-                                                </div>
+                                                </div> */}
                                                 <div className="text-xs text-muted-foreground">
                                                     Current price: ${formatPrice(parseFloat(pair.currentPrice))}
                                                 </div>
@@ -856,9 +856,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         {recentPairs.week.map(pair => (
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400/50 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
-                                                <div className="text-xs text-muted-foreground">
+                                                {/* <div className="text-xs text-muted-foreground">
                                                     First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
-                                                </div>
+                                                </div> */}
                                             </li>
                                         ))}
                                     </ul>
@@ -873,9 +873,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         {recentPairs.month.map(pair => (
                                             <li key={pair.pair} className="text-sm border-l-2 border-blue-400/30 pl-2">
                                                 <div className="font-medium text-primary">{pair.pair}</div>
-                                                <div className="text-xs text-muted-foreground">
+                                                {/* <div className="text-xs text-muted-foreground">
                                                     First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
-                                                </div>
+                                                </div> */}
                                             </li>
                                         ))}
                                     </ul>
