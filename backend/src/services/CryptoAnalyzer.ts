@@ -30,7 +30,19 @@ interface VolumeProfileData {
     trend: 'Increasing' | 'Decreasing' | 'Neutral';
     trendStrength: number;
     spikes: Array<{ timestamp: number; volume: number; type: 'buy' | 'sell' }>;
-    levels: Array<{ price: number; type: 'support' | 'resistance' }>;
+    levels: Array<{ price: number; type: SupportResistanceType }>;
+}
+
+type SupportResistanceType = 'Support' | 'Resistance';
+
+interface VolumeLevel {
+    price: number;
+    type: SupportResistanceType;
+}
+
+interface PivotLevel extends VolumeLevel {
+    strength: number;
+    description?: string;
 }
 
 export class CryptoAnalyzer {
@@ -140,6 +152,9 @@ export class CryptoAnalyzer {
             //     isRecent: firstSeenTimestamp && moment(firstSeenTimestamp).isAfter(moment().subtract(30, 'days')) ? 'Yes' : 'No'
             // });
             
+            // Calculate market structure
+            const marketStructure = this.calculateMarketStructure(recentCandles);
+
             results.push({
               pair,
               currentVolumeUSD: currentVolumeUSD.toFixed(2),
@@ -158,7 +173,8 @@ export class CryptoAnalyzer {
                                   (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
                                   pumpDumpAnalysis.isDumping ? 
                                   (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
-                                  'Normal'
+                                  'Normal',
+              marketStructure,
             });
           } catch (error) {
             console.error(`Error analyzing ${pair} from database:`, error);
@@ -456,7 +472,7 @@ export class CryptoAnalyzer {
             if (cluster.price > currentPrice) {
                 resistances.push({
                     price: cluster.price,
-                    strength: this.calculateLevelStrength(cluster, candles, 'resistance')
+                    strength: this.calculateLevelStrength(cluster, candles, 'Resistance')
                 });
             }
         }
@@ -465,7 +481,7 @@ export class CryptoAnalyzer {
             if (cluster.price < currentPrice) {
                 supports.push({
                     price: cluster.price,
-                    strength: this.calculateLevelStrength(cluster, candles, 'support')
+                    strength: this.calculateLevelStrength(cluster, candles, 'Support')
                 });
             }
         }
@@ -579,9 +595,9 @@ export class CryptoAnalyzer {
     }
 
     private calculateLevelStrength(
-        cluster: { price: number; touches: number },
+        cluster: any,
         candles: CandleData[],
-        type: 'support' | 'resistance'
+        type: 'Support' | 'Resistance'
     ): number {
         const currentPrice = candles[candles.length - 1].close;
         
@@ -622,27 +638,27 @@ export class CryptoAnalyzer {
         }, 0);
     }
 
-    private findLastTouch(candles: CandleData[], price: number, type: 'support' | 'resistance'): number {
+    private findLastTouch(candles: CandleData[], price: number, type: SupportResistanceType): number {
         const threshold = price * 0.005; // 0.5% threshold
         for (let i = candles.length - 1; i >= 0; i--) {
             const candle = candles[i];
-            if (type === 'support' && Math.abs(candle.low - price) <= threshold) {
+            if (type === 'Support' && Math.abs(candle.low - price) <= threshold) {
                 return i;
             }
-            if (type === 'resistance' && Math.abs(candle.high - price) <= threshold) {
+            if (type === 'Resistance' && Math.abs(candle.high - price) <= threshold) {
                 return i;
             }
         }
         return -1;
     }
 
-    private calculateRejectionStrength(candles: CandleData[], price: number, type: 'support' | 'resistance'): number {
+    private calculateRejectionStrength(candles: CandleData[], price: number, type: SupportResistanceType): number {
         const touches = candles.filter((candle, i) => {
             if (i === 0) return false;
             const prev = candles[i - 1];
             const threshold = price * 0.005;
             
-            if (type === 'support') {
+            if (type === 'Support') {
                 return Math.abs(candle.low - price) <= threshold && candle.close > prev.close;
             } else {
                 return Math.abs(candle.high - price) <= threshold && candle.close < prev.close;
@@ -918,6 +934,8 @@ export class CryptoAnalyzer {
         // Add volume profile analysis
         const volumeProfile = this.calculateVolumeProfile(recentCandles);
 
+        const volumeAnalysis = this.calculateVolumeAnalysis(recentCandles);
+
         return {
             currentPrice: currentPrice.toFixed(8),
             dailyPriceChange: this.calculateDailyPriceChange(recentCandles),
@@ -1055,6 +1073,7 @@ export class CryptoAnalyzer {
             riskAdjustedScore: riskAdjustedScore.toFixed(2),
             enhancedScore: enhancedScore.toFixed(2),
             volumeProfile,
+            volumeAnalysis,
         };
     }
 
@@ -2120,10 +2139,7 @@ export class CryptoAnalyzer {
             .slice(-3);
     }
 
-    private findVolumeLevels(candles: CandleData[]): Array<{
-        price: number;
-        type: 'support' | 'resistance';
-    }> {
+    private findVolumeLevels(candles: CandleData[]): VolumeLevel[] {
         const volumeByPrice = new Map<number, number>();
         
         candles.forEach(candle => {
@@ -2142,12 +2158,421 @@ export class CryptoAnalyzer {
             .map(([price, volume]) => ({
                 price,
                 volume,
-                type: price > currentPrice ? 'resistance' as const : 'support' as const
+                type: price > currentPrice ? 'Resistance' as const : 'Support' as const
             }))
             .filter(level => level.volume > Array.from(volumeByPrice.values()).reduce((a, b) => a + b, 0) / volumeByPrice.size * 2)
             .sort((a, b) => b.volume - a.volume)
             .map(({ price, type }) => ({ price, type }));
 
         return levels;
+    }
+
+    private calculateMarketStructure(candles: CandleData[]): {
+        trend: 'Uptrend' | 'Downtrend' | 'Sideways' | 'Accumulation' | 'Distribution';
+        strength: number;
+        swingPoints: Array<{
+            type: 'High' | 'Low';
+            price: number;
+            timestamp: number;
+            significance: number;
+            description?: string;
+        }>;
+        pivotLevels: Array<{
+            type: 'Support' | 'Resistance';
+            price: number;
+            strength: number;
+            description?: string;
+        }>;
+        phase: {
+            current: 'Accumulation' | 'Mark-Up' | 'Distribution' | 'Mark-Down';
+            duration: number;
+            confidence: number;
+            description?: string;
+        };
+        structure: {
+            higherHighs: boolean;
+            higherLows: boolean;
+            lowerHighs: boolean;
+            lowerLows: boolean;
+            lastSwingHigh: number;
+            lastSwingLow: number;
+        };
+    } {
+        if (candles.length < 30) {
+            return {
+                trend: 'Sideways',
+                strength: 0,
+                swingPoints: [],
+                pivotLevels: [],
+                phase: {
+                    current: 'Accumulation',
+                    duration: 0,
+                    confidence: 0,
+                    description: 'Insufficient data for market structure analysis'
+                },
+                structure: {
+                    higherHighs: false,
+                    higherLows: false,
+                    lowerHighs: false,
+                    lowerLows: false,
+                    lastSwingHigh: candles[candles.length - 1]?.high || 0,
+                    lastSwingLow: candles[candles.length - 1]?.low || 0
+                }
+            };
+        }
+
+        const lookbackPeriod = 30;
+        const swingPoints = this.findSwingPoints(candles.slice(-lookbackPeriod));
+        const structure = this.analyzeStructure(swingPoints);
+        const adx = this.calculateADXValue(candles.slice(-lookbackPeriod));
+        const trendStrength = {
+            strength: Math.min(100, adx * 2),
+            adx
+        };
+        
+        const trend = this.determineTrend(structure, trendStrength);
+        const pivotLevels = this.findPivotLevels(candles.slice(-lookbackPeriod));
+        const phase = this.determineMarketPhase(structure, trend, trendStrength, pivotLevels);
+
+        return {
+            trend,
+            strength: trendStrength.strength,
+            swingPoints,
+            pivotLevels,
+            phase,
+            structure
+        };
+    }
+
+    private calculateADXValue(candles: CandleData[]): number {
+        const high = candles.map(c => Number(c.high));
+        const low = candles.map(c => Number(c.low));
+        const close = candles.map(c => Number(c.close));
+        
+        // Calculate True Range
+        const tr = high.map((h, i) => {
+            if (i === 0) return h - low[i];
+            const yesterdayClose = close[i - 1];
+            return Math.max(h - low[i], Math.abs(h - yesterdayClose), Math.abs(low[i] - yesterdayClose));
+        });
+        
+        // Calculate +DM and -DM
+        const plusDM = high.map((h, i) => {
+            if (i === 0) return 0;
+            const moveUp = h - high[i - 1];
+            const moveDown = low[i - 1] - low[i];
+            return moveUp > moveDown && moveUp > 0 ? moveUp : 0;
+        });
+        
+        const minusDM = low.map((l, i) => {
+            if (i === 0) return 0;
+            const moveUp = high[i] - high[i - 1];
+            const moveDown = low[i - 1] - l;
+            return moveDown > moveUp && moveDown > 0 ? moveDown : 0;
+        });
+        
+        // Calculate smoothed values
+        const period = 14;
+        const smoothedTR = this.smoothSeries(tr, period);
+        const smoothedPlusDM = this.smoothSeries(plusDM, period);
+        const smoothedMinusDM = this.smoothSeries(minusDM, period);
+        
+        // Calculate DI+ and DI-
+        const plusDI = smoothedPlusDM.map((dm, i) => (dm / smoothedTR[i]) * 100);
+        const minusDI = smoothedMinusDM.map((dm, i) => (dm / smoothedTR[i]) * 100);
+        
+        // Calculate ADX
+        const dx = plusDI.map((plus, i) => {
+            const diff = Math.abs(plus - minusDI[i]);
+            const sum = plus + minusDI[i];
+            return (diff / sum) * 100;
+        });
+        
+        const adx = this.smoothSeries(dx, period);
+        return adx[adx.length - 1];
+    }
+
+    private smoothSeries(series: number[], period: number): number[] {
+        const smoothed: number[] = [];
+        let sum = 0;
+        
+        // First value is simple average
+        for (let i = 0; i < period; i++) {
+            sum += series[i];
+        }
+        smoothed.push(sum / period);
+        
+        // Rest use smoothing formula
+        for (let i = period; i < series.length; i++) {
+            smoothed.push((smoothed[smoothed.length - 1] * (period - 1) + series[i]) / period);
+        }
+        
+        return smoothed;
+    }
+
+    private findSwingPoints(candles: CandleData[]): Array<{
+        type: 'High' | 'Low';
+        price: number;
+        timestamp: number;
+        significance: number;
+        description?: string;
+    }> {
+        const points: Array<{
+            type: 'High' | 'Low';
+            price: number;
+            timestamp: number;
+            significance: number;
+            description?: string;
+        }> = [];
+        
+        const prices = candles.map(c => Number(c.close));
+        const timestamps = candles.map(c => c.timestamp);
+        
+        // Window size for swing point detection
+        const window = 5;
+        
+        for (let i = window; i < prices.length - window; i++) {
+            const currentPrice = prices[i];
+            const leftPrices = prices.slice(i - window, i);
+            const rightPrices = prices.slice(i + 1, i + window + 1);
+            
+            // Check for swing high
+            if (currentPrice > Math.max(...leftPrices) && currentPrice > Math.max(...rightPrices)) {
+                const significance = this.calculateSwingSignificance(currentPrice, leftPrices, rightPrices);
+                points.push({
+                    type: 'High',
+                    price: currentPrice,
+                    timestamp: timestamps[i],
+                    significance,
+                    description: `Swing High at ${currentPrice.toFixed(2)}`
+                });
+            }
+            
+            // Check for swing low
+            if (currentPrice < Math.min(...leftPrices) && currentPrice < Math.min(...rightPrices)) {
+                const significance = this.calculateSwingSignificance(currentPrice, leftPrices, rightPrices);
+                points.push({
+                    type: 'Low',
+                    price: currentPrice,
+                    timestamp: timestamps[i],
+                    significance,
+                    description: `Swing Low at ${currentPrice.toFixed(2)}`
+                });
+            }
+        }
+        
+        // Sort by significance and return top points
+        return points.sort((a, b) => b.significance - a.significance).slice(0, 5);
+    }
+
+    private calculateSwingSignificance(price: number, leftPrices: number[], rightPrices: number[]): number {
+        const avgLeft = leftPrices.reduce((a, b) => a + b, 0) / leftPrices.length;
+        const avgRight = rightPrices.reduce((a, b) => a + b, 0) / rightPrices.length;
+        const deviation = Math.abs(price - (avgLeft + avgRight) / 2);
+        return Math.min(100, (deviation / price) * 1000); // Scale to 0-100
+    }
+
+    private analyzeStructure(swingPoints: Array<{
+        type: 'High' | 'Low';
+        price: number;
+        timestamp: number;
+        significance: number;
+    }>): {
+        higherHighs: boolean;
+        higherLows: boolean;
+        lowerHighs: boolean;
+        lowerLows: boolean;
+        lastSwingHigh: number;
+        lastSwingLow: number;
+    } {
+        const highs = swingPoints.filter(p => p.type === 'High').sort((a, b) => b.timestamp - a.timestamp);
+        const lows = swingPoints.filter(p => p.type === 'Low').sort((a, b) => b.timestamp - a.timestamp);
+        
+        return {
+            higherHighs: highs.length >= 2 && highs[0].price > highs[1].price,
+            higherLows: lows.length >= 2 && lows[0].price > lows[1].price,
+            lowerHighs: highs.length >= 2 && highs[0].price < highs[1].price,
+            lowerLows: lows.length >= 2 && lows[0].price < lows[1].price,
+            lastSwingHigh: highs[0]?.price || 0,
+            lastSwingLow: lows[0]?.price || 0
+        };
+    }
+
+    private determineTrend(
+        structure: {
+            higherHighs: boolean;
+            higherLows: boolean;
+            lowerHighs: boolean;
+            lowerLows: boolean;
+        },
+        trendStrength: { strength: number; adx: number }
+    ): 'Uptrend' | 'Downtrend' | 'Sideways' | 'Accumulation' | 'Distribution' {
+        if (structure.higherHighs && structure.higherLows && trendStrength.strength > 50) {
+            return 'Uptrend';
+        } else if (structure.lowerHighs && structure.lowerLows && trendStrength.strength > 50) {
+            return 'Downtrend';
+        } else if (trendStrength.strength < 30) {
+            if (structure.higherLows) return 'Accumulation';
+            if (structure.lowerHighs) return 'Distribution';
+            return 'Sideways';
+        }
+        return 'Sideways';
+    }
+
+    private findPivotLevels(candles: CandleData[]): PivotLevel[] {
+        const prices = candles.map(c => Number(c.close));
+        const volumes = candles.map(c => Number(c.volume));
+        
+        // Find price clusters
+        const clusters = this.findPriceClusters(prices, 0.005); // 0.5% threshold
+        
+        // Convert clusters to pivot levels
+        return clusters.map(cluster => {
+            const isSupport = prices[prices.length - 1] > cluster.price;
+            const volumeAtLevel = this.calculateVolumeAtLevel(candles, cluster.price);
+            const strength = this.calculateLevelStrength(cluster, candles, isSupport ? 'Support' : 'Resistance');
+            
+            return {
+                price: cluster.price,
+                type: isSupport ? 'Support' as const : 'Resistance' as const,
+                strength,
+                description: `${isSupport ? 'Support' : 'Resistance'} level with ${cluster.touches} touches`
+            };
+        }).sort((a, b) => b.strength - a.strength).slice(0, 5);
+    }
+
+    private determineMarketPhase(
+        structure: {
+            higherHighs: boolean;
+            higherLows: boolean;
+            lowerHighs: boolean;
+            lowerLows: boolean;
+        },
+        trend: string,
+        trendStrength: { strength: number; adx: number },
+        pivotLevels: PivotLevel[]
+    ): {
+        current: 'Accumulation' | 'Mark-Up' | 'Distribution' | 'Mark-Down';
+        duration: number;
+        confidence: number;
+        description?: string;
+    } {
+        let phase: 'Accumulation' | 'Mark-Up' | 'Distribution' | 'Mark-Down';
+        let confidence = 0;
+        let description = '';
+
+        if (trend === 'Uptrend' && structure.higherHighs && structure.higherLows) {
+            phase = 'Mark-Up';
+            confidence = trendStrength.strength;
+            description = 'Strong uptrend with higher highs and higher lows';
+        } else if (trend === 'Downtrend' && structure.lowerHighs && structure.lowerLows) {
+            phase = 'Mark-Down';
+            confidence = trendStrength.strength;
+            description = 'Strong downtrend with lower highs and lower lows';
+        } else if (trend === 'Sideways' || trend === 'Accumulation') {
+            if (structure.higherLows) {
+                phase = 'Accumulation';
+                confidence = 60 + (trendStrength.adx / 5);
+                description = 'Sideways movement with higher lows suggesting accumulation';
+            } else {
+                phase = 'Distribution';
+                confidence = 60 + (trendStrength.adx / 5);
+                description = 'Sideways movement with lower highs suggesting distribution';
+            }
+        } else {
+            phase = 'Accumulation';
+            confidence = 40;
+            description = 'Unclear market phase, showing mixed signals';
+        }
+
+        return {
+            current: phase,
+            duration: 0, // This should be calculated based on when the phase started
+            confidence: Math.min(100, Math.max(0, confidence)),
+            description
+        };
+    }
+
+    private calculateVolumeAnalysis(candles: CandleData[]): {
+        volumeOscillator: number;
+        vma_7: number;
+        vma_30: number;
+        trend: 'Strong Bullish' | 'Bullish' | 'Strong Bearish' | 'Bearish' | 'Neutral';
+        trendStrength: number;
+        signal: string;
+        priceVolumeCorrelation: number;
+    } {
+        // Calculate volume moving averages in USD
+        const volumes = candles.map(c => c.volume * c.close); // Convert to USD
+        const prices = candles.map(c => c.close);
+        
+        // Calculate VMAs
+        const vma7 = this.calculateSMA(volumes.slice(-7));
+        const vma30 = this.calculateSMA(volumes.slice(-30));
+        
+        // Calculate volume oscillator
+        const volumeOscillator = ((vma7 - vma30) / vma30) * 100;
+
+        // Calculate price-volume correlation
+        const priceChanges = prices.slice(1).map((price, i) => price - prices[i]);
+        const volumeChanges = volumes.slice(1).map((vol, i) => vol - volumes[i]);
+        const correlation = this.calculateCorrelation(priceChanges, volumeChanges);
+
+        // Calculate recent volume trend
+        const recentVolumes = volumes.slice(-5);
+        const avgRecentVolume = this.calculateSMA(recentVolumes);
+        const volumeStrength = (avgRecentVolume / this.calculateSMA(volumes)) - 1;
+
+        // Determine trend and signal
+        let trend: 'Strong Bullish' | 'Bullish' | 'Strong Bearish' | 'Bearish' | 'Neutral' = 'Neutral';
+        let signal = '';
+
+        const recentPriceChange = (prices[prices.length - 1] - prices[prices.length - 5]) / prices[prices.length - 5] * 100;
+
+        if (volumeOscillator > 10 && correlation > 0.5 && recentPriceChange > 0) {
+            trend = 'Strong Bullish';
+            signal = 'High volume supporting price increase. Strong buying pressure.';
+        } else if (volumeOscillator > 5 && correlation > 0.3 && recentPriceChange > 0) {
+            trend = 'Bullish';
+            signal = 'Moderate volume with upward price movement.';
+        } else if (volumeOscillator < -10 && correlation < -0.5 && recentPriceChange < 0) {
+            trend = 'Strong Bearish';
+            signal = 'High volume with price decline. Strong selling pressure.';
+        } else if (volumeOscillator < -5 && correlation < -0.3 && recentPriceChange < 0) {
+            trend = 'Bearish';
+            signal = 'Moderate volume with downward price movement.';
+        } else {
+            trend = 'Neutral';
+            signal = Math.abs(volumeOscillator) < 5 
+                ? 'Low volume indicating lack of conviction.'
+                : 'Mixed signals. Watch for trend confirmation.';
+        }
+
+        return {
+            volumeOscillator,
+            vma_7: vma7,
+            vma_30: vma30,
+            trend,
+            trendStrength: Math.abs(volumeStrength),
+            signal,
+            priceVolumeCorrelation: correlation
+        };
+    }
+
+    private calculateCorrelation(array1: number[], array2: number[]): number {
+        const mean1 = array1.reduce((acc, val) => acc + val, 0) / array1.length;
+        const mean2 = array2.reduce((acc, val) => acc + val, 0) / array2.length;
+
+        const variance1 = array1.reduce((acc, val) => acc + Math.pow(val - mean1, 2), 0);
+        const variance2 = array2.reduce((acc, val) => acc + Math.pow(val - mean2, 2), 0);
+
+        const covariance = array1.reduce((acc, val, i) => acc + (val - mean1) * (array2[i] - mean2), 0);
+
+        return covariance / Math.sqrt(variance1 * variance2);
+    }
+
+    private calculateSMA(values: number[]): number {
+        if (!values.length) return 0;
+        return values.reduce((acc, val) => acc + val, 0) / values.length;
     }
 }

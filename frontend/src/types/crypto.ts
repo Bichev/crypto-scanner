@@ -183,6 +183,46 @@ export interface CryptoPair {
             type: 'support' | 'resistance';
         }>;
     };
+    marketStructure?: {
+        trend: 'Uptrend' | 'Downtrend' | 'Sideways' | 'Accumulation' | 'Distribution';
+        strength: number;
+        swingPoints: Array<{
+            type: 'High' | 'Low';
+            price: number;
+            timestamp: number;
+            significance: number;
+            description?: string;
+        }>;
+        pivotLevels: Array<{
+            type: 'Support' | 'Resistance';
+            price: number;
+            strength: number;
+            description?: string;
+        }>;
+        phase: {
+            current: 'Accumulation' | 'Mark-Up' | 'Distribution' | 'Mark-Down';
+            duration: number; // in candles
+            confidence: number;
+            description?: string;
+        };
+        structure: {
+            higherHighs: boolean;
+            higherLows: boolean;
+            lowerHighs: boolean;
+            lowerLows: boolean;
+            lastSwingHigh: number;
+            lastSwingLow: number;
+        };
+    };
+    volumeAnalysis?: {
+        trend: 'Strong Bullish' | 'Bullish' | 'Strong Bearish' | 'Bearish' | 'Neutral';
+        signal: string;
+        trendStrength: number;
+        priceVolumeCorrelation: number;
+        volumeOscillator: number;
+        vma_7: number;
+        vma_30: number;
+    };
 }
 
 export interface IndicatorDescription {
