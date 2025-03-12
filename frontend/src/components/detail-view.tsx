@@ -1637,6 +1637,185 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Risk Analysis Card */}
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                Risk Analysis
+                <div className="relative group">
+                  <button className="text-muted-foreground hover:text-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.75 2.75 0 013.82 0 .75.75 0 01-1.06 1.06 1.25 1.25 0 00-1.7 0zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <div className="absolute left-full top-0 ml-2 w-[400px] hidden group-hover:block z-50">
+            <div className="bg-black/95 backdrop-blur-sm border border-border/50 text-white px-4 py-3 rounded-lg shadow-xl text-sm">
+              <h4 className="font-semibold mb-3 text-base border-b border-border/50 pb-2">Understanding Risk Analysis</h4>
+              <div className="space-y-3">
+                <div className="bg-white/5 rounded-md p-3">
+                  <p className="mb-2"><span className="font-medium text-primary">Risk Metrics:</span></p>
+                  <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                    <li>Risk/Reward Ratio: Potential loss vs potential gain</li>
+                    <li>Volatility: Price fluctuation intensity</li>
+                    <li>ATR: Average True Range for stop loss</li>
+                    <li>Position Size: Recommended trade size</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-2 gap-6">
+        {/* Risk/Reward Analysis */}
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Risk/Reward Analysis</h3>
+          <div className="space-y-4">
+            <div className="p-3 border border-border rounded-lg bg-card/50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-muted-foreground">Risk Score</span>
+                <span className={cn(
+                  "font-medium",
+                  parseFloat(pair.riskAdjustedScore) >= 0.7 ? "text-emerald-400" :
+                  parseFloat(pair.riskAdjustedScore) <= 0.3 ? "text-red-400" :
+                  "text-amber-400"
+                )}>
+                  {(parseFloat(pair.riskAdjustedScore) * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-secondary/30 rounded-full h-2">
+                <div 
+                  className={cn(
+                    "h-full rounded-full",
+                    parseFloat(pair.riskAdjustedScore) >= 0.7 ? "bg-emerald-400" :
+                    parseFloat(pair.riskAdjustedScore) <= 0.3 ? "bg-red-400" :
+                    "bg-amber-400"
+                  )}
+                  style={{ width: `${parseFloat(pair.riskAdjustedScore) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Volatility Analysis */}
+            <div className="p-3 border border-border rounded-lg bg-card/50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-muted-foreground">Volatility</span>
+                <span className={cn(
+                  "font-medium",
+                  pair.atrAnalysis?.volatility === 'High' ? "text-red-400" :
+                  pair.atrAnalysis?.volatility === 'Low' ? "text-emerald-400" :
+                  "text-amber-400"
+                )}>
+                  {pair.atrAnalysis?.volatility || 'N/A'}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                ATR: {pair.atrAnalysis?.normalizedATR}% of price
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Liquidity Analysis */}
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Liquidity Analysis</h3>
+          <div className="space-y-4">
+            <div className="p-3 border border-border rounded-lg bg-card/50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-muted-foreground">Market Liquidity</span>
+                <span className={cn(
+                  "font-medium",
+                  pair.liquidityType === 'High' ? "text-emerald-400" :
+                  pair.liquidityType === 'Low' ? "text-red-400" :
+                  "text-amber-400"
+                )}>
+                  {pair.liquidityType}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Volume Score: {pair.volumeScore?.toFixed(1)}
+              </div>
+            </div>
+
+            {/* Volume Profile */}
+            <div className="p-3 border border-border rounded-lg bg-card/50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-muted-foreground">Volume Profile</span>
+                <span className={cn(
+                  "font-medium",
+                  pair.volumeAnalysis?.trend === 'Strong Bullish' ? "text-emerald-400" :
+                  pair.volumeAnalysis?.trend === 'Strong Bearish' ? "text-red-400" :
+                  "text-amber-400"
+                )}>
+                  {pair.volumeAnalysis?.trend || 'Neutral'}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {pair.volumeAnalysis?.signal}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stop Loss & Position Sizing */}
+      <div className="mt-6 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          {/* Stop Loss Suggestions */}
+          <div className="p-3 border border-border rounded-lg bg-card/50">
+            <h4 className="text-sm font-medium mb-3">Stop Loss Suggestions</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">ATR-based</span>
+                <span className="font-mono text-red-400">
+                  ${(parseFloat(pair.currentPrice) - parseFloat(pair.atrAnalysis?.atr || '0')).toFixed(6)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Support-based</span>
+                <span className="font-mono text-red-400">
+                  ${formatPrice(pair.supports?.[0]?.price || 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Position Sizing */}
+          <div className="p-3 border border-border rounded-lg bg-card/50">
+            <h4 className="text-sm font-medium mb-3">Position Sizing</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Risk Level</span>
+                <span className={cn(
+                  "font-medium",
+                  parseFloat(pair.volatilityIndex?.value || '0') > 70 ? "text-red-400" :
+                  parseFloat(pair.volatilityIndex?.value || '0') < 30 ? "text-emerald-400" :
+                  "text-amber-400"
+                )}>
+                  {pair.volatilityIndex?.trend || 'Normal'}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                Recommended position size based on:
+                <ul className="list-disc pl-4 mt-1 space-y-1">
+                  <li>Account risk: 1-2% per trade</li>
+                  <li>Volatility adjustment: {pair.atrAnalysis?.normalizedATR}%</li>
+                  <li>Market liquidity: {pair.liquidityType}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+</div>
+
+        
       </div>
         
         <DialogFooter>

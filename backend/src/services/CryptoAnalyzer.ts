@@ -85,7 +85,7 @@ export class CryptoAnalyzer {
     async analyzePairs(pairs: string[]): Promise<{ pairs: any[]; marketSummary: any }> {
         const startTime = moment();
         const results = [];
-        const thirtyDaysAgo = moment().subtract(30, 'days');
+        const thirtyDaysAgo = moment().subtract(31, 'days');
         const twoHundredDaysAgo = moment().subtract(200, 'days');
         
         // Process all pairs
@@ -136,9 +136,12 @@ export class CryptoAnalyzer {
               })),
               pair
             );
-                
+
+            console.log('recentCandles:', recentCandles.length);
+            console.log('longTermCandles:', longTermCandles.length);
             // Add pump/dump detection
             const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
+            // console.log('Pump/dump analysis:', pumpDumpAnalysis);
             
             // Calculate first seen timestamp using moment
             const firstSeenTimestamp = longTermCandles.length > 0 ? 
@@ -935,7 +938,7 @@ export class CryptoAnalyzer {
             atr: advancedATR.normalizedATR,
             percentChangeFromHigh: ((currentPrice - allTimeHigh) / allTimeHigh) * 100
         });
-
+        // console.log('Enhanced score:', enhancedScore);
         // Calculate Fibonacci levels
         const recentSwingHigh = Math.max(...recentHighs.slice(-30));
         const recentSwingLow = Math.min(...recentLows.slice(-30));
@@ -1633,10 +1636,12 @@ export class CryptoAnalyzer {
     // A more sophisticated composite scoring system
     private calculateEnhancedCompositeScore(indicators: any): number {
         //check if we have all the required indicators
-        if (!indicators.rsi || !indicators.macdTrend || !indicators.volumeOscillator || !indicators.dailyPriceChange || !indicators.sma_7 || !indicators.sma_30 || !indicators.sma_50 || !indicators.sma_200 || !indicators.atr || !indicators.percentChangeFromHigh) {
-            return NaN;
-        }
+        // if (!indicators.rsi || !indicators.macdTrend || !indicators.volumeOscillator || !indicators.dailyPriceChange || !indicators.sma_7 || !indicators.sma_30 || !indicators.sma_50 || !indicators.sma_200 || !indicators.atr || !indicators.percentChangeFromHigh) {
+        //     return NaN;
+        //     console.log('Missing required indicators:', indicators);
+        // }
 
+        // console.log('Calculating enhanced composite score for:', indicators);
         // Technical indicator weights
         const weights = {
             rsi: 0.15,
@@ -1731,6 +1736,7 @@ export class CryptoAnalyzer {
         const previousCandle = recentCandles[recentCandles.length - 2];
 
         if (!currentCandle || !previousCandle || recentCandles.length < 30) {
+            // console.log('Not enough data to detect pump/dump');
             return {
                 isPumping: false,
                 isDumping: false,
