@@ -1132,25 +1132,32 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                         <span className="text-sm text-muted-foreground">Volume Trend:</span>
                         <span className={cn(
                           "font-medium",
-                          pair.volumeProfile?.trend === 'Increasing' ? "text-emerald-400" :
-                          pair.volumeProfile?.trend === 'Decreasing' ? "text-red-400" :
-                          "text-blue-400"
+                          pair.volumeAnalysis?.trend === 'Strong Bullish' ? "text-emerald-400" :
+                          pair.volumeAnalysis?.trend === 'Bullish' ? "text-emerald-400/70" :
+                          pair.volumeAnalysis?.trend === 'Strong Bearish' ? "text-red-400" :
+                          pair.volumeAnalysis?.trend === 'Bearish' ? "text-red-400/70" :
+                          "text-amber-400"
                         )}>
-                          {pair.volumeProfile?.trend || 'Neutral'}
+                          {pair.volumeAnalysis?.trend || 'Neutral'}
                         </span>
                       </div>
                       <div className="w-full bg-secondary/30 rounded-full h-2">
                         <div 
                           className={cn(
-                            "h-full rounded-full",
-                            pair.volumeProfile?.trend === 'Increasing' ? "bg-emerald-400/50" :
-                            pair.volumeProfile?.trend === 'Decreasing' ? "bg-red-400/50" :
-                            "bg-blue-400/50"
+                            "h-full rounded-full transition-all duration-300",
+                            pair.volumeAnalysis?.trend === 'Strong Bullish' ? "bg-emerald-400/50" :
+                            pair.volumeAnalysis?.trend === 'Bullish' ? "bg-emerald-400/30" :
+                            pair.volumeAnalysis?.trend === 'Strong Bearish' ? "bg-red-400/50" :
+                            pair.volumeAnalysis?.trend === 'Bearish' ? "bg-red-400/30" :
+                            "bg-amber-400/30"
                           )}
                           style={{ 
-                            width: `${Math.max(15, pair.volumeProfile?.trendStrength || 50)}%` 
+                            width: `${Math.min(100, Math.max(15, (pair.volumeAnalysis?.trendStrength || 0) * 100))}%` 
                           }}
                         />
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {pair.volumeAnalysis?.signal || 'Volume analysis not available'}
                       </div>
                     </div>
 
