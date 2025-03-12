@@ -224,6 +224,14 @@ export interface CryptoPair {
         vma_7: number;
         vma_30: number;
     };
+    candles: Array<{
+        timestamp: number;
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+        volume: number;
+    }>;
 }
 
 export interface IndicatorDescription {

@@ -1002,7 +1002,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                     <ul className="space-y-3">
                       {pair.supports
                         .sort((a, b) => b.strength - a.strength)
-                        .slice(0, 3)
+                        .slice(0, 5)
                         .map((level, index) => (
                         <li key={index} className="flex flex-col space-y-1">
                   <div className="flex justify-between items-center">
@@ -1058,7 +1058,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                     <ul className="space-y-3">
                       {pair.resistances
                         .sort((a, b) => b.strength - a.strength)
-                        .slice(0, 3)
+                        .slice(0, 5)
                         .map((level, index) => (
                         <li key={index} className="flex flex-col space-y-1">
                   <div className="flex justify-between items-center">

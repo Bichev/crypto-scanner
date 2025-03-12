@@ -28,20 +28,22 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
     const weekAgo = moment().subtract(7, 'days').startOf('day');
     const monthAgo = moment().subtract(30, 'days').startOf('day');
 
-    // Filter pairs based on firstSeenTimestamp using moment
+    // Filter pairs based on number of candles
     const recentPairs = {
         today: data.pairs
-            .filter(pair => pair.firstSeenTimestamp && moment(pair.firstSeenTimestamp).isSameOrAfter(todayStart))
+            .filter(pair => pair.candles?.length === 1)
             .sort((a, b) => (b.firstSeenTimestamp || 0) - (a.firstSeenTimestamp || 0)),
         week: data.pairs
-            .filter(pair => pair.firstSeenTimestamp && 
-                moment(pair.firstSeenTimestamp).isSameOrAfter(weekAgo) && 
-                moment(pair.firstSeenTimestamp).isBefore(todayStart))
+            .filter(pair => {
+                const candleCount = pair.candles?.length || 0;
+                return candleCount > 1 && candleCount <= 7;
+            })
             .sort((a, b) => (b.firstSeenTimestamp || 0) - (a.firstSeenTimestamp || 0)),
         month: data.pairs
-            .filter(pair => pair.firstSeenTimestamp && 
-                moment(pair.firstSeenTimestamp).isSameOrAfter(monthAgo) && 
-                moment(pair.firstSeenTimestamp).isBefore(weekAgo))
+            .filter(pair => {
+                const candleCount = pair.candles?.length || 0;
+                return candleCount > 7 && candleCount <= 30;
+            })
             .sort((a, b) => (b.firstSeenTimestamp || 0) - (a.firstSeenTimestamp || 0))
     };
 
@@ -192,7 +194,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                         }`}
                                     style={{ width: `${Math.min(100, data.marketSummary.marketBreadth.averageRSI)}%` }}
                                     ></div>
-                            </div>
+                                </div>
                         </div>
 
                         <div className="mt-4">
@@ -567,6 +569,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                     <CardContent>
                         <div className="space-y-4">
                             {data.pairs
+                                .filter(pair => !isNaN(parseFloat(pair.enhancedScore)))
                                 .sort((a, b) => parseFloat(b.enhancedScore) - parseFloat(a.enhancedScore))
                                 .slice(0, 5)
                                 .map((pair, index) => (
@@ -794,7 +797,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                                     "bg-blue-500/20 text-blue-500"
                                                 )}>
                                                     {pair.liquidityType} Liquidity
-                                                </span>
+                                </span>
                                                 <div className="invisible group-hover:visible absolute z-50 w-64 p-2 mt-2 text-sm bg-secondary/90 rounded-md shadow-lg">
                                                     <p className="font-medium mb-1">Understanding Liquidity:</p>
                                                     <ul className="space-y-1 text-xs">
@@ -820,9 +823,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                             {pair.intradayPriceChange > pair.priceChange && (
                                                 <span className="text-xs ml-1">
                                                     (Spike: {formatPercentage(pair.intradayPriceChange)})
-                                                </span>
+                                </span>
                                             )}
-                                        </span>
+                                </span>
                                         <span className={cn(
                                             "text-xs",
                                             pair.volumeScore >= 15 ? "text-emerald-400" :
@@ -832,7 +835,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                             Vol: +{pair.volumeIncrease.toFixed(0)}% ({pair.volumeScore} pts)
                                         </span>
                                     </div>
-                                </li>
+                            </li>
                             ))}
                             {pumpDumpData.pumpingPairs.length === 0 && (
                                 <li className="text-muted-foreground text-sm">No pumping pairs detected</li>
@@ -910,7 +913,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                             )}
                         </ul>
                     </CardContent>
-                </Card>                
+                </Card>
 
                 {/* Volume Analysis Card */}
                 <Card>
@@ -958,7 +961,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                             </div>
                                         ))}
                                 </div>
-                            </div>
+            </div>
 
                             {/* Volume/Price Divergence */}
                             <div>
@@ -979,7 +982,7 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-muted-foreground">{index + 1}.</span>
                                                     <span className="font-medium">{pair.pair}</span>
-                                                </div>
+            </div>
                                                 <div className="text-right">
                                                     <div className="text-xs text-muted-foreground">
                                                         Vol: {parseFloat(pair.volumeOscillator).toFixed(1)}%
@@ -1442,6 +1445,9 @@ export function CryptoDashboard({ data, lastUpdated }: DashboardProps) {
                                                 {/* <div className="text-xs text-muted-foreground">
                                                     First seen: {new Date(pair.firstSeenTimestamp || 0).toLocaleString()}
                                                 </div> */}
+                                                <div className="text-xs text-muted-foreground">
+                                                    Current price: ${formatPrice(parseFloat(pair.currentPrice))}
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>

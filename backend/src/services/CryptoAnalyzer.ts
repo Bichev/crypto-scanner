@@ -154,7 +154,7 @@ export class CryptoAnalyzer {
             
             // Calculate market structure
             const marketStructure = this.calculateMarketStructure(recentCandles);
-
+            
             results.push({
               pair,
               currentVolumeUSD: currentVolumeUSD.toFixed(2),
@@ -175,6 +175,14 @@ export class CryptoAnalyzer {
                                   (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
                                   'Normal',
               marketStructure,
+              candles: recentCandles.map(c => ({
+                timestamp: c.timestamp,
+                open: c.open,
+                high: c.high,
+                low: c.low,
+                close: c.close,
+                volume: c.volume
+              }))
             });
           } catch (error) {
             console.error(`Error analyzing ${pair} from database:`, error);
@@ -956,8 +964,8 @@ export class CryptoAnalyzer {
                 swingPoints: {
                     high: recentSwingHigh,
                     low: recentSwingLow,
-                    highTime: recentCandles[recentHighs.indexOf(recentSwingHigh)]?.timestamp,
-                    lowTime: recentCandles[recentLows.indexOf(recentSwingLow)]?.timestamp
+                    highTime: (recentCandles.find(c => c.high === recentSwingHigh)?.timestamp || 0) * 1000, // Convert to milliseconds
+                    lowTime: (recentCandles.find(c => c.low === recentSwingLow)?.timestamp || 0) * 1000 // Convert to milliseconds
                 }
             },
 
@@ -1626,7 +1634,7 @@ export class CryptoAnalyzer {
     private calculateEnhancedCompositeScore(indicators: any): number {
         //check if we have all the required indicators
         if (!indicators.rsi || !indicators.macdTrend || !indicators.volumeOscillator || !indicators.dailyPriceChange || !indicators.sma_7 || !indicators.sma_30 || !indicators.sma_50 || !indicators.sma_200 || !indicators.atr || !indicators.percentChangeFromHigh) {
-            return 0;
+            return NaN;
         }
 
         // Technical indicator weights
@@ -2143,7 +2151,7 @@ export class CryptoAnalyzer {
                 return candle.volume > avgVolume + 2 * stdDev;
             })
             .map(candle => ({
-                timestamp: new Date(candle.timestamp).getTime(),
+                timestamp: candle.timestamp * 1000, // Convert seconds to milliseconds
                 volume: candle.volume,
                 type: candle.close > candle.open ? 'buy' as const : 'sell' as const
             }))
@@ -2337,7 +2345,7 @@ export class CryptoAnalyzer {
         }> = [];
         
         const prices = candles.map(c => Number(c.close));
-        const timestamps = candles.map(c => c.timestamp);
+        const timestamps = candles.map(c => c.timestamp * 1000); // Convert to milliseconds
         
         // Window size for swing point detection
         const window = 5;
