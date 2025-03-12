@@ -1618,15 +1618,20 @@ export class CryptoAnalyzer {
 
     // A more sophisticated composite scoring system
     private calculateEnhancedCompositeScore(indicators: any): number {
+        //check if we have all the required indicators
+        if (!indicators.rsi || !indicators.macdTrend || !indicators.volumeOscillator || !indicators.dailyPriceChange || !indicators.sma_7 || !indicators.sma_30 || !indicators.sma_50 || !indicators.sma_200 || !indicators.atr || !indicators.percentChangeFromHigh) {
+            return 0;
+        }
+
         // Technical indicator weights
         const weights = {
-        rsi: 0.15,
-        macd: 0.20,
-        volumeOscillator: 0.10,
-        priceMovement: 0.15,
-        movingAverages: 0.20,
-        volatility: 0.10,
-        supportResistance: 0.10
+            rsi: 0.15,
+            macd: 0.20,
+            volumeOscillator: 0.10,
+            priceMovement: 0.15,
+            movingAverages: 0.20,
+            volatility: 0.10,
+            supportResistance: 0.10
         };
         
         // RSI component

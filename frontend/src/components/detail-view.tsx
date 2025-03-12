@@ -155,7 +155,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">24h Volume:</span>
                     <span className="font-mono font-medium">
-                      {pair.currentVolumeUSD ? `$${parseFloat(pair.currentVolumeUSD).toFixed(0).toLocaleString()}` : '-'}
+                      {pair.currentVolumeUSD ? `$${formatLargeNumber(parseFloat(pair.currentVolumeUSD))}` : '-'}
                     </span>
                   </div>
                   <div>
@@ -184,7 +184,64 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
           <div className="col-span-2 sm:col-span-1">
             <Card className="h-full">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">RSI Analysis</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  RSI Analysis
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <InformationCircleIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="w-[450px] p-5 space-y-4 bg-card/95 backdrop-blur-sm border-border shadow-xl">
+                        <div className="border-l-4 border-primary pl-3">
+                          <p className="font-semibold text-base mb-1 text-primary">Relative Strength Index (RSI)</p>
+                          <p className="text-sm text-muted-foreground">Momentum oscillator measuring the speed and magnitude of price movements on a scale of 0 to 100.</p>
+                        </div>
+
+                        <div className="bg-accent/30 rounded-lg p-3">
+                          <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                            Signal Zones
+                          </p>
+                          <ul className="text-xs space-y-2 ml-2">
+                            <li className="flex items-start gap-2">
+                              <span className="font-medium text-red-400 min-w-[90px]">Overbought (70+):</span>
+                              <span className="text-muted-foreground">Price may be overextended. Potential reversal or pullback signal.</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="font-medium text-emerald-400 min-w-[90px]">Oversold (30-):</span>
+                              <span className="text-muted-foreground">Price may be undervalued. Potential bounce or reversal signal.</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="font-medium text-blue-400 min-w-[90px]">Neutral (30-70):</span>
+                              <span className="text-muted-foreground">Price in equilibrium. No extreme conditions present.</span>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-accent/30 rounded-lg p-3">
+                          <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                            Trading Signals
+                          </p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li><span className="text-emerald-400">Bullish Divergence:</span> Price makes lower lows while RSI makes higher lows</li>
+                            <li><span className="text-red-400">Bearish Divergence:</span> Price makes higher highs while RSI makes lower highs</li>
+                            <li><span className="text-amber-400">Centerline Cross:</span> RSI crossing above/below 50 indicates shift in momentum</li>
+                          </ul>
+                        </div>
+
+                        <div className="border-l-4 border-primary/50 pl-3 mt-2">
+                          <p className="font-semibold mb-1 text-primary">Interpretation Tips</p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li>• Strong trends can maintain overbought/oversold conditions</li>
+                            <li>• Look for divergences at extreme levels for reversal signals</li>
+                            <li>• Use in conjunction with other indicators for confirmation</li>
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -230,7 +287,60 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
         <div className="col-span-2 sm:col-span-1">
             <Card className="h-full">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Stochastic Oscillator</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Stochastic Oscillator
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <InformationCircleIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="w-[450px] p-5 space-y-4 bg-card/95 backdrop-blur-sm border-border shadow-xl">
+                        <div className="border-l-4 border-primary pl-3">
+                          <p className="font-semibold text-base mb-1 text-primary">Stochastic Oscillator</p>
+                          <p className="text-sm text-muted-foreground">Momentum indicator comparing a closing price to its price range over time. Shows where price is relative to its recent range.</p>
+                        </div>
+
+                        <div className="bg-accent/30 rounded-lg p-3">
+                          <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                            Components
+                          </p>
+                          <ul className="text-xs space-y-2 ml-2">
+                            <li className="flex items-start gap-2">
+                              <span className="font-medium text-blue-400 min-w-[90px]">%K Line:</span>
+                              <span className="text-muted-foreground">Fast stochastic, more sensitive to price changes. Main signal line.</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="font-medium text-amber-400 min-w-[90px]">%D Line:</span>
+                              <span className="text-muted-foreground">Slow stochastic, smoothed average of %K. Used for signal confirmation.</span>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-accent/30 rounded-lg p-3">
+                          <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                            Signal Zones
+                          </p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li><span className="text-red-400">Overbought (80+):</span> Price near recent high, potential reversal down</li>
+                            <li><span className="text-emerald-400">Oversold (20-):</span> Price near recent low, potential reversal up</li>
+                            <li><span className="text-blue-400">Neutral (20-80):</span> Price within normal trading range</li>
+                          </ul>
+                        </div>
+
+                        <div className="border-l-4 border-primary/50 pl-3 mt-2">
+                          <p className="font-semibold mb-1 text-primary">Trading Signals</p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li><span className="text-emerald-400">Bullish:</span> %K crosses above %D in oversold zone</li>
+                            <li><span className="text-red-400">Bearish:</span> %K crosses below %D in overbought zone</li>
+                            <li><span className="text-amber-400">Divergence:</span> Price/oscillator moving in opposite directions</li>
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
