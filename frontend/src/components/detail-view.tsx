@@ -75,6 +75,24 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                       {pair.currentVolumeUSD ? `$${parseFloat(pair.currentVolumeUSD).toFixed(0).toLocaleString()}` : '-'}
                     </span>
                   </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Advanced Score</span>
+                      <span className={cn(
+                        parseFloat(pair.enhancedScore || "0.5") >= 0.7 ? "text-emerald-400" :
+                        parseFloat(pair.enhancedScore || "0.5") <= 0.3 ? "text-red-400" :
+                        "text-gray-400"
+                      )}>{pair.enhancedScore || '-'}</span>
+                    </div>
+                    <div className="w-full bg-secondary/30 rounded-full h-2">
+                      <div className={cn(
+                        "h-full rounded-full",
+                        parseFloat(pair.enhancedScore || "0.5") >= 0.7 ? "bg-emerald-400" :
+                        parseFloat(pair.enhancedScore || "0.5") <= 0.3 ? "bg-red-400" :
+                        "bg-blue-400"
+                      )} style={{ width: `${parseFloat(pair.enhancedScore || "0.5") * 100}%` }}></div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -158,7 +176,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
             </Card>
           </div>
         </div>
-
+        
         {/* Second row of cards */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="col-span-2 sm:col-span-1">
@@ -499,6 +517,175 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
           </Card>
         </div>
 
+        {/* Volume Profile Card */}
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                Volume Profile
+                <div className="relative group">
+                  <button className="text-muted-foreground hover:text-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.75 2.75 0 013.82 0 .75.75 0 01-1.06 1.06 1.25 1.25 0 00-1.7 0zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-full top-0 ml-2 w-[400px] hidden group-hover:block z-50">
+                    <div className="bg-black/95 backdrop-blur-sm border border-border/50 text-white px-4 py-3 rounded-lg shadow-xl text-sm">
+                      <h4 className="font-semibold mb-3 text-base border-b border-border/50 pb-2">Understanding Volume Profile</h4>
+                      <div className="space-y-3">
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="mb-2"><span className="font-medium text-primary">Volume Nodes:</span></p>
+                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                            <li>High Volume Node (HVN): Areas of significant trading activity</li>
+                            <li>Low Volume Node (LVN): Areas of low trading interest</li>
+                            <li>Point of Control (POC): Price level with highest trading volume</li>
+                          </ul>
+                        </div>
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="text-xs text-gray-300">Volume profile helps identify support/resistance levels based on historical trading activity. High volume nodes often act as strong support/resistance levels.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Volume Distribution</h3>
+                  <div className="space-y-2">
+                    {/* Point of Control */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Point of Control:</span>
+                      <span className="font-mono font-medium text-amber-400">
+                        ${formatPrice(pair.volumeProfile?.poc || 0)}
+                      </span>
+                    </div>
+                    
+                    {/* Value Area */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Value Area (70%):</span>
+                      <div className="text-right">
+                        <div className="font-mono text-xs text-red-400">High: ${formatPrice(pair.volumeProfile?.valueAreaHigh || 0)}</div>
+                        <div className="font-mono text-xs text-emerald-400">Low: ${formatPrice(pair.volumeProfile?.valueAreaLow || 0)}</div>
+                      </div>
+                    </div>
+
+                    {/* Volume Nodes */}
+                    <div className="mt-4">
+                      <div className="text-sm text-muted-foreground mb-2">High Volume Nodes:</div>
+                      <div className="space-y-2">
+                        {(pair.volumeProfile?.hvnodes || []).map((node: any, index: number) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <div className="w-full bg-secondary/30 rounded-full h-2">
+                              <div 
+                                className="bg-blue-400/50 h-full rounded-full" 
+                                style={{ width: `${Math.max(15, (node.volume / (pair.volumeProfile?.maxVolume || 0)) * 100)}%` }}
+                              />
+                            </div>
+                            <span className="font-mono text-xs min-w-[100px] text-right">
+                              ${formatPrice(node.price)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Volume Analysis</h3>
+                  <div className="space-y-4">
+                    {/* Volume Trend */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-muted-foreground">Volume Trend:</span>
+                        <span className={cn(
+                          "font-medium",
+                          pair.volumeProfile?.trend === 'Increasing' ? "text-emerald-400" :
+                          pair.volumeProfile?.trend === 'Decreasing' ? "text-red-400" :
+                          "text-blue-400"
+                        )}>
+                          {pair.volumeProfile?.trend || 'Neutral'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary/30 rounded-full h-2">
+                        <div 
+                          className={cn(
+                            "h-full rounded-full",
+                            pair.volumeProfile?.trend === 'Increasing' ? "bg-emerald-400/50" :
+                            pair.volumeProfile?.trend === 'Decreasing' ? "bg-red-400/50" :
+                            "bg-blue-400/50"
+                          )}
+                          style={{ 
+                            width: `${Math.max(15, pair.volumeProfile?.trendStrength || 50)}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Volume Spikes */}
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-2">Recent Volume Spikes:</div>
+                      <div className="space-y-2">
+                        {(pair.volumeProfile?.spikes || []).map((spike: any, index: number) => (
+                          <div key={index} className="p-2 border border-border/50 rounded-md bg-secondary/10">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(spike.timestamp).toLocaleString()}
+                              </span>
+                              <span className={cn(
+                                "text-xs font-medium",
+                                spike.type === 'buy' ? "text-emerald-400" : "text-red-400"
+                              )}>
+                                {spike.type === 'buy' ? 'Buying' : 'Selling'} Pressure
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center mt-1">
+                              <span className="text-xs text-muted-foreground">Volume:</span>
+                              <span className="font-mono text-xs">
+                                {spike.volume >= 1000000 
+                                  ? `${(spike.volume / 1000000).toFixed(1)}M` 
+                                  : spike.volume >= 1000 
+                                    ? `${(spike.volume / 1000).toFixed(1)}K` 
+                                    : spike.volume}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Volume-Based Support/Resistance */}
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-2">Volume-Based Levels:</div>
+                      <div className="space-y-2">
+                        {(pair.volumeProfile?.levels || []).slice(0, 3).map((level: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full",
+                                level.type === 'support' ? "bg-emerald-400" : "bg-red-400"
+                              )} />
+                              <span className="text-xs text-muted-foreground">
+                                {level.type === 'support' ? 'Support' : 'Resistance'}
+                              </span>
+                            </div>
+                            <span className="font-mono text-xs">
+                              ${formatPrice(level.price)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Fibonacci Analysis card */}
         <div className="grid grid-cols-1 gap-4 mb-4">
           <Card className="h-full">
@@ -688,8 +875,8 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                 </div>
               </CardContent>
             </Card>
-          </div>
-
+        </div>
+        
           <div className="col-span-2 sm:col-span-1">
             <Card className="h-full">
               <CardHeader className="pb-2">
@@ -845,9 +1032,10 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
               </CardContent>
             </Card>
           </div>
-        </div>
-        
+        </div>        
+
         {/* Add Advanced Technical Analysis section */}
+{/*         
         <div className="grid grid-cols-1 gap-4 mb-4">
           <Card className="h-full">
             <CardHeader className="pb-2">
@@ -960,7 +1148,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Close</Button>

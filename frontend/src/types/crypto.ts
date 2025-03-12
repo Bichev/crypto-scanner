@@ -162,6 +162,27 @@ export interface CryptoPair {
     };
     fallbackSupport?: { price: number; description: string };
     fallbackResistance?: { price: number; description: string };
+    volumeProfile?: {
+        poc: number;
+        valueAreaHigh: number;
+        valueAreaLow: number;
+        maxVolume: number;
+        hvnodes: Array<{
+            price: number;
+            volume: number;
+        }>;
+        trend: 'Increasing' | 'Decreasing' | 'Neutral';
+        trendStrength: number;
+        spikes: Array<{
+            timestamp: number;
+            volume: number;
+            type: 'buy' | 'sell';
+        }>;
+        levels: Array<{
+            price: number;
+            type: 'support' | 'resistance';
+        }>;
+    };
 }
 
 export interface IndicatorDescription {

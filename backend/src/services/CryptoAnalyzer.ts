@@ -21,6 +21,18 @@ interface CacheEntry {
     data: any[];
 }
 
+interface VolumeProfileData {
+    poc: number;
+    valueAreaHigh: number;
+    valueAreaLow: number;
+    maxVolume: number;
+    hvnodes: Array<{ price: number; volume: number }>;
+    trend: 'Increasing' | 'Decreasing' | 'Neutral';
+    trendStrength: number;
+    spikes: Array<{ timestamp: number; volume: number; type: 'buy' | 'sell' }>;
+    levels: Array<{ price: number; type: 'support' | 'resistance' }>;
+}
+
 export class CryptoAnalyzer {
     private readonly dataFetcher: CoinbaseDataFetcher;
     private readonly indicatorDescriptions: Record<string, IndicatorDescription>;
@@ -903,6 +915,9 @@ export class CryptoAnalyzer {
         // Calculate current price position relative to Fibonacci levels
         const fibPosition = this.calculateFibonacciPosition(currentPrice, fibLevels);
 
+        // Add volume profile analysis
+        const volumeProfile = this.calculateVolumeProfile(recentCandles);
+
         return {
             currentPrice: currentPrice.toFixed(8),
             dailyPriceChange: this.calculateDailyPriceChange(recentCandles),
@@ -1038,7 +1053,8 @@ export class CryptoAnalyzer {
             shortTermScore: shortTermScore.toFixed(2),
             longTermScore: longTermScore.toFixed(2),
             riskAdjustedScore: riskAdjustedScore.toFixed(2),
-            enhancedScore: enhancedScore.toFixed(2)
+            enhancedScore: enhancedScore.toFixed(2),
+            volumeProfile,
         };
     }
 
@@ -1979,5 +1995,159 @@ export class CryptoAnalyzer {
             type: 'Retracement',
             description: `Below ${(sortedLevels[sortedLevels.length - 1].level * 100).toFixed(1)}%`
         };
+    }
+
+    private calculateVolumeProfile(candles: CandleData[]): VolumeProfileData {
+        // Calculate price levels and their volumes
+        const volumeByPrice = new Map<number, number>();
+        let maxVolume = 0;
+        
+        candles.forEach(candle => {
+            const price = (candle.high + candle.low) / 2;
+            const volume = candle.volume;
+            const roundedPrice = Math.round(price * 100) / 100;
+            
+            volumeByPrice.set(
+                roundedPrice,
+                (volumeByPrice.get(roundedPrice) || 0) + volume
+            );
+            maxVolume = Math.max(maxVolume, volumeByPrice.get(roundedPrice) || 0);
+        });
+
+        // Find Point of Control (price level with highest volume)
+        let poc = 0;
+        let maxVol = 0;
+        for (const [price, volume] of volumeByPrice.entries()) {
+            if (volume > maxVol) {
+                maxVol = volume;
+                poc = price;
+            }
+        }
+
+        // Calculate Value Area (70% of total volume)
+        const totalVolume = Array.from(volumeByPrice.values()).reduce((a, b) => a + b, 0);
+        const valueAreaTarget = totalVolume * 0.7;
+        let currentVolume = 0;
+        let valueAreaHigh = poc;
+        let valueAreaLow = poc;
+        
+        // Expand value area until it contains 70% of volume
+        while (currentVolume < valueAreaTarget) {
+            const nextHighPrice = Math.max(...Array.from(volumeByPrice.keys()).filter(p => p > valueAreaHigh));
+            const nextLowPrice = Math.min(...Array.from(volumeByPrice.keys()).filter(p => p < valueAreaLow));
+            
+            const highVolume = volumeByPrice.get(nextHighPrice) || 0;
+            const lowVolume = volumeByPrice.get(nextLowPrice) || 0;
+            
+            if (highVolume > lowVolume) {
+                valueAreaHigh = nextHighPrice;
+                currentVolume += highVolume;
+            } else {
+                valueAreaLow = nextLowPrice;
+                currentVolume += lowVolume;
+            }
+        }
+
+        // Find High Volume Nodes (local maxima in volume)
+        const hvnodes = Array.from(volumeByPrice.entries())
+            .map(([price, volume]) => ({ price, volume }))
+            .filter(node => node.volume > totalVolume / volumeByPrice.size * 1.5)
+            .sort((a, b) => b.volume - a.volume)
+            .slice(0, 5);
+
+        // Calculate Volume Trend
+        const recentCandles = candles.slice(-14);
+        const volumeTrend = this.calculateVolumeTrend(recentCandles);
+
+        // Detect Volume Spikes
+        const spikes = this.detectVolumeSpikes(recentCandles);
+
+        // Find Volume-Based Support/Resistance Levels
+        const levels = this.findVolumeLevels(candles);
+
+        return {
+            poc,
+            valueAreaHigh,
+            valueAreaLow,
+            maxVolume,
+            hvnodes,
+            ...volumeTrend,
+            spikes,
+            levels
+        };
+    }
+
+    private calculateVolumeTrend(candles: CandleData[]): { 
+        trend: 'Increasing' | 'Decreasing' | 'Neutral';
+        trendStrength: number;
+    } {
+        const volumes = candles.map(c => c.volume);
+        const volumeSMA = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+        
+        const recentVolume = volumes.slice(-3).reduce((a, b) => a + b, 0) / 3;
+        const trendStrength = ((recentVolume - volumeSMA) / volumeSMA) * 100;
+        
+        let trend: 'Increasing' | 'Decreasing' | 'Neutral' = 'Neutral';
+        if (trendStrength > 20) trend = 'Increasing';
+        else if (trendStrength < -20) trend = 'Decreasing';
+        
+        return {
+            trend,
+            trendStrength: Math.abs(trendStrength)
+        };
+    }
+
+    private detectVolumeSpikes(candles: CandleData[]): Array<{
+        timestamp: number;
+        volume: number;
+        type: 'buy' | 'sell';
+    }> {
+        const volumes = candles.map(c => c.volume);
+        const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+        const stdDev = Math.sqrt(
+            volumes.reduce((a, b) => a + Math.pow(b - avgVolume, 2), 0) / volumes.length
+        );
+        
+        return candles
+            .filter(candle => {
+                return candle.volume > avgVolume + 2 * stdDev;
+            })
+            .map(candle => ({
+                timestamp: new Date(candle.timestamp).getTime(),
+                volume: candle.volume,
+                type: candle.close > candle.open ? 'buy' as const : 'sell' as const
+            }))
+            .slice(-3);
+    }
+
+    private findVolumeLevels(candles: CandleData[]): Array<{
+        price: number;
+        type: 'support' | 'resistance';
+    }> {
+        const volumeByPrice = new Map<number, number>();
+        
+        candles.forEach(candle => {
+            const price = (candle.high + candle.low) / 2;
+            const volume = candle.volume;
+            const roundedPrice = Math.round(price * 100) / 100;
+            
+            volumeByPrice.set(
+                roundedPrice,
+                (volumeByPrice.get(roundedPrice) || 0) + volume
+            );
+        });
+
+        const currentPrice = candles[candles.length - 1].close;
+        const levels = Array.from(volumeByPrice.entries())
+            .map(([price, volume]) => ({
+                price,
+                volume,
+                type: price > currentPrice ? 'resistance' as const : 'support' as const
+            }))
+            .filter(level => level.volume > Array.from(volumeByPrice.values()).reduce((a, b) => a + b, 0) / volumeByPrice.size * 2)
+            .sort((a, b) => b.volume - a.volume)
+            .map(({ price, type }) => ({ price, type }));
+
+        return levels;
     }
 }
