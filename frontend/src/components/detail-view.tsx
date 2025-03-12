@@ -112,7 +112,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
   const macdValue = parseFloat(pair.macd || '0');
   const signalLine = parseFloat(pair.signalLine || '0');
   const histogram = parseFloat(pair.histogram || '0');
-  
+  const rsi_30 = parseFloat(pair.rsi_30 || '0');
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
@@ -250,15 +250,23 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                     <span className={`font-mono font-medium ${
                       rsi > 70 ? 'text-red-400' : rsi < 30 ? 'text-emerald-400' : 'text-gray-400'
                     }`}>
-                      {!isNaN(rsi) ? rsi.toFixed(2) : '-'}
+                      {!isNaN(rsi) && rsi !== 0 ? rsi.toFixed(2) : '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">RSI (30):</span>
+                    <span className={`font-mono font-medium ${
+                      rsi_30 > 70 ? 'text-red-400' : rsi_30 < 30 && rsi_30 !== 0 ? 'text-emerald-400' : 'text-gray-400'
+                    }`}>
+                      {!isNaN(rsi_30) && rsi_30 !== 0 ? rsi_30.toFixed(2) : '-'}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <span className="text-muted-foreground mr-2">Status:</span>
                     <span className={`font-medium ${
-                      rsi > 70 ? 'text-red-400' : rsi < 30 ? 'text-emerald-400' : 'text-gray-400'
+                      rsi > 70 ? 'text-red-400' : rsi < 30 && rsi !== 0 ? 'text-emerald-400' : 'text-gray-400'
                     }`}>
-                      {rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral'}
+                      {rsi > 70 ? 'Overbought' : rsi < 30 && rsi !== 0 ? 'Oversold' : 'Neutral'}
                     </span>
                   </div>
                   <div className="mt-4">

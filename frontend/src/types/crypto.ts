@@ -44,6 +44,7 @@ export interface CryptoPair {
     atr: string;
     roc: string;
     rsi: string;
+    rsi_30: string;
     // Additional momentum indicators
     stoch_k: string;
     stoch_d: string;

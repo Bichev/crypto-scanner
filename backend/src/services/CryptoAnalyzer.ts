@@ -702,6 +702,11 @@ export class CryptoAnalyzer {
             period: 14
         });
 
+        const rsi_30 = ti.RSI.calculate({
+            values: longTermClosePrices,
+            period: 30
+        });
+
         // Calculate MACD (26 days max)
         type MACDResult = {
             MACD?: number;
@@ -965,6 +970,7 @@ export class CryptoAnalyzer {
             
             // RSI indicators
             rsi: rsi[rsi.length - 1]?.toFixed(2),
+            rsi_30: rsi_30[rsi_30.length - 1]?.toFixed(2),
             rsiDivergence: this.calculateRSIDivergence(recentClosePrices, rsi, 14),
             stoch_k: latestStoch.k?.toFixed(2),
             stoch_d: latestStoch.d?.toFixed(2),
