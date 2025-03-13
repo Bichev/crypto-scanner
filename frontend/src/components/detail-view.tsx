@@ -364,10 +364,10 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                   <div className="flex items-center mt-2">
                     <span className="text-muted-foreground mr-2">Signal:</span>
                     <span className={`font-medium ${pair.stochastic?.signal === 'Overbought' ? 'text-red-400' :
-                        pair.stochastic?.signal === 'Oversold' ? 'text-emerald-400' :
-                          pair.stochastic?.signal?.includes('Bullish') ? 'text-emerald-400' :
-                            pair.stochastic?.signal?.includes('Bearish') ? 'text-red-400' :
-                              'text-gray-400'
+                      pair.stochastic?.signal === 'Oversold' ? 'text-emerald-400' :
+                        pair.stochastic?.signal?.includes('Bullish') ? 'text-emerald-400' :
+                          pair.stochastic?.signal?.includes('Bearish') ? 'text-red-400' :
+                            'text-gray-400'
                       }`}>
                       {pair.stochastic?.signal || 'Neutral'}
                     </span>
@@ -711,8 +711,8 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">%B:</span>
                     <span className={`font-mono font-medium ${parseFloat(pair.bollingerBands?.percentB || '0.5') > 1 ? 'text-red-400' :
-                        parseFloat(pair.bollingerBands?.percentB || '0.5') < 0 ? 'text-emerald-400' :
-                          'text-gray-400'
+                      parseFloat(pair.bollingerBands?.percentB || '0.5') < 0 ? 'text-emerald-400' :
+                        'text-gray-400'
                       }`}>
                       {pair.bollingerBands?.percentB || '-'}
                     </span>
@@ -775,8 +775,8 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                   <div className="flex items-center mt-2">
                     <span className="text-muted-foreground mr-2">TK Cross:</span>
                     <span className={`font-medium ${pair.ichimoku?.tkCross?.includes('Bullish') ? 'text-emerald-400' :
-                        pair.ichimoku?.tkCross?.includes('Bearish') ? 'text-red-400' :
-                          'text-gray-400'
+                      pair.ichimoku?.tkCross?.includes('Bearish') ? 'text-red-400' :
+                        'text-gray-400'
                       }`}>
                       {pair.ichimoku?.tkCross || 'None'}
                     </span>
@@ -784,10 +784,10 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                   <div className="flex items-center mt-2">
                     <span className="text-muted-foreground mr-2">Signal:</span>
                     <span className={`font-medium ${pair.ichimoku?.cloudSignal?.includes('Strong Bull') ? 'text-emerald-400' :
-                        pair.ichimoku?.cloudSignal?.includes('Bull') ? 'text-emerald-400/70' :
-                          pair.ichimoku?.cloudSignal?.includes('Strong Bear') ? 'text-red-400' :
-                            pair.ichimoku?.cloudSignal?.includes('Bear') ? 'text-red-400/70' :
-                              'text-gray-400'
+                      pair.ichimoku?.cloudSignal?.includes('Bull') ? 'text-emerald-400/70' :
+                        pair.ichimoku?.cloudSignal?.includes('Strong Bear') ? 'text-red-400' :
+                          pair.ichimoku?.cloudSignal?.includes('Bear') ? 'text-red-400/70' :
+                            'text-gray-400'
                       }`}>
                       {pair.ichimoku?.cloudSignal || 'Neutral'}
                     </span>
@@ -931,6 +931,498 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Risk Analysis Card */}
+        <div className="grid grid-cols-1 gap-4 mb-4">
+
+
+
+          {/* Risk Analysis & Opportunities Card */}
+          <Card className="mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                Risk Analysis & Opportunities
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <InformationCircleIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="w-[450px] p-5 space-y-4 bg-card/95 backdrop-blur-sm border-border shadow-xl">
+                      <div className="border-l-4 border-primary pl-3">
+                        <p className="font-semibold text-base mb-1 text-primary">Risk Analysis</p>
+                        <p className="text-sm text-muted-foreground">Comprehensive assessment of market conditions, volatility, and position sizing to manage trading risk effectively.</p>
+                      </div>
+
+                      <div className="bg-accent/30 rounded-lg p-3">
+                        <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                          Risk Metrics
+                        </p>
+                        <ul className="text-xs space-y-2 ml-2">
+                          <li className="flex items-start gap-2">
+                            <span className="font-medium text-blue-400 min-w-[110px]">Risk Score:</span>
+                            <span className="text-muted-foreground">Overall risk assessment based on multiple factors including volatility, liquidity, and technical indicators.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="font-medium text-blue-400 min-w-[110px]">Risk/Reward Ratio:</span>
+                            <span className="text-muted-foreground">Comparison of potential profit to potential loss. Higher values indicate more favorable trading conditions.</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-accent/30 rounded-lg p-3">
+                        <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                          Opportunity Analysis
+                        </p>
+                        <ul className="text-xs space-y-2 ml-2">
+                          <li className="flex items-start gap-2">
+                            <span className="font-medium text-emerald-400 min-w-[110px]">Entry Points:</span>
+                            <span className="text-muted-foreground">Suggested price levels for opening positions based on technical analysis.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="font-medium text-red-400 min-w-[110px]">Stop Loss:</span>
+                            <span className="text-muted-foreground">Recommended exit points to limit potential losses, calculated using ATR and support/resistance levels.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="font-medium text-emerald-400 min-w-[110px]">Targets:</span>
+                            <span className="text-muted-foreground">Potential price targets based on Fibonacci levels, historical resistance, and volatility.</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div className="border-l-4 border-primary/50 pl-3 mt-2">
+                        <p className="font-semibold mb-1 text-primary">Position Sizing</p>
+                        <p className="text-xs text-muted-foreground">Recommendations based on volatility and account risk management principles. Adjust position size based on your risk tolerance and market conditions.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </CardTitle>
+              <CardDescription>Risk metrics and trading opportunities</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Left column - Risk Analysis */}
+                <div className="space-y-4">
+                  {/* Risk Score */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium">Risk Score</h3>
+                      <span className={cn(
+                        "font-medium",
+                        parseFloat(pair.riskAdjustedScore) >= 0.7 ? "text-emerald-400" :
+                          parseFloat(pair.riskAdjustedScore) <= 0.3 ? "text-red-400" :
+                            "text-amber-400"
+                      )}>
+                        {(parseFloat(pair.riskAdjustedScore) * 100).toFixed(1)}%
+                      </span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-xs font-medium",
+                        pair.riskAnalysis?.riskLevel === 'Low' ? "bg-emerald-400/20 text-emerald-400" :
+                          pair.riskAnalysis?.riskLevel === 'High' ? "bg-red-400/20 text-red-400" :
+                            "bg-amber-400/20 text-amber-400"
+                      )}>
+                        {pair.riskAnalysis?.riskLevel || 'Medium'} Risk
+                      </span>
+                    </div>
+                    <div className="w-full bg-secondary/30 rounded-full h-2">
+                      <div
+                        className={cn(
+                          "h-full rounded-full",
+                          pair.riskAnalysis?.riskLevel === 'Low' ? "bg-emerald-400" :
+                            pair.riskAnalysis?.riskLevel === 'High' ? "bg-red-400" :
+                              "bg-amber-400"
+                        )}
+                        style={{ width: `${(pair.riskAnalysis?.riskScore || parseFloat(pair.riskAdjustedScore) * 100 || 50)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Risk/Reward Analysis */}
+                  <div className="p-3 border rounded-lg bg-card/50">
+                    <h3 className="text-sm font-medium mb-2">Risk/Reward Analysis</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Composite Score:</span>
+                        <span className={cn(
+                          "font-medium",
+                          parseFloat(pair.enhancedScore) >= 0.7 ? "text-emerald-400" :
+                            parseFloat(pair.enhancedScore) <= 0.3 ? "text-red-400" :
+                              "text-amber-400"
+                        )}>
+                          {parseFloat(pair.enhancedScore).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Short-term:</span>
+                        <span className={cn(
+                          "font-medium",
+                          parseFloat(pair.shortTermScore) >= 0.7 ? "text-emerald-400" :
+                            parseFloat(pair.shortTermScore) <= 0.3 ? "text-red-400" :
+                              "text-amber-400"
+                        )}>
+                          {parseFloat(pair.shortTermScore).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Long-term:</span>
+                        <span className={cn(
+                          "font-medium",
+                          parseFloat(pair.longTermScore) >= 0.7 ? "text-emerald-400" :
+                            parseFloat(pair.longTermScore) <= 0.3 ? "text-red-400" :
+                              "text-amber-400"
+                        )}>
+                          {parseFloat(pair.longTermScore).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Risk-adjusted:</span>
+                        <span className={cn(
+                          "font-medium",
+                          parseFloat(pair.riskAdjustedScore) >= 0.7 ? "text-emerald-400" :
+                            parseFloat(pair.riskAdjustedScore) <= 0.3 ? "text-red-400" :
+                              "text-amber-400"
+                        )}>
+                          {parseFloat(pair.riskAdjustedScore).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Volatility Metrics */}
+                  <div className="p-3 border rounded-lg bg-card/50">
+                    <h3 className="text-sm font-medium mb-2">Volatility Metrics</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Volatility Level:</span>
+                        <span className={cn(
+                          "font-medium",
+                          pair.atrAnalysis?.volatility?.includes('High') ? "text-red-400" :
+                            pair.atrAnalysis?.volatility?.includes('Low') ? "text-emerald-400" :
+                              "text-amber-400"
+                        )}>
+                          {pair.atrAnalysis?.volatility || 'Medium'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Normalized ATR:</span>
+                        <span className={cn(
+                          "font-medium",
+                          parseFloat(pair.atrAnalysis?.normalizedATR || '0') > 5 ? "text-red-400" :
+                            parseFloat(pair.atrAnalysis?.normalizedATR || '0') < 1 ? "text-emerald-400" :
+                              "text-amber-400"
+                        )}>
+                          {pair.atrAnalysis?.normalizedATR ? `${pair.atrAnalysis.normalizedATR}%` : '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">ATR (14):</span>
+                        <span className="font-mono text-xs">
+                          {pair.atrAnalysis?.atr || pair.atr || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">BB Width:</span>
+                        <span className="font-mono text-xs">
+                          {pair.bb_width || '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+
+                  {/* Volume Analysis */}
+                  <div className="p-3 border rounded-lg bg-card/50">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium mb-2">Volume Analysis</h3>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Volume Trend:</span>
+                        <span className={cn(
+                          "font-medium",
+                          pair.volumeAnalysis?.trend === 'Strong Bullish' ? "text-emerald-400" :
+                            pair.volumeAnalysis?.trend === 'Bullish' ? "text-emerald-400/70" :
+                              pair.volumeAnalysis?.trend === 'Strong Bearish' ? "text-red-400" :
+                                pair.volumeAnalysis?.trend === 'Bearish' ? "text-red-400/70" :
+                                  "text-amber-400"
+                        )}>
+                          {pair.volumeAnalysis?.trend || 'Neutral'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Volume Score:</span>
+                        <span className="font-medium">
+                          {pair.volumeScore?.toFixed(1) || '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Liquidity:</span>
+                        <span className={cn(
+                          "font-medium",
+                          pair.liquidityType === 'High' ? "text-emerald-400" :
+                            pair.liquidityType === 'Low' ? "text-red-400" :
+                              "text-amber-400"
+                        )}>
+                          {pair.liquidityType || 'Normal'}
+                        </span>
+                      </div>
+                      {pair.volumeAnalysis?.signal && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {pair.volumeAnalysis.signal}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+
+
+                {/* Right column - Opportunities & Position Sizing */}
+                <div className="space-y-4">
+                  {/* Trading Opportunity */}
+                  <div className="p-3 border rounded-lg bg-card/50">
+
+
+                    {/* Opportunity Type Section */}
+
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-sm font-medium">Opportunity Type</h3>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-xs font-medium",
+                        // Bullish trend styles
+                        (pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'long') ?
+                          "bg-blue-400/20 text-blue-400" :
+                          // Bearish trend styles
+                          (pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'short') ?
+                            "bg-red-400/20 text-red-400" :
+                            // Other opportunity types
+                            pair.opportunityMetrics?.type === 'Reversal' ? "bg-purple-400/20 text-purple-400" :
+                              pair.opportunityMetrics?.type === 'Breakout' ? "bg-amber-400/20 text-amber-400" :
+                                "bg-gray-400/20 text-gray-400"
+                      )}>
+                        {/* Enhanced display that includes direction */}
+                        {(pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'long') ?
+                          "Bullish Trend" :
+                          (pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'short') ?
+                            "Bearish Trend" :
+                            (pair.opportunityMetrics?.type === 'Reversal' && pair.opportunityMetrics?.direction === 'long') ?
+                              "Bullish Reversal" :
+                              (pair.opportunityMetrics?.type === 'Reversal' && pair.opportunityMetrics?.direction === 'short') ?
+                                "Bearish Reversal" :
+                                (pair.opportunityMetrics?.type === 'Breakout' && pair.opportunityMetrics?.direction === 'long') ?
+                                  "Bullish Breakout" :
+                                  (pair.opportunityMetrics?.type === 'Breakout' && pair.opportunityMetrics?.direction === 'short') ?
+                                    "Bearish Breakout" :
+                                    pair.opportunityMetrics?.type || 'None'} ({pair.opportunityMetrics?.timeframe || 'Medium'})
+                      </span>
+                    </div>
+
+                    {/* Confidence level - only show if not None */}
+                    {pair.opportunityMetrics?.type !== 'None' && (
+                      <div className="text-sm mb-2">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-muted-foreground">Confidence:</span>
+                          <span className="font-medium">
+                            {pair.opportunityMetrics?.confidence ? `${pair.opportunityMetrics.confidence.toFixed(0)}%` : '-'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-secondary/30 rounded-full h-1.5">
+                          <div
+                            className="bg-blue-400 h-full rounded-full"
+                            style={{ width: `${pair.opportunityMetrics?.confidence || 0}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Key levels - only show if not None */}
+                    {pair.opportunityMetrics?.type !== 'None' && pair.opportunityMetrics?.keyLevels && (
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-3 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Entry:</span>
+                          <span className="font-mono">${formatPrice(pair.opportunityMetrics?.keyLevels.entry ?? 0)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Target{pair.opportunityMetrics?.direction ? ` (${pair.opportunityMetrics.direction === 'long' ? 'Long' : 'Short'})` : ''}:
+                          </span>
+                          <span className="font-mono text-emerald-400">${formatPrice(pair.opportunityMetrics?.keyLevels.target ?? 0)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Stop:</span>
+                          <span className="font-mono text-red-400">${formatPrice(pair.opportunityMetrics?.keyLevels.stop ?? 0)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">R/R:</span>
+                          <span className="font-medium">{pair.opportunityMetrics?.keyLevels.riskRewardRatio?.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Trade opportunity explanation - only show if not None */}
+                    {pair.opportunityMetrics?.type !== 'None' && pair.opportunityMetrics?.direction === 'short' && (
+                      <div className="mt-3 p-1.5 text-xs border border-dashed border-blue-400/30 rounded bg-blue-400/5">
+                        <div className="font-medium text-blue-400 mb-0.5">📉 Short Trade Opportunity</div>
+                        <div className="text-muted-foreground">
+                          This setup suggests a potential short position with entry at ${formatPrice(pair.opportunityMetrics?.keyLevels.entry ?? 0)} and
+                          target at ${formatPrice(pair.opportunityMetrics?.keyLevels.target ?? 0)}. Place a stop-loss at ${formatPrice(pair.opportunityMetrics?.keyLevels.stop ?? 0)}.
+                        </div>
+                      </div>
+                    )}
+
+                    {pair.opportunityMetrics?.type !== 'None' && pair.opportunityMetrics?.direction === 'long' && (
+                      <div className="mt-3 p-1.5 text-xs border border-dashed border-green-400/30 rounded bg-green-400/5">
+                        <div className="font-medium text-green-400 mb-0.5">📈 Long Trade Opportunity</div>
+                        <div className="text-muted-foreground">
+                          This setup suggests a potential long position with entry at ${formatPrice(pair.opportunityMetrics?.keyLevels.entry ?? 0)} and
+                          target at ${formatPrice(pair.opportunityMetrics?.keyLevels.target ?? 0)}. Place a stop-loss at ${formatPrice(pair.opportunityMetrics?.keyLevels.stop ?? 0)}.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No opportunity message */}
+                    {(pair.opportunityMetrics?.type === 'None' || !pair.opportunityMetrics?.type) && (
+                      <div className="mt-1 p-1.5 text-xs border border-dashed border-gray-400/30 rounded bg-gray-400/5">
+                        <div className="text-muted-foreground">
+                          No significant trading opportunity detected at this time. Watch for changes in market conditions.
+                        </div>
+                      </div>
+                    )}
+
+
+
+
+
+                  </div>
+
+                  {/* Stop Loss Suggestions */}
+                  <div className="p-3 border rounded-lg bg-card/50">
+                    <h3 className="text-sm font-medium mb-2">Stop Loss Suggestions</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">ATR-based:</span>
+                        <span className="font-mono text-red-400">
+                          ${formatPrice(pair.riskAnalysis?.stopLoss?.atrBased ||
+                            (parseFloat(pair.currentPrice) - parseFloat(pair.atrAnalysis?.atr || pair.atr || '0')) || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Support-based:</span>
+                        <span className="font-mono text-red-400">
+                          ${formatPrice(pair.riskAnalysis?.stopLoss?.supportBased ||
+                            (pair.supports && pair.supports.length > 0 ? pair.supports[0].price : 0))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Suggested:</span>
+                        <span className="font-mono font-medium text-red-400">
+                          {pair.riskAnalysis?.stopLoss?.suggestion || '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Position Sizing */}
+                  <div className="p-3 border rounded-lg bg-card/50">
+                    <h3 className="text-sm font-medium mb-2">Position Sizing</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Suggested Size:</span>
+                        <span className="font-mono font-medium">
+                          {pair.riskAnalysis?.positionSizing?.suggested ?
+                            `${pair.riskAnalysis.positionSizing.suggested.toFixed(2)}` : '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Max Size:</span>
+                        <span className="font-mono">
+                          {pair.riskAnalysis?.positionSizing?.maxSize ?
+                            `${pair.riskAnalysis.positionSizing.maxSize.toFixed(2)}` : '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Risk %:</span>
+                        <span className="font-mono">
+                          {pair.riskAnalysis?.positionSizing?.riskPercentage ?
+                            `${pair.riskAnalysis.positionSizing.riskPercentage.toFixed(2)}%` : '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Risk Factors / Warnings */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium mb-2">Risk Factors</h3>
+                    <div className={cn(
+                      "p-2 rounded-md border",
+                      pair.isPumping ? "bg-emerald-400/10 border-emerald-400/30 text-emerald-400" :
+                        pair.isDumping ? "bg-red-400/10 border-red-400/30 text-red-400" :
+                          "bg-amber-400/10 border-amber-400/30 text-amber-400"
+                    )}>
+                      {pair.isPumping && (
+                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                          Potential Pump Detected
+                        </div>
+                      )}
+                      {pair.isDumping && (
+                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-400"></span>
+                          Potential Dump Detected
+                        </div>
+                      )}
+                      {!pair.isPumping && !pair.isDumping && (
+                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                          Risk Assessment
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {pair.isPumping ? (
+                          <>
+                            Pump Score: <span className="font-medium text-emerald-400">{pair.pumpScore?.toFixed(1)}</span> |
+                            Price Change: <span className="font-medium text-emerald-400">{pair.priceChange?.toFixed(2)}%</span> |
+                            Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
+                          </>
+                        ) : pair.isDumping ? (
+                          <>
+                            Dump Score: <span className="font-medium text-red-400">{pair.dumpScore?.toFixed(1)}</span> |
+                            Price Change: <span className="font-medium text-red-400">{pair.priceChange?.toFixed(2)}%</span> |
+                            Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
+                          </>
+                        ) : (
+                          <>
+                            Movement Type: <span className="font-medium">{pair.movementType || 'Normal'}</span> |
+                            Vol/Price Corr: <span className="font-medium">{pair.volumeAnalysis?.priceVolumeCorrelation?.toFixed(2) || 'N/A'}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {pair.isPumping ? (
+                        "Exercise caution - high volatility detected. Consider reduced position size."
+                      ) : pair.isDumping ? (
+                        "Exercise caution - significant selling pressure detected."
+                      ) : (
+                        pair.atrAnalysis?.volatility?.includes('High') ?
+                          "Higher than normal volatility. Consider adjusting position size." :
+                          "Normal market conditions. Standard risk management advised."
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
+
+
+
+              </div>
+
+            </CardContent>
+          </Card>
+
+
         </div>
 
         {/* Support & Resistance card */}
@@ -1153,6 +1645,141 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                Fibonacci Analysis
+                <div className="relative group">
+                  <button className="text-muted-foreground hover:text-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.75 2.75 0 013.82 0 .75.75 0 01-1.06 1.06 1.25 1.25 0 00-1.7 0zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-full top-0 ml-2 w-[400px] hidden group-hover:block z-50">
+                    <div className="bg-black/95 backdrop-blur-sm border border-border/50 text-white px-4 py-3 rounded-lg shadow-xl text-sm">
+                      <h4 className="font-semibold mb-3 text-base border-b border-border/50 pb-2">Understanding Fibonacci Analysis</h4>
+                      <div className="space-y-3">
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="mb-2"><span className="font-medium text-primary">Fibonacci Levels:</span></p>
+                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                            <li>0.236 - Weak retracement level</li>
+                            <li>0.382 - Moderate retracement level</li>
+                            <li>0.500 - Mid-point retracement</li>
+                            <li>0.618 - Golden ratio, strong level</li>
+                            <li>0.786 - Deep retracement level</li>
+                          </ul>
+                        </div>
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="mb-2"><span className="font-medium text-primary">Extensions:</span></p>
+                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
+                            <li>1.272 - First extension target</li>
+                            <li>1.618 - Golden ratio extension</li>
+                            <li>2.618 - Major extension level</li>
+                          </ul>
+                        </div>
+                        <div className="bg-white/5 rounded-md p-3">
+                          <p className="text-xs text-gray-300">Fibonacci levels are calculated based on significant price swings (high and low points). They often act as support/resistance levels and potential reversal zones.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Fibonacci Levels</h3>
+                  {pair.fibonacciAnalysis?.levels && pair.fibonacciAnalysis.levels.length > 0 ? (
+                    <ul className="space-y-2">
+                      {pair.fibonacciAnalysis.levels.map((level, index) => (
+                        <li key={index} className="flex flex-col space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className={cn(
+                              "font-mono",
+                              level.level < 1 ? "text-emerald-400" : "text-amber-400"
+                            )}>
+                              {(level.level * 100).toFixed(1)}% - ${formatPrice(level.price)}
+                            </span>
+                            {isSameLevel(level.price, parseFloat(pair.currentPrice), 0.1) && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20">Current</span>
+                            )}
+                          </div>
+                          <div className="w-full bg-secondary/30 rounded-full h-1">
+                            <div
+                              className={cn(
+                                "h-full rounded-full",
+                                level.level < 1 ? "bg-emerald-400/50" : "bg-amber-400/50"
+                              )}
+                              style={{ width: `${Math.min(100, level.level * 100)}%` }}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
+                      <p className="text-sm text-muted-foreground">No Fibonacci levels calculated</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Swing Points</h3>
+                  {pair.fibonacciAnalysis?.swingPoints ? (
+                    <div className="space-y-4">
+                      <div className="p-3 border border-secondary/20 rounded-md bg-secondary/10">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-muted-foreground">Swing High:</span>
+                          <span className="font-mono text-red-400">
+                            ${formatPrice(pair.fibonacciAnalysis.swingPoints.high)}
+                          </span>
+                        </div>
+                        {pair.fibonacciAnalysis.swingPoints.highTime && (
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(pair.fibonacciAnalysis.swingPoints.highTime).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 border border-secondary/20 rounded-md bg-secondary/10">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-muted-foreground">Swing Low:</span>
+                          <span className="font-mono text-emerald-400">
+                            ${formatPrice(pair.fibonacciAnalysis.swingPoints.low)}
+                          </span>
+                        </div>
+                        {pair.fibonacciAnalysis.swingPoints.lowTime && (
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(pair.fibonacciAnalysis.swingPoints.lowTime).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 border border-secondary/20 rounded-md bg-secondary/10">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Current Position:</span>
+                          <span className={cn(
+                            "font-medium",
+                            pair.fibonacciAnalysis.currentPosition?.includes('Retracement') ? "text-emerald-400" :
+                              pair.fibonacciAnalysis.currentPosition?.includes('Extension') ? "text-amber-400" :
+                                "text-blue-400"
+                          )}>
+                            {pair.fibonacciAnalysis.currentPosition || 'Between Levels'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
+                      <p className="text-sm text-muted-foreground">No swing points detected</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1496,805 +2123,9 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
 
         {/* Fibonacci Analysis card */}
         <div className="grid grid-cols-1 gap-4 mb-4">
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                Fibonacci Analysis
-                <div className="relative group">
-                  <button className="text-muted-foreground hover:text-foreground">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.75 2.75 0 013.82 0 .75.75 0 01-1.06 1.06 1.25 1.25 0 00-1.7 0zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                  <div className="absolute left-full top-0 ml-2 w-[400px] hidden group-hover:block z-50">
-                    <div className="bg-black/95 backdrop-blur-sm border border-border/50 text-white px-4 py-3 rounded-lg shadow-xl text-sm">
-                      <h4 className="font-semibold mb-3 text-base border-b border-border/50 pb-2">Understanding Fibonacci Analysis</h4>
-                      <div className="space-y-3">
-                        <div className="bg-white/5 rounded-md p-3">
-                          <p className="mb-2"><span className="font-medium text-primary">Fibonacci Levels:</span></p>
-                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
-                            <li>0.236 - Weak retracement level</li>
-                            <li>0.382 - Moderate retracement level</li>
-                            <li>0.500 - Mid-point retracement</li>
-                            <li>0.618 - Golden ratio, strong level</li>
-                            <li>0.786 - Deep retracement level</li>
-                          </ul>
-                        </div>
-                        <div className="bg-white/5 rounded-md p-3">
-                          <p className="mb-2"><span className="font-medium text-primary">Extensions:</span></p>
-                          <ul className="list-disc pl-4 space-y-1 text-gray-300">
-                            <li>1.272 - First extension target</li>
-                            <li>1.618 - Golden ratio extension</li>
-                            <li>2.618 - Major extension level</li>
-                          </ul>
-                        </div>
-                        <div className="bg-white/5 rounded-md p-3">
-                          <p className="text-xs text-gray-300">Fibonacci levels are calculated based on significant price swings (high and low points). They often act as support/resistance levels and potential reversal zones.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Fibonacci Levels</h3>
-                  {pair.fibonacciAnalysis?.levels && pair.fibonacciAnalysis.levels.length > 0 ? (
-                    <ul className="space-y-2">
-                      {pair.fibonacciAnalysis.levels.map((level, index) => (
-                        <li key={index} className="flex flex-col space-y-1">
-                          <div className="flex justify-between items-center">
-                            <span className={cn(
-                              "font-mono",
-                              level.level < 1 ? "text-emerald-400" : "text-amber-400"
-                            )}>
-                              {(level.level * 100).toFixed(1)}% - ${formatPrice(level.price)}
-                            </span>
-                            {isSameLevel(level.price, parseFloat(pair.currentPrice), 0.1) && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20">Current</span>
-                            )}
-                          </div>
-                          <div className="w-full bg-secondary/30 rounded-full h-1">
-                            <div
-                              className={cn(
-                                "h-full rounded-full",
-                                level.level < 1 ? "bg-emerald-400/50" : "bg-amber-400/50"
-                              )}
-                              style={{ width: `${Math.min(100, level.level * 100)}%` }}
-                            />
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
-                      <p className="text-sm text-muted-foreground">No Fibonacci levels calculated</p>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Swing Points</h3>
-                  {pair.fibonacciAnalysis?.swingPoints ? (
-                    <div className="space-y-4">
-                      <div className="p-3 border border-secondary/20 rounded-md bg-secondary/10">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Swing High:</span>
-                          <span className="font-mono text-red-400">
-                            ${formatPrice(pair.fibonacciAnalysis.swingPoints.high)}
-                          </span>
-                        </div>
-                        {pair.fibonacciAnalysis.swingPoints.highTime && (
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(pair.fibonacciAnalysis.swingPoints.highTime).toLocaleString()}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="p-3 border border-secondary/20 rounded-md bg-secondary/10">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Swing Low:</span>
-                          <span className="font-mono text-emerald-400">
-                            ${formatPrice(pair.fibonacciAnalysis.swingPoints.low)}
-                          </span>
-                        </div>
-                        {pair.fibonacciAnalysis.swingPoints.lowTime && (
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(pair.fibonacciAnalysis.swingPoints.lowTime).toLocaleString()}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="p-3 border border-secondary/20 rounded-md bg-secondary/10">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Current Position:</span>
-                          <span className={cn(
-                            "font-medium",
-                            pair.fibonacciAnalysis.currentPosition?.includes('Retracement') ? "text-emerald-400" :
-                              pair.fibonacciAnalysis.currentPosition?.includes('Extension') ? "text-amber-400" :
-                                "text-blue-400"
-                          )}>
-                            {pair.fibonacciAnalysis.currentPosition || 'Between Levels'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 border border-dashed border-secondary rounded-md bg-secondary/10">
-                      <p className="text-sm text-muted-foreground">No swing points detected</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Risk Analysis Card */}
-          <div className="grid grid-cols-1 gap-4 mb-4">
-            <Card className="h-full">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  Risk Analysis
-                  <div className="relative group">
-                    <button className="text-muted-foreground hover:text-foreground">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.06-1.06 2.75 2.75 0 013.82 0 .75.75 0 01-1.06 1.06 1.25 1.25 0 00-1.7 0zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                    <div className="absolute left-full top-0 ml-2 w-[400px] hidden group-hover:block z-50">
-                      <div className="bg-black/95 backdrop-blur-sm border border-border/50 text-white px-4 py-3 rounded-lg shadow-xl text-sm">
-                        <h4 className="font-semibold mb-3 text-base border-b border-border/50 pb-2">Understanding Risk Analysis</h4>
-                        <div className="space-y-3">
-                          <div className="bg-white/5 rounded-md p-3">
-                            <p className="mb-2"><span className="font-medium text-primary">Risk Metrics:</span></p>
-                            <ul className="list-disc pl-4 space-y-1 text-gray-300">
-                              <li>Risk/Reward Ratio: Potential loss vs potential gain</li>
-                              <li>Volatility: Price fluctuation intensity</li>
-                              <li>ATR: Average True Range for stop loss</li>
-                              <li>Position Size: Recommended trade size</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Risk/Reward Analysis */}
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">Risk/Reward Analysis</h3>
-                    <div className="space-y-4">
-                      <div className="p-3 border border-border rounded-lg bg-card/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Risk Score</span>
-                          <span className={cn(
-                            "font-medium",
-                            parseFloat(pair.riskAdjustedScore) >= 0.7 ? "text-emerald-400" :
-                              parseFloat(pair.riskAdjustedScore) <= 0.3 ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {(parseFloat(pair.riskAdjustedScore) * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-secondary/30 rounded-full h-2">
-                          <div
-                            className={cn(
-                              "h-full rounded-full",
-                              parseFloat(pair.riskAdjustedScore) >= 0.7 ? "bg-emerald-400" :
-                                parseFloat(pair.riskAdjustedScore) <= 0.3 ? "bg-red-400" :
-                                  "bg-amber-400"
-                            )}
-                            style={{ width: `${parseFloat(pair.riskAdjustedScore) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Volatility Analysis */}
-                      <div className="p-3 border border-border rounded-lg bg-card/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Volatility</span>
-                          <span className={cn(
-                            "font-medium",
-                            pair.atrAnalysis?.volatility === 'High' ? "text-red-400" :
-                              pair.atrAnalysis?.volatility === 'Low' ? "text-emerald-400" :
-                                "text-amber-400"
-                          )}>
-                            {pair.atrAnalysis?.volatility || 'N/A'}
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          ATR: {pair.atrAnalysis?.normalizedATR}% of price
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Liquidity Analysis */}
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3">Liquidity Analysis</h3>
-                    <div className="space-y-4">
-                      <div className="p-3 border border-border rounded-lg bg-card/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Market Liquidity</span>
-                          <span className={cn(
-                            "font-medium",
-                            pair.liquidityType === 'High' ? "text-emerald-400" :
-                              pair.liquidityType === 'Low' ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {pair.liquidityType}
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Volume Score: {pair.volumeScore?.toFixed(1)}
-                        </div>
-                      </div>
-
-                      {/* Volume Profile */}
-                      <div className="p-3 border border-border rounded-lg bg-card/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Volume Profile</span>
-                          <span className={cn(
-                            "font-medium",
-                            pair.volumeAnalysis?.trend === 'Strong Bullish' ? "text-emerald-400" :
-                              pair.volumeAnalysis?.trend === 'Strong Bearish' ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {pair.volumeAnalysis?.trend || 'Neutral'}
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {pair.volumeAnalysis?.signal}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stop Loss & Position Sizing */}
-                <div className="mt-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Stop Loss Suggestions */}
-                    <div className="p-3 border border-border rounded-lg bg-card/50">
-                      <h4 className="text-sm font-medium mb-3">Stop Loss Suggestions</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">ATR-based</span>
-                          <span className="font-mono text-red-400">
-                            ${formatPrice(pair.riskAnalysis?.stopLoss?.atrBased ||
-                              (parseFloat(pair.currentPrice) - parseFloat(pair.atrAnalysis?.atr || pair.atr || '0')) || 0)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Support-based</span>
-                          <span className="font-mono text-red-400">
-                            ${formatPrice(pair.supports?.[0]?.price || 0)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Position Sizing */}
-                    <div className="p-3 border border-border rounded-lg bg-card/50">
-                      <h4 className="text-sm font-medium mb-3">Position Sizing</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Risk Level</span>
-                          <span className={cn(
-                            "font-medium",
-                            parseFloat(pair.volatilityIndex?.value || '0') > 70 ? "text-red-400" :
-                              parseFloat(pair.volatilityIndex?.value || '0') < 30 ? "text-emerald-400" :
-                                "text-amber-400"
-                          )}>
-                            {pair.volatilityIndex?.trend || 'Normal'}
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          Recommended position size based ons:
-                          <ul className="list-disc pl-4 mt-1 space-y-1">
-                            <li>Account risk: 1-2% per trade</li>
-                            <li>Volatility adjustment: {pair.atrAnalysis?.normalizedATR}%</li>
-                            <li>Market liquidity: {pair.liquidityType}</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-
-            {/* Risk Analysis & Opportunities Card */}
-            <Card className="mb-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  Risk Analysis & Opportunities
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <InformationCircleIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="w-[450px] p-5 space-y-4 bg-card/95 backdrop-blur-sm border-border shadow-xl">
-                        <div className="border-l-4 border-primary pl-3">
-                          <p className="font-semibold text-base mb-1 text-primary">Risk Analysis</p>
-                          <p className="text-sm text-muted-foreground">Comprehensive assessment of market conditions, volatility, and position sizing to manage trading risk effectively.</p>
-                        </div>
-
-                        <div className="bg-accent/30 rounded-lg p-3">
-                          <p className="font-semibold mb-2 text-primary flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
-                            Risk Metrics
-                          </p>
-                          <ul className="text-xs space-y-2 ml-2">
-                            <li className="flex items-start gap-2">
-                              <span className="font-medium text-blue-400 min-w-[110px]">Risk Score:</span>
-                              <span className="text-muted-foreground">Overall risk assessment based on multiple factors including volatility, liquidity, and technical indicators.</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="font-medium text-blue-400 min-w-[110px]">Risk/Reward Ratio:</span>
-                              <span className="text-muted-foreground">Comparison of potential profit to potential loss. Higher values indicate more favorable trading conditions.</span>
-                            </li>
-                          </ul>
-                        </div>
-
-                        <div className="bg-accent/30 rounded-lg p-3">
-                          <p className="font-semibold mb-2 text-primary flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
-                            Opportunity Analysis
-                          </p>
-                          <ul className="text-xs space-y-2 ml-2">
-                            <li className="flex items-start gap-2">
-                              <span className="font-medium text-emerald-400 min-w-[110px]">Entry Points:</span>
-                              <span className="text-muted-foreground">Suggested price levels for opening positions based on technical analysis.</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="font-medium text-red-400 min-w-[110px]">Stop Loss:</span>
-                              <span className="text-muted-foreground">Recommended exit points to limit potential losses, calculated using ATR and support/resistance levels.</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="font-medium text-emerald-400 min-w-[110px]">Targets:</span>
-                              <span className="text-muted-foreground">Potential price targets based on Fibonacci levels, historical resistance, and volatility.</span>
-                            </li>
-                          </ul>
-                        </div>
-
-                        <div className="border-l-4 border-primary/50 pl-3 mt-2">
-                          <p className="font-semibold mb-1 text-primary">Position Sizing</p>
-                          <p className="text-xs text-muted-foreground">Recommendations based on volatility and account risk management principles. Adjust position size based on your risk tolerance and market conditions.</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-                <CardDescription>Risk metrics and trading opportunities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Left column - Risk Analysis */}
-                  <div className="space-y-4">
-                    {/* Risk Score */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium">Risk Score</h3>
-                        <span className={cn(
-                          "font-medium",
-                          parseFloat(pair.riskAdjustedScore) >= 0.7 ? "text-emerald-400" :
-                            parseFloat(pair.riskAdjustedScore) <= 0.3 ? "text-red-400" :
-                              "text-amber-400"
-                        )}>
-                          {(parseFloat(pair.riskAdjustedScore) * 100).toFixed(1)}%
-                        </span>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full text-xs font-medium",
-                          pair.riskAnalysis?.riskLevel === 'Low' ? "bg-emerald-400/20 text-emerald-400" :
-                            pair.riskAnalysis?.riskLevel === 'High' ? "bg-red-400/20 text-red-400" :
-                              "bg-amber-400/20 text-amber-400"
-                        )}>
-                          {pair.riskAnalysis?.riskLevel || 'Medium'} Risk
-                        </span>
-                      </div>
-                      <div className="w-full bg-secondary/30 rounded-full h-2">
-                        <div
-                          className={cn(
-                            "h-full rounded-full",
-                            pair.riskAnalysis?.riskLevel === 'Low' ? "bg-emerald-400" :
-                              pair.riskAnalysis?.riskLevel === 'High' ? "bg-red-400" :
-                                "bg-amber-400"
-                          )}
-                          style={{ width: `${(pair.riskAnalysis?.riskScore || parseFloat(pair.riskAdjustedScore) * 100 || 50)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    {/* Risk/Reward Analysis */}
-                    <div className="p-3 border rounded-lg bg-card/50">
-                      <h3 className="text-sm font-medium mb-2">Risk/Reward Analysis</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Composite Score:</span>
-                          <span className={cn(
-                            "font-medium",
-                            parseFloat(pair.enhancedScore) >= 0.7 ? "text-emerald-400" :
-                              parseFloat(pair.enhancedScore) <= 0.3 ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {parseFloat(pair.enhancedScore).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Short-term:</span>
-                          <span className={cn(
-                            "font-medium",
-                            parseFloat(pair.shortTermScore) >= 0.7 ? "text-emerald-400" :
-                              parseFloat(pair.shortTermScore) <= 0.3 ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {parseFloat(pair.shortTermScore).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Long-term:</span>
-                          <span className={cn(
-                            "font-medium",
-                            parseFloat(pair.longTermScore) >= 0.7 ? "text-emerald-400" :
-                              parseFloat(pair.longTermScore) <= 0.3 ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {parseFloat(pair.longTermScore).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Risk-adjusted:</span>
-                          <span className={cn(
-                            "font-medium",
-                            parseFloat(pair.riskAdjustedScore) >= 0.7 ? "text-emerald-400" :
-                              parseFloat(pair.riskAdjustedScore) <= 0.3 ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {parseFloat(pair.riskAdjustedScore).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Volatility Metrics */}
-                    <div className="p-3 border rounded-lg bg-card/50">
-                      <h3 className="text-sm font-medium mb-2">Volatility Metrics</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Volatility Level:</span>
-                          <span className={cn(
-                            "font-medium",
-                            pair.atrAnalysis?.volatility?.includes('High') ? "text-red-400" :
-                              pair.atrAnalysis?.volatility?.includes('Low') ? "text-emerald-400" :
-                                "text-amber-400"
-                          )}>
-                            {pair.atrAnalysis?.volatility || 'Medium'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Normalized ATR:</span>
-                          <span className={cn(
-                            "font-medium",
-                            parseFloat(pair.atrAnalysis?.normalizedATR || '0') > 5 ? "text-red-400" :
-                              parseFloat(pair.atrAnalysis?.normalizedATR || '0') < 1 ? "text-emerald-400" :
-                                "text-amber-400"
-                          )}>
-                            {pair.atrAnalysis?.normalizedATR ? `${pair.atrAnalysis.normalizedATR}%` : '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">ATR (14):</span>
-                          <span className="font-mono text-xs">
-                            {pair.atrAnalysis?.atr || pair.atr || '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">BB Width:</span>
-                          <span className="font-mono text-xs">
-                            {pair.bb_width || '-'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-
-                    {/* Volume Analysis */}
-                    <div className="p-3 border rounded-lg bg-card/50">
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-medium mb-2">Volume Analysis</h3>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Volume Trend:</span>
-                          <span className={cn(
-                            "font-medium",
-                            pair.volumeAnalysis?.trend === 'Strong Bullish' ? "text-emerald-400" :
-                              pair.volumeAnalysis?.trend === 'Bullish' ? "text-emerald-400/70" :
-                                pair.volumeAnalysis?.trend === 'Strong Bearish' ? "text-red-400" :
-                                  pair.volumeAnalysis?.trend === 'Bearish' ? "text-red-400/70" :
-                                    "text-amber-400"
-                          )}>
-                            {pair.volumeAnalysis?.trend || 'Neutral'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Volume Score:</span>
-                          <span className="font-medium">
-                            {pair.volumeScore?.toFixed(1) || '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Liquidity:</span>
-                          <span className={cn(
-                            "font-medium",
-                            pair.liquidityType === 'High' ? "text-emerald-400" :
-                              pair.liquidityType === 'Low' ? "text-red-400" :
-                                "text-amber-400"
-                          )}>
-                            {pair.liquidityType || 'Normal'}
-                          </span>
-                        </div>
-                        {pair.volumeAnalysis?.signal && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {pair.volumeAnalysis.signal}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
 
 
 
-                  {/* Right column - Opportunities & Position Sizing */}
-                  <div className="space-y-4">
-                    {/* Trading Opportunity */}
-                    <div className="p-3 border rounded-lg bg-card/50">
-
-
-                      {/* Opportunity Type Section */}
-
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-sm font-medium">Opportunity Type</h3>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full text-xs font-medium",
-                          // Bullish trend styles
-                          (pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'long') ?
-                            "bg-blue-400/20 text-blue-400" :
-                            // Bearish trend styles
-                            (pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'short') ?
-                              "bg-red-400/20 text-red-400" :
-                              // Other opportunity types
-                              pair.opportunityMetrics?.type === 'Reversal' ? "bg-purple-400/20 text-purple-400" :
-                                pair.opportunityMetrics?.type === 'Breakout' ? "bg-amber-400/20 text-amber-400" :
-                                  "bg-gray-400/20 text-gray-400"
-                        )}>
-                          {/* Enhanced display that includes direction */}
-                          {(pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'long') ?
-                            "Bullish Trend" :
-                            (pair.opportunityMetrics?.type === 'Trend' && pair.opportunityMetrics?.direction === 'short') ?
-                              "Bearish Trend" :
-                              (pair.opportunityMetrics?.type === 'Reversal' && pair.opportunityMetrics?.direction === 'long') ?
-                                "Bullish Reversal" :
-                                (pair.opportunityMetrics?.type === 'Reversal' && pair.opportunityMetrics?.direction === 'short') ?
-                                  "Bearish Reversal" :
-                                  (pair.opportunityMetrics?.type === 'Breakout' && pair.opportunityMetrics?.direction === 'long') ?
-                                    "Bullish Breakout" :
-                                    (pair.opportunityMetrics?.type === 'Breakout' && pair.opportunityMetrics?.direction === 'short') ?
-                                      "Bearish Breakout" :
-                                      pair.opportunityMetrics?.type || 'None'} ({pair.opportunityMetrics?.timeframe || 'Medium'})
-                        </span>
-                      </div>
-
-                      {/* Confidence level - only show if not None */}
-                      {pair.opportunityMetrics?.type !== 'None' && (
-                        <div className="text-sm mb-2">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-muted-foreground">Confidence:</span>
-                            <span className="font-medium">
-                              {pair.opportunityMetrics?.confidence ? `${pair.opportunityMetrics.confidence.toFixed(0)}%` : '-'}
-                            </span>
-                          </div>
-                          <div className="w-full bg-secondary/30 rounded-full h-1.5">
-                            <div
-                              className="bg-blue-400 h-full rounded-full"
-                              style={{ width: `${pair.opportunityMetrics?.confidence || 0}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Key levels - only show if not None */}
-                      {pair.opportunityMetrics?.type !== 'None' && pair.opportunityMetrics?.keyLevels && (
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-3 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Entry:</span>
-                            <span className="font-mono">${formatPrice(pair.opportunityMetrics?.keyLevels.entry ?? 0)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Target{pair.opportunityMetrics?.direction ? ` (${pair.opportunityMetrics.direction === 'long' ? 'Long' : 'Short'})` : ''}:
-                            </span>
-                            <span className="font-mono text-emerald-400">${formatPrice(pair.opportunityMetrics?.keyLevels.target ?? 0)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Stop:</span>
-                            <span className="font-mono text-red-400">${formatPrice(pair.opportunityMetrics?.keyLevels.stop ?? 0)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">R/R:</span>
-                            <span className="font-medium">{pair.opportunityMetrics?.keyLevels.riskRewardRatio?.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Trade opportunity explanation - only show if not None */}
-                      {pair.opportunityMetrics?.type !== 'None' && pair.opportunityMetrics?.direction === 'short' && (
-                        <div className="mt-3 p-1.5 text-xs border border-dashed border-blue-400/30 rounded bg-blue-400/5">
-                          <div className="font-medium text-blue-400 mb-0.5">📉 Short Trade Opportunity</div>
-                          <div className="text-muted-foreground">
-                            This setup suggests a potential short position with entry at ${formatPrice(pair.opportunityMetrics?.keyLevels.entry ?? 0)} and
-                            target at ${formatPrice(pair.opportunityMetrics?.keyLevels.target ?? 0)}. Place a stop-loss at ${formatPrice(pair.opportunityMetrics?.keyLevels.stop ?? 0)}.
-                          </div>
-                        </div>
-                      )}
-
-                      {pair.opportunityMetrics?.type !== 'None' && pair.opportunityMetrics?.direction === 'long' && (
-                        <div className="mt-3 p-1.5 text-xs border border-dashed border-green-400/30 rounded bg-green-400/5">
-                          <div className="font-medium text-green-400 mb-0.5">📈 Long Trade Opportunity</div>
-                          <div className="text-muted-foreground">
-                            This setup suggests a potential long position with entry at ${formatPrice(pair.opportunityMetrics?.keyLevels.entry ?? 0)} and
-                            target at ${formatPrice(pair.opportunityMetrics?.keyLevels.target ?? 0)}. Place a stop-loss at ${formatPrice(pair.opportunityMetrics?.keyLevels.stop ?? 0)}.
-                          </div>
-                        </div>
-                      )}
-
-                      {/* No opportunity message */}
-                      {(pair.opportunityMetrics?.type === 'None' || !pair.opportunityMetrics?.type) && (
-                        <div className="mt-1 p-1.5 text-xs border border-dashed border-gray-400/30 rounded bg-gray-400/5">
-                          <div className="text-muted-foreground">
-                            No significant trading opportunity detected at this time. Watch for changes in market conditions.
-                          </div>
-                        </div>
-                      )}
-
-
-
-
-
-                    </div>
-
-                    {/* Stop Loss Suggestions */}
-                    <div className="p-3 border rounded-lg bg-card/50">
-                      <h3 className="text-sm font-medium mb-2">Stop Loss Suggestions</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">ATR-based:</span>
-                          <span className="font-mono text-red-400">
-                            ${formatPrice(pair.riskAnalysis?.stopLoss?.atrBased ||
-                              (parseFloat(pair.currentPrice) - parseFloat(pair.atrAnalysis?.atr || pair.atr || '0')) || 0)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Support-based:</span>
-                          <span className="font-mono text-red-400">
-                            ${formatPrice(pair.riskAnalysis?.stopLoss?.supportBased ||
-                              (pair.supports && pair.supports.length > 0 ? pair.supports[0].price : 0))}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Suggested:</span>
-                          <span className="font-mono font-medium text-red-400">
-                            {pair.riskAnalysis?.stopLoss?.suggestion || '-'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Position Sizing */}
-                    <div className="p-3 border rounded-lg bg-card/50">
-                      <h3 className="text-sm font-medium mb-2">Position Sizing</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Suggested Size:</span>
-                          <span className="font-mono font-medium">
-                            {pair.riskAnalysis?.positionSizing?.suggested ?
-                              `${pair.riskAnalysis.positionSizing.suggested.toFixed(2)}` : '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Max Size:</span>
-                          <span className="font-mono">
-                            {pair.riskAnalysis?.positionSizing?.maxSize ?
-                              `${pair.riskAnalysis.positionSizing.maxSize.toFixed(2)}` : '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Risk %:</span>
-                          <span className="font-mono">
-                            {pair.riskAnalysis?.positionSizing?.riskPercentage ?
-                              `${pair.riskAnalysis.positionSizing.riskPercentage.toFixed(2)}%` : '-'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Risk Factors / Warnings */}
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium mb-2">Risk Factors</h3>
-                      <div className={cn(
-                        "p-2 rounded-md border",
-                        pair.isPumping ? "bg-emerald-400/10 border-emerald-400/30 text-emerald-400" :
-                          pair.isDumping ? "bg-red-400/10 border-red-400/30 text-red-400" :
-                            "bg-amber-400/10 border-amber-400/30 text-amber-400"
-                      )}>
-                        {pair.isPumping && (
-                          <div className="text-xs font-medium mb-1 flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                            Potential Pump Detected
-                          </div>
-                        )}
-                        {pair.isDumping && (
-                          <div className="text-xs font-medium mb-1 flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-400"></span>
-                            Potential Dump Detected
-                          </div>
-                        )}
-                        {!pair.isPumping && !pair.isDumping && (
-                          <div className="text-xs font-medium mb-1 flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
-                            Risk Assessment
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          {pair.isPumping ? (
-                            <>
-                              Pump Score: <span className="font-medium text-emerald-400">{pair.pumpScore?.toFixed(1)}</span> |
-                              Price Change: <span className="font-medium text-emerald-400">{pair.priceChange?.toFixed(2)}%</span> |
-                              Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
-                            </>
-                          ) : pair.isDumping ? (
-                            <>
-                              Dump Score: <span className="font-medium text-red-400">{pair.dumpScore?.toFixed(1)}</span> |
-                              Price Change: <span className="font-medium text-red-400">{pair.priceChange?.toFixed(2)}%</span> |
-                              Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
-                            </>
-                          ) : (
-                            <>
-                              Movement Type: <span className="font-medium">{pair.movementType || 'Normal'}</span> |
-                              Vol/Price Corr: <span className="font-medium">{pair.volumeAnalysis?.priceVolumeCorrelation?.toFixed(2) || 'N/A'}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {pair.isPumping ? (
-                          "Exercise caution - high volatility detected. Consider reduced position size."
-                        ) : pair.isDumping ? (
-                          "Exercise caution - significant selling pressure detected."
-                        ) : (
-                          pair.atrAnalysis?.volatility?.includes('High') ?
-                            "Higher than normal volatility. Consider adjusting position size." :
-                            "Normal market conditions. Standard risk management advised."
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-
-
-
-
-                </div>
-
-              </CardContent>
-            </Card>
-
-
-          </div>
 
 
         </div>
