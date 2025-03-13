@@ -1800,7 +1800,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                 </span>
               </div>
               <div className="text-xs text-muted-foreground mt-2">
-                Recommended position size based on:
+                Recommended position size based ons:
                 <ul className="list-disc pl-4 mt-1 space-y-1">
                   <li>Account risk: 1-2% per trade</li>
                   <li>Volatility adjustment: {pair.atrAnalysis?.normalizedATR}%</li>
@@ -1813,6 +1813,416 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
       </div>
     </CardContent>
   </Card>
+
+
+{/* Risk Analysis & Opportunities Card */}
+<Card className="mb-4">
+  <CardHeader className="pb-2">
+    <CardTitle className="text-lg flex items-center gap-2">
+      Risk Analysis & Opportunities
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <InformationCircleIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="w-[450px] p-5 space-y-4 bg-card/95 backdrop-blur-sm border-border shadow-xl">
+            <div className="border-l-4 border-primary pl-3">
+              <p className="font-semibold text-base mb-1 text-primary">Risk Analysis</p>
+              <p className="text-sm text-muted-foreground">Comprehensive assessment of market conditions, volatility, and position sizing to manage trading risk effectively.</p>
+            </div>
+
+            <div className="bg-accent/30 rounded-lg p-3">
+              <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                Risk Metrics
+              </p>
+              <ul className="text-xs space-y-2 ml-2">
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-blue-400 min-w-[110px]">Risk Score:</span>
+                  <span className="text-muted-foreground">Overall risk assessment based on multiple factors including volatility, liquidity, and technical indicators.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-blue-400 min-w-[110px]">Risk/Reward Ratio:</span>
+                  <span className="text-muted-foreground">Comparison of potential profit to potential loss. Higher values indicate more favorable trading conditions.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-accent/30 rounded-lg p-3">
+              <p className="font-semibold mb-2 text-primary flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary"></span>
+                Opportunity Analysis
+              </p>
+              <ul className="text-xs space-y-2 ml-2">
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-emerald-400 min-w-[110px]">Entry Points:</span>
+                  <span className="text-muted-foreground">Suggested price levels for opening positions based on technical analysis.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-red-400 min-w-[110px]">Stop Loss:</span>
+                  <span className="text-muted-foreground">Recommended exit points to limit potential losses, calculated using ATR and support/resistance levels.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-medium text-emerald-400 min-w-[110px]">Targets:</span>
+                  <span className="text-muted-foreground">Potential price targets based on Fibonacci levels, historical resistance, and volatility.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="border-l-4 border-primary/50 pl-3 mt-2">
+              <p className="font-semibold mb-1 text-primary">Position Sizing</p>
+              <p className="text-xs text-muted-foreground">Recommendations based on volatility and account risk management principles. Adjust position size based on your risk tolerance and market conditions.</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </CardTitle>
+    <CardDescription>Risk metrics and trading opportunities</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="grid grid-cols-2 gap-4">
+      {/* Left column - Risk Analysis */}
+      <div className="space-y-4">
+        {/* Risk Score */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Risk Score</h3>
+            <span className={cn(
+              "px-2 py-0.5 rounded-full text-xs font-medium",
+              pair.riskAnalysis?.riskLevel === 'Low' ? "bg-emerald-400/20 text-emerald-400" :
+              pair.riskAnalysis?.riskLevel === 'High' ? "bg-red-400/20 text-red-400" :
+              "bg-amber-400/20 text-amber-400"
+            )}>
+              {pair.riskAnalysis?.riskLevel || 'Medium'} Risk
+            </span>
+          </div>
+          <div className="w-full bg-secondary/30 rounded-full h-2">
+            <div 
+              className={cn(
+                "h-full rounded-full",
+                pair.riskAnalysis?.riskLevel === 'Low' ? "bg-emerald-400" :
+                pair.riskAnalysis?.riskLevel === 'High' ? "bg-red-400" :
+                "bg-amber-400"
+              )}
+              style={{ width: `${(pair.riskAnalysis?.riskScore || parseFloat(pair.riskAdjustedScore) * 100 || 50)}%` }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Risk/Reward Analysis */}
+        <div className="p-3 border rounded-lg bg-card/50">
+          <h3 className="text-sm font-medium mb-2">Risk/Reward Analysis</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Composite Score:</span>
+              <span className={cn(
+                "font-medium",
+                parseFloat(pair.enhancedScore) >= 0.7 ? "text-emerald-400" : 
+                parseFloat(pair.enhancedScore) <= 0.3 ? "text-red-400" : 
+                "text-amber-400"
+              )}>
+                {parseFloat(pair.enhancedScore).toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Short-term:</span>
+              <span className={cn(
+                "font-medium",
+                parseFloat(pair.shortTermScore) >= 0.7 ? "text-emerald-400" : 
+                parseFloat(pair.shortTermScore) <= 0.3 ? "text-red-400" : 
+                "text-amber-400"
+              )}>
+                {parseFloat(pair.shortTermScore).toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Long-term:</span>
+              <span className={cn(
+                "font-medium",
+                parseFloat(pair.longTermScore) >= 0.7 ? "text-emerald-400" : 
+                parseFloat(pair.longTermScore) <= 0.3 ? "text-red-400" : 
+                "text-amber-400"
+              )}>
+                {parseFloat(pair.longTermScore).toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Risk-adjusted:</span>
+              <span className={cn(
+                "font-medium",
+                parseFloat(pair.riskAdjustedScore) >= 0.7 ? "text-emerald-400" : 
+                parseFloat(pair.riskAdjustedScore) <= 0.3 ? "text-red-400" : 
+                "text-amber-400"
+              )}>
+                {parseFloat(pair.riskAdjustedScore).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Volatility Metrics */}
+        <div className="p-3 border rounded-lg bg-card/50">
+          <h3 className="text-sm font-medium mb-2">Volatility Metrics</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Volatility Level:</span>
+              <span className={cn(
+                "font-medium",
+                pair.atrAnalysis?.volatility?.includes('High') ? "text-red-400" :
+                pair.atrAnalysis?.volatility?.includes('Low') ? "text-emerald-400" :
+                "text-amber-400"
+              )}>
+                {pair.atrAnalysis?.volatility || 'Medium'}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Normalized ATR:</span>
+              <span className={cn(
+                "font-medium",
+                parseFloat(pair.atrAnalysis?.normalizedATR || '0') > 5 ? "text-red-400" :
+                parseFloat(pair.atrAnalysis?.normalizedATR || '0') < 1 ? "text-emerald-400" :
+                "text-amber-400"
+              )}>
+                {pair.atrAnalysis?.normalizedATR ? `${pair.atrAnalysis.normalizedATR}%` : '-'}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">ATR (14):</span>
+              <span className="font-mono text-xs">
+                {pair.atrAnalysis?.atr || pair.atr || '-'}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">BB Width:</span>
+              <span className="font-mono text-xs">
+                {pair.bb_width || '-'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right column - Opportunities & Position Sizing */}
+      <div className="space-y-4">
+        {/* Trading Opportunity */}
+        <div className="p-3 border rounded-lg bg-card/50">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-medium">Opportunity Type</h3>
+            <span className={cn(
+              "px-2 py-0.5 rounded-full text-xs font-medium",
+              pair.opportunityMetrics?.type === 'Reversal' ? "bg-purple-400/20 text-purple-400" :
+              pair.opportunityMetrics?.type === 'Trend' ? "bg-blue-400/20 text-blue-400" :
+              pair.opportunityMetrics?.type === 'Breakout' ? "bg-amber-400/20 text-amber-400" :
+              "bg-gray-400/20 text-gray-400"
+            )}>
+              {pair.opportunityMetrics?.type || 'None'} ({pair.opportunityMetrics?.timeframe || 'Medium'})
+            </span>
+          </div>
+          <div className="text-sm mb-2">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-muted-foreground">Confidence:</span>
+              <span className="font-medium">
+                {pair.opportunityMetrics?.confidence ? `${pair.opportunityMetrics.confidence.toFixed(0)}%` : '-'}
+              </span>
+            </div>
+            <div className="w-full bg-secondary/30 rounded-full h-1.5">
+              <div 
+                className="bg-blue-400 h-full rounded-full" 
+                style={{ width: `${pair.opportunityMetrics?.confidence || 0}%` }}
+              ></div>
+            </div>
+          </div>
+          {pair.opportunityMetrics?.keyLevels && (
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-3 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Entry:</span>
+                <span className="font-mono">${formatPrice(pair.opportunityMetrics.keyLevels.entry)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Target:</span>
+                <span className="font-mono text-emerald-400">${formatPrice(pair.opportunityMetrics.keyLevels.target)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Stop:</span>
+                <span className="font-mono text-red-400">${formatPrice(pair.opportunityMetrics.keyLevels.stop)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">R/R:</span>
+                <span className="font-medium">{pair.opportunityMetrics.keyLevels.riskRewardRatio?.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Stop Loss Suggestions */}
+        <div className="p-3 border rounded-lg bg-card/50">
+          <h3 className="text-sm font-medium mb-2">Stop Loss Suggestions</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">ATR-based:</span>
+              <span className="font-mono text-red-400">
+                ${formatPrice(pair.riskAnalysis?.stopLoss?.atrBased || 
+                  (parseFloat(pair.currentPrice) - parseFloat(pair.atrAnalysis?.atr || pair.atr || '0')) || 0)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Support-based:</span>
+              <span className="font-mono text-red-400">
+                ${formatPrice(pair.riskAnalysis?.stopLoss?.supportBased || 
+                  (pair.supports && pair.supports.length > 0 ? pair.supports[0].price : 0))}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Suggested:</span>
+              <span className="font-mono font-medium text-red-400">
+                {pair.riskAnalysis?.stopLoss?.suggestion || '-'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Position Sizing */}
+        <div className="p-3 border rounded-lg bg-card/50">
+          <h3 className="text-sm font-medium mb-2">Position Sizing</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Suggested Size:</span>
+              <span className="font-mono font-medium">
+                {pair.riskAnalysis?.positionSizing?.suggested ? 
+                  `${pair.riskAnalysis.positionSizing.suggested.toFixed(2)}` : '-'}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Max Size:</span>
+              <span className="font-mono">
+                {pair.riskAnalysis?.positionSizing?.maxSize ? 
+                  `${pair.riskAnalysis.positionSizing.maxSize.toFixed(2)}` : '-'}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Risk %:</span>
+              <span className="font-mono">
+                {pair.riskAnalysis?.positionSizing?.riskPercentage ? 
+                  `${pair.riskAnalysis.positionSizing.riskPercentage.toFixed(2)}%` : '-'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    {/* Volume & Liquidity Analysis - Bottom section */}
+    <div className="mt-4 pt-3 border-t border-secondary/30">
+      <div className="grid grid-cols-2 gap-4">
+        {/* Volume Analysis */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium mb-2">Volume Analysis</h3>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Volume Trend:</span>
+            <span className={cn(
+              "font-medium",
+              pair.volumeAnalysis?.trend === 'Strong Bullish' ? "text-emerald-400" :
+              pair.volumeAnalysis?.trend === 'Bullish' ? "text-emerald-400/70" :
+              pair.volumeAnalysis?.trend === 'Strong Bearish' ? "text-red-400" :
+              pair.volumeAnalysis?.trend === 'Bearish' ? "text-red-400/70" :
+              "text-amber-400"
+            )}>
+              {pair.volumeAnalysis?.trend || 'Neutral'}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Volume Score:</span>
+            <span className="font-medium">
+              {pair.volumeScore?.toFixed(1) || '-'}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Liquidity:</span>
+            <span className={cn(
+              "font-medium",
+              pair.liquidityType === 'High' ? "text-emerald-400" :
+              pair.liquidityType === 'Low' ? "text-red-400" :
+              "text-amber-400"
+            )}>
+              {pair.liquidityType || 'Normal'}
+            </span>
+          </div>
+          {pair.volumeAnalysis?.signal && (
+            <div className="text-xs text-muted-foreground mt-1">
+              {pair.volumeAnalysis.signal}
+            </div>
+          )}
+        </div>
+        
+        {/* Risk Factors / Warnings */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium mb-2">Risk Factors</h3>
+          <div className={cn(
+            "p-2 rounded-md",
+            pair.isPumping ? "bg-emerald-50 border border-emerald-200" :
+            pair.isDumping ? "bg-red-50 border border-red-200" :
+            "bg-amber-50 border border-amber-200"
+          )}>
+            {pair.isPumping && (
+              <div className="text-xs font-medium text-emerald-800 mb-1 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                Potential Pump Detected
+              </div>
+            )}
+            {pair.isDumping && (
+              <div className="text-xs font-medium text-red-800 mb-1 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                Potential Dump Detected
+              </div>
+            )}
+            {!pair.isPumping && !pair.isDumping && (
+              <div className="text-xs font-medium text-amber-800 mb-1 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                Risk Assessment
+              </div>
+            )}
+            <div className="text-xs">
+              {pair.isPumping ? (
+                <>
+                  Pump Score: <span className="font-medium">{pair.pumpScore?.toFixed(1)}</span> | 
+                  Price Change: <span className="font-medium text-emerald-600">{pair.priceChange?.toFixed(2)}%</span> | 
+                  Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
+                </>
+              ) : pair.isDumping ? (
+                <>
+                  Dump Score: <span className="font-medium">{pair.dumpScore?.toFixed(1)}</span> | 
+                  Price Change: <span className="font-medium text-red-600">{pair.priceChange?.toFixed(2)}%</span> | 
+                  Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
+                </>
+              ) : (
+                <>
+                  Movement Type: <span className="font-medium">{pair.movementType || 'Normal'}</span> | 
+                  Vol/Price Corr: <span className="font-medium">{pair.volumeAnalysis?.priceVolumeCorrelation?.toFixed(2) || 'N/A'}</span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {pair.isPumping ? (
+              "Exercise caution - high volatility detected. Consider reduced position size."
+            ) : pair.isDumping ? (
+              "Exercise caution - significant selling pressure detected."
+            ) : (
+              pair.atrAnalysis?.volatility?.includes('High') ? 
+                "Higher than normal volatility. Consider adjusting position size." :
+                "Normal market conditions. Standard risk management advised."
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
+
+
+
+
+
 </div>
 
         

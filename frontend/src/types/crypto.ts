@@ -107,10 +107,14 @@ export interface CryptoPair {
         signal: string;
     };
     
+    // Enhance existing atrAnalysis
     atrAnalysis?: {
         atr: string;
         normalizedATR: string;
         volatility: string;
+        suggestedStopLoss: number;
+        volatilityPercentile: number;
+        riskAdjustment: number;
     };
     supports: Array<{price: number; strength: number; description?: string}>;
     resistances: Array<{price: number; strength: number; description?: string}>;
@@ -125,6 +129,34 @@ export interface CryptoPair {
     volatilityIndex?: {
         value: string;
         trend: string;
+        percentile: number;
+        historicalAverage: number;
+        historicalHigh: number;
+        historicalLow: number;
+    };
+
+    // Add position sizing recommendations
+    positionRecommendations?: {
+        baseSize: number;
+        adjustedSize: number;
+        maxSize: number;
+        riskAmount: number;
+        leverageLimit: number;
+        confidence: 'Low' | 'Medium' | 'High';
+    };
+
+    // Add opportunity metrics
+    opportunityMetrics?: {
+        score: number;
+        type: 'Reversal' | 'Trend' | 'Breakout' | 'None';
+        confidence: number;
+        timeframe: 'Short' | 'Medium' | 'Long';
+        keyLevels: {
+            entry: number;
+            target: number;
+            stop: number;
+            riskRewardRatio: number;
+        };
     };
     
     advancedTrend: string;
@@ -232,6 +264,47 @@ export interface CryptoPair {
         close: number;
         volume: number;
     }>;
+    riskAnalysis?: {
+        riskScore: number;
+        riskLevel: 'Low' | 'Medium' | 'High';
+        riskRewardRatio: number;
+        potentialReward: number;
+        maxRiskAmount: number;
+        stopLoss: {
+            atrBased: number;
+            supportBased: number;
+            suggestion: string;
+        };
+        positionSizing: {
+            suggested: number;
+            maxSize: number;
+            riskPercentage: number;
+            adjustedForVolatility: number;
+        };
+        volatilityMetrics: {
+            percentile: number; // Historical volatility percentile
+            currentLevel: 'Low' | 'Medium' | 'High';
+            historicalComparison: string;
+            volatilityScore: number;
+        };
+        liquidityMetrics: {
+            type: 'Low' | 'Normal' | 'High';
+            score: number;
+            marketDepth: number;
+            spreadAnalysis: {
+                current: number;
+                average: number;
+                volatility: number;
+            };
+        };
+        riskFactors: {
+            volatilityRisk: number;
+            liquidityRisk: number;
+            trendRisk: number;
+            overallRisk: number;
+            warnings: string[];
+        };
+    };
 }
 
 export interface IndicatorDescription {
