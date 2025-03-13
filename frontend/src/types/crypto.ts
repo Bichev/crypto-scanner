@@ -17,6 +17,8 @@ interface OpportunityMetrics {
     type: 'Trend' | 'Reversal' | 'Breakout' | 'None';
     timeframe: 'Short' | 'Medium' | 'Long';
     confidence: number;
+    // Added this property
+    direction: 'long' | 'short';
     keyLevels: {
         entry: number;
         target: number;
