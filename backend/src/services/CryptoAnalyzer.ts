@@ -87,111 +87,111 @@ export class CryptoAnalyzer {
         const results = [];
         const thirtyDaysAgo = moment().subtract(31, 'days');
         const twoHundredDaysAgo = moment().subtract(200, 'days');
-        
+
         // Process all pairs
         for (const pair of pairs) {
-          try {
+            try {
                 // Get data in different time ranges for optimization
                 const [recentCandles, longTermCandles] = await Promise.all([
                     // Recent data for most indicators (30 days)
-              CandleModel.find({ 
-                pair, 
-                        timestamp: { $gte: thirtyDaysAgo.unix() } 
-              }).sort({ timestamp: 1 }),
-              
+                    CandleModel.find({
+                        pair,
+                        timestamp: { $gte: thirtyDaysAgo.unix() }
+                    }).sort({ timestamp: 1 }),
+
                     // Long-term data only for 200MA and long-term analysis
-              CandleModel.find({ 
-                pair, 
-                        timestamp: { $gte: twoHundredDaysAgo.unix() } 
-              }).sort({ timestamp: 1 }),
-            ]);
-            
+                    CandleModel.find({
+                        pair,
+                        timestamp: { $gte: twoHundredDaysAgo.unix() }
+                    }).sort({ timestamp: 1 }),
+                ]);
+
                 if (recentCandles.length === 0) {
-              console.log(`No data available for ${pair}. Skipping...`);
-              continue;
-            }
-            
-            // Calculate USD volume using recent data
-            const lastCandle = recentCandles[recentCandles.length - 1];
-            const currentVolumeUSD = lastCandle.volume * lastCandle.close;
-            
+                    console.log(`No data available for ${pair}. Skipping...`);
+                    continue;
+                }
+
+                // Calculate USD volume using recent data
+                const lastCandle = recentCandles[recentCandles.length - 1];
+                const currentVolumeUSD = lastCandle.volume * lastCandle.close;
+
                 // Calculate indicators with appropriate data ranges
-            const analysis = this.calculateIndicators(
+                const analysis = this.calculateIndicators(
                     // Map candle data
                     longTermCandles.map((c: CandleData) => ({
-                timestamp: c.timestamp,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close,
-                volume: c.volume
-              })), 
+                        timestamp: c.timestamp,
+                        open: c.open,
+                        high: c.high,
+                        low: c.low,
+                        close: c.close,
+                        volume: c.volume
+                    })),
                     recentCandles.map((c: CandleData) => ({
-                timestamp: c.timestamp,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close,
-                volume: c.volume
-              })),
-              pair
-            );
+                        timestamp: c.timestamp,
+                        open: c.open,
+                        high: c.high,
+                        low: c.low,
+                        close: c.close,
+                        volume: c.volume
+                    })),
+                    pair
+                );
 
-            console.log('recentCandles:', recentCandles.length);
-            console.log('longTermCandles:', longTermCandles.length);
-            // Add pump/dump detection
-            const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
-            // console.log('Pump/dump analysis:', pumpDumpAnalysis);
-            
-            // Calculate first seen timestamp using moment
-            const firstSeenTimestamp = longTermCandles.length > 0 ? 
-                moment.unix(longTermCandles[0].timestamp).valueOf() : null;
-            
-            // Add debug logging with moment formatting
-            // console.log(`[${pair}] First seen analysis:`, {
-            //     originalTimestamp: longTermCandles[0]?.timestamp,
-            //     convertedTimestamp: firstSeenTimestamp,
-            //     date: firstSeenTimestamp ? moment(firstSeenTimestamp).format('YYYY-MM-DD HH:mm:ss') : 'N/A',
-            //     isRecent: firstSeenTimestamp && moment(firstSeenTimestamp).isAfter(moment().subtract(30, 'days')) ? 'Yes' : 'No'
-            // });
-            
-            // Calculate market structure
-            const marketStructure = this.calculateMarketStructure(recentCandles);
-            
-            results.push({
-              pair,
-              currentVolumeUSD: currentVolumeUSD.toFixed(2),
-              firstSeenTimestamp,
-              ...analysis,
-              isPumping: pumpDumpAnalysis.isPumping,
-              isDumping: pumpDumpAnalysis.isDumping,
-              pumpScore: pumpDumpAnalysis.pumpScore,
-              dumpScore: pumpDumpAnalysis.dumpScore,
-              volumeIncrease: pumpDumpAnalysis.volumeIncrease,
-              priceChange: pumpDumpAnalysis.priceChange,
-              intradayPriceChange: pumpDumpAnalysis.intradayPriceChange,
-              liquidityType: pumpDumpAnalysis.liquidityType,
-              volumeScore: pumpDumpAnalysis.volumeScore,
-              movementType: pumpDumpAnalysis.isPumping ? 
-                                  (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
-                                  pumpDumpAnalysis.isDumping ? 
-                                  (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') : 
-                                  'Normal',
-              marketStructure,
-              candles: recentCandles.map(c => ({
-                timestamp: c.timestamp,
-                open: c.open,
-                high: c.high,
-                low: c.low,
-                close: c.close,
-                volume: c.volume
-              }))
-            });
-          } catch (error) {
-            console.error(`Error analyzing ${pair} from database:`, error);
-          }
+                console.log('recentCandles:', recentCandles.length);
+                console.log('longTermCandles:', longTermCandles.length);
+                // Add pump/dump detection
+                const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
+                // console.log('Pump/dump analysis:', pumpDumpAnalysis);
+
+                // Calculate first seen timestamp using moment
+                const firstSeenTimestamp = longTermCandles.length > 0 ?
+                    moment.unix(longTermCandles[0].timestamp).valueOf() : null;
+
+                // Add debug logging with moment formatting
+                // console.log(`[${pair}] First seen analysis:`, {
+                //     originalTimestamp: longTermCandles[0]?.timestamp,
+                //     convertedTimestamp: firstSeenTimestamp,
+                //     date: firstSeenTimestamp ? moment(firstSeenTimestamp).format('YYYY-MM-DD HH:mm:ss') : 'N/A',
+                //     isRecent: firstSeenTimestamp && moment(firstSeenTimestamp).isAfter(moment().subtract(30, 'days')) ? 'Yes' : 'No'
+                // });
+
+                // Calculate market structure
+                const marketStructure = this.calculateMarketStructure(recentCandles);
+
+                results.push({
+                    pair,
+                    currentVolumeUSD: currentVolumeUSD.toFixed(2),
+                    firstSeenTimestamp,
+                    ...analysis,
+                    isPumping: pumpDumpAnalysis.isPumping,
+                    isDumping: pumpDumpAnalysis.isDumping,
+                    pumpScore: pumpDumpAnalysis.pumpScore,
+                    dumpScore: pumpDumpAnalysis.dumpScore,
+                    volumeIncrease: pumpDumpAnalysis.volumeIncrease,
+                    priceChange: pumpDumpAnalysis.priceChange,
+                    intradayPriceChange: pumpDumpAnalysis.intradayPriceChange,
+                    liquidityType: pumpDumpAnalysis.liquidityType,
+                    volumeScore: pumpDumpAnalysis.volumeScore,
+                    movementType: pumpDumpAnalysis.isPumping ?
+                        (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Pump' : 'Volume Driven Pump') :
+                        pumpDumpAnalysis.isDumping ?
+                            (pumpDumpAnalysis.liquidityType === 'Low' ? 'Low Liquidity Dump' : 'Volume Driven Dump') :
+                            'Normal',
+                    marketStructure,
+                    candles: recentCandles.map(c => ({
+                        timestamp: c.timestamp,
+                        open: c.open,
+                        high: c.high,
+                        low: c.low,
+                        close: c.close,
+                        volume: c.volume
+                    }))
+                });
+            } catch (error) {
+                console.error(`Error analyzing ${pair} from database:`, error);
+            }
         }
-        
+
         // Calculate market breadth metrics after analyzing all pairs
         const marketBreadth = await this.calculateMarketBreadth(results);
 
@@ -252,23 +252,23 @@ export class CryptoAnalyzer {
             const vma7 = parseFloat(p.vma_7); // This is already in USD from calculateIndicators
             return sum + (isNaN(vma7) ? 0 : vma7);
         }, 0);
-        
+
         console.log('totalCurrentVolume USD:', totalCurrentVolume);
         console.log('totalPrevVolume USD:', totalPrevVolume);
-        
+
         // Calculate percentage change
         if (totalCurrentVolume > 0 && totalPrevVolume > 0) {
             const change = ((totalCurrentVolume - totalPrevVolume) / totalPrevVolume) * 100;
             // Round to 2 decimal places
             return Math.round(change * 100) / 100;
         }
-        
+
         return 0;
     }
 
     private calculateFibonacciLevels(high: number, low: number): { level: number; price: number }[] {
         const diff = high - low;
-        
+
         // Standard Fibonacci ratios
         const levels = [
             { level: 0, price: low },
@@ -410,7 +410,7 @@ export class CryptoAnalyzer {
         // Calculate fallback support and resistance with more meaningful descriptions
         let fallbackSupport = {
             price: currentPrice * 0.85,
-            description: brokenLevels.brokenSupports.length > 0 
+            description: brokenLevels.brokenSupports.length > 0
                 ? `Support broken - Next target ${(currentPrice * 0.85).toFixed(8)}`
                 : 'No support level established yet'
         };
@@ -458,26 +458,26 @@ export class CryptoAnalyzer {
         const currentPrice = candles[candles.length - 1].close;
         const high = Math.max(...candles.map(c => c.high));
         const low = Math.min(...candles.map(c => c.low));
-        
+
         // Initialize arrays for supports and resistances
         let supports: Array<{ price: number; strength: number }> = [];
         let resistances: Array<{ price: number; strength: number }> = [];
-        
+
         // Calculate ATR for adaptive thresholds
         const atr = this.calculateATR(candles, 14);
         const priceThreshold = atr * 0.5; // Use half ATR as threshold
-        
+
         // Find potential levels by looking for price clusters
         const pricePoints = candles.map(c => ({
             high: c.high,
             low: c.low,
             volume: c.volume
         }));
-        
+
         // Group price points into clusters
         const highClusters = this.findPriceClusters(pricePoints.map(p => p.high), priceThreshold);
         const lowClusters = this.findPriceClusters(pricePoints.map(p => p.low), priceThreshold);
-        
+
         // Convert clusters to support/resistance levels
         for (const cluster of highClusters) {
             if (cluster.price > currentPrice) {
@@ -487,7 +487,7 @@ export class CryptoAnalyzer {
                 });
             }
         }
-        
+
         for (const cluster of lowClusters) {
             if (cluster.price < currentPrice) {
                 supports.push({
@@ -496,20 +496,20 @@ export class CryptoAnalyzer {
                 });
             }
         }
-        
+
         // Sort by strength
         supports = supports.sort((a, b) => b.strength - a.strength);
         resistances = resistances.sort((a, b) => b.strength - a.strength);
-        
+
         // Find nearest levels
-        const nearestSupport = supports.length > 0 
+        const nearestSupport = supports.length > 0
             ? Math.max(...supports.map(s => s.price))
             : currentPrice * 0.85;
-            
+
         const nearestResistance = resistances.length > 0
             ? Math.min(...resistances.map(r => r.price))
             : currentPrice * 1.15;
-        
+
         return {
             supports,
             resistances,
@@ -527,7 +527,7 @@ export class CryptoAnalyzer {
         if (Array.isArray(input)) {
             // Handle CandleData[] input
             if (input.length < 2) return 0;
-            
+
             trueRanges = input.slice(1).map((candle, i) => {
                 const prev = input[i];
                 return Math.max(
@@ -540,7 +540,7 @@ export class CryptoAnalyzer {
             // Handle separate arrays input
             const { high, low, close } = input;
             if (high.length < 2 || low.length < 2 || close.length < 2) return 0;
-            
+
             trueRanges = high.slice(1).map((h, i) => {
                 const prevClose = close[i];
                 return Math.max(
@@ -550,7 +550,7 @@ export class CryptoAnalyzer {
                 );
             });
         }
-        
+
         // Calculate simple moving average of true ranges
         const sum = trueRanges.slice(-period).reduce((a, b) => a + b, 0);
         return sum / period;
@@ -563,17 +563,17 @@ export class CryptoAnalyzer {
     } {
         const atr = this.calculateATR(candles);
         const latestClose = candles[candles.length - 1].close;
-        
+
         // Normalize ATR as percentage of price
         const normalizedATR = (atr / latestClose) * 100;
-        
+
         // Volatility interpretation
         let volatility = 'Medium';
         if (normalizedATR > 5) volatility = 'Very High';
         else if (normalizedATR > 3) volatility = 'High';
         else if (normalizedATR < 1) volatility = 'Low';
         else if (normalizedATR < 0.5) volatility = 'Very Low';
-        
+
         return {
             atr,
             normalizedATR,
@@ -583,7 +583,7 @@ export class CryptoAnalyzer {
 
     private findPriceClusters(prices: number[], threshold: number): Array<{ price: number; touches: number }> {
         const clusters: Array<{ price: number; touches: number }> = [];
-        
+
         for (const price of prices) {
             // Find existing cluster or create new one
             let found = false;
@@ -596,12 +596,12 @@ export class CryptoAnalyzer {
                     break;
                 }
             }
-            
+
             if (!found) {
                 clusters.push({ price, touches: 1 });
             }
         }
-        
+
         return clusters;
     }
 
@@ -611,31 +611,31 @@ export class CryptoAnalyzer {
         type: 'Support' | 'Resistance'
     ): number {
         const currentPrice = candles[candles.length - 1].close;
-        
+
         // Base strength on number of touches (20%)
         let strength = Math.min(100, (cluster.touches / 3) * 20);
-        
+
         // Volume component (25%)
         const volumeAtLevel = this.calculateVolumeAtLevel(candles, cluster.price);
         const avgVolume = candles.reduce((sum, c) => sum + c.volume, 0) / candles.length;
         strength += Math.min(25, (volumeAtLevel / avgVolume) * 25);
-        
+
         // Recency component (20%)
         const lastTouch = this.findLastTouch(candles, cluster.price, type);
         if (lastTouch > 0) {
             const recencyScore = Math.max(0, 20 - (candles.length - lastTouch) / 10);
             strength += recencyScore;
         }
-        
+
         // Rejection strength (25%)
         const rejectionStrength = this.calculateRejectionStrength(candles, cluster.price, type);
         strength += Math.min(25, rejectionStrength * 25);
-        
+
         // Psychological level bonus (10%)
         if (this.isPsychologicalLevel(cluster.price)) {
             strength += 10;
         }
-        
+
         return Math.min(100, Math.max(0, strength));
     }
 
@@ -668,14 +668,14 @@ export class CryptoAnalyzer {
             if (i === 0) return false;
             const prev = candles[i - 1];
             const threshold = price * 0.005;
-            
+
             if (type === 'Support') {
                 return Math.abs(candle.low - price) <= threshold && candle.close > prev.close;
             } else {
                 return Math.abs(candle.high - price) <= threshold && candle.close < prev.close;
             }
         });
-        
+
         return touches.length / candles.length;
     }
 
@@ -683,8 +683,8 @@ export class CryptoAnalyzer {
         // Check for round numbers
         const priceStr = price.toString();
         return /[0-9]0{4,}/.test(priceStr) || // e.g. 10000, 20000
-               /[0-9]5{4,}/.test(priceStr) || // e.g. 15555, 25555
-               /[0-9]{1,2}000/.test(priceStr); // e.g. 1000, 2000, etc
+            /[0-9]5{4,}/.test(priceStr) || // e.g. 15555, 25555
+            /[0-9]{1,2}000/.test(priceStr); // e.g. 1000, 2000, etc
     }
 
     private calculateIndicators(longTermCandles: CandleData[], recentCandles: CandleData[], pair: string) {
@@ -724,16 +724,16 @@ export class CryptoAnalyzer {
             signal?: number;
             histogram?: number;
         };
-        
+
         let macd: MACDResult[] = [];
         if (longTermClosePrices.length >= 35) { // Minimum required periods: 26 + 9
             macd = ti.MACD.calculate({
                 values: longTermClosePrices,  // Use long-term data for MACD
-            fastPeriod: 12,
-            slowPeriod: 26,
-            signalPeriod: 9,
-            SimpleMAOscillator: false,
-            SimpleMASignal: false
+                fastPeriod: 12,
+                slowPeriod: 26,
+                signalPeriod: 9,
+                SimpleMAOscillator: false,
+                SimpleMASignal: false
             });
             // console.log('MACD calculation successful:', { 
             //     dataPoints: longTermClosePrices.length,
@@ -741,7 +741,7 @@ export class CryptoAnalyzer {
             //     lastMACD: macd[macd.length - 1] 
             // });
         } else {
-            macd = [{MACD: 0, signal: 0, histogram: 0}] //assign insufficent default values
+            macd = [{ MACD: 0, signal: 0, histogram: 0 }] //assign insufficent default values
 
             // console.log('Insufficient data for MACD calculation for pair: ', pair, {
             //     requiredPoints: 35,
@@ -752,7 +752,7 @@ export class CryptoAnalyzer {
         // Calculate recent moving averages
         const sma7 = ti.SMA.calculate({ values: recentClosePrices, period: 7 });
         const sma30 = ti.SMA.calculate({ values: recentClosePrices, period: 30 });
-        
+
         // Calculate long-term moving averages
         const sma50 = ti.SMA.calculate({ values: longTermClosePrices, period: 50 });
         const sma200 = ti.SMA.calculate({ values: longTermClosePrices, period: 200 });
@@ -821,7 +821,7 @@ export class CryptoAnalyzer {
         const ema30 = ti.EMA.calculate({ values: recentClosePrices, period: 30 });
         const ema50 = ti.EMA.calculate({ values: recentClosePrices, period: 50 });
         const ema200 = ti.EMA.calculate({ values: recentClosePrices, period: 200 });
-        
+
         // Calculate Bollinger Bands using the enhanced method
         const bollingerBands = this.calculateBollingerBands(recentClosePrices);
 
@@ -865,7 +865,7 @@ export class CryptoAnalyzer {
 
         // Calculate volatility
         const volatility = this.calculateVolatility(recentClosePrices, 14);
-        
+
         // Calculate momentum
         const momentum = this.calculateMomentum(recentClosePrices, 14);
 
@@ -875,18 +875,18 @@ export class CryptoAnalyzer {
 
         // Calculate scores
         const shortTermScore = this.calculateShortTermScore(
-            rsi[rsi.length - 1], 
-            latestMACD, 
-            sma7[sma7.length - 1], 
+            rsi[rsi.length - 1],
+            latestMACD,
+            sma7[sma7.length - 1],
             sma30[sma30.length - 1],
             latestStochRSI,
             momentum
         );
 
         const longTermScore = this.calculateLongTermScore(
-            sma50[sma50.length - 1], 
-            sma200[sma200.length - 1], 
-            percentFromHigh, 
+            sma50[sma50.length - 1],
+            sma200[sma200.length - 1],
+            percentFromHigh,
             percentFromLow,
             latestADX.adx || 0
         );
@@ -902,7 +902,7 @@ export class CryptoAnalyzer {
         const longTermHighs = longTermCandles.map(c => c.high);
         const longTermLows = longTermCandles.map(c => c.low);
         // const longTermClosePrices = longTermCandles.map(c => c.close);
-        
+
         const ichimoku = this.calculateIchimoku(
             longTermHighs,
             longTermLows,
@@ -911,20 +911,20 @@ export class CryptoAnalyzer {
         const stochastic = this.calculateStochastic(recentHighs, recentLows, recentClosePrices);
         const supportResistance = this.calculateSupportResistance(recentClosePrices);
         // Make sure all the inputs to calculateAdvancedTrend have values
-        const advancedTrend = macd && macd.length > 0 && rsi && rsi.length > 0 
-        ? this.calculateAdvancedTrend(
-            recentClosePrices, 
-            macd, 
-            rsi, 
-            ema50,
-            ema200
+        const advancedTrend = macd && macd.length > 0 && rsi && rsi.length > 0
+            ? this.calculateAdvancedTrend(
+                recentClosePrices,
+                macd,
+                rsi,
+                ema50,
+                ema200
             )
-        : 'Insufficient Data';
+            : 'Insufficient Data';
         const volatilityIndex = this.calculateVolatilityIndex(
             recentClosePrices,
             ti.ATR.calculate({ high: recentHighs, low: recentLows, close: recentClosePrices, period: 14 })
         );
-        
+
         // Enhanced scores
         const enhancedScore = this.calculateEnhancedCompositeScore({
             rsi: rsi[rsi.length - 1],
@@ -943,7 +943,7 @@ export class CryptoAnalyzer {
         const recentSwingHigh = Math.max(...recentHighs.slice(-30));
         const recentSwingLow = Math.min(...recentLows.slice(-30));
         const fibLevels = this.calculateFibonacciLevels(recentSwingHigh, recentSwingLow);
-        
+
         // Calculate current price position relative to Fibonacci levels
         const fibPosition = this.calculateFibonacciPosition(currentPrice, fibLevels);
 
@@ -958,7 +958,7 @@ export class CryptoAnalyzer {
             percentChangeFromHigh: percentFromHigh.toFixed(2),
             percentChangeFromLow: percentFromLow.toFixed(2),
             percentChangeLastThreeMonths: threeMonthChange.toFixed(2),
-            
+
             // Add Fibonacci analysis
             fibonacciAnalysis: {
                 levels: fibLevels,
@@ -978,7 +978,7 @@ export class CryptoAnalyzer {
             volumeOscillator: volumeOscillator.toFixed(2),
             obv: obv[obv.length - 1]?.toString(),
             obvChange: ((obv[obv.length - 1] - obv[obv.length - 2]) / obv[obv.length - 2] * 100).toFixed(2),
-            
+
             // RSI indicators
             rsi: rsi[rsi.length - 1]?.toFixed(2),
             rsi_30: rsi_30[rsi_30.length - 1]?.toFixed(2),
@@ -987,14 +987,14 @@ export class CryptoAnalyzer {
             stoch_d: latestStoch.d?.toFixed(2),
             stochRsi_k: latestStochRSI.k?.toFixed(2),
             stochRsi_d: latestStochRSI.d?.toFixed(2),
-            
+
             // MACD
             macd: latestMACD?.MACD?.toFixed(8) ?? "0.00000000",
             signalLine: latestMACD?.signal?.toFixed(8) ?? "0.00000000",
             histogram: latestMACD?.histogram?.toFixed(8) ?? "0.00000000",
             macdTrend: this.calculateMACDTrend(macd),
             macdCrossover: this.calculateMACDCrossover(macd),
-            
+
             // Moving averages
             sma_7: sma7[sma7.length - 1]?.toFixed(8),
             sma_30: sma30[sma30.length - 1]?.toFixed(8),
@@ -1004,13 +1004,13 @@ export class CryptoAnalyzer {
             ema_30: ema30[ema30.length - 1]?.toFixed(8),
             ema_50: ema50[ema50.length - 1]?.toFixed(8),
             ema_200: ema200[ema200.length - 1]?.toFixed(8),
-            
+
             // Bollinger Bands
             bb_middle: bollingerBands.middle?.toFixed(8),
             bb_upper: bollingerBands.upper?.toFixed(8),
             bb_lower: bollingerBands.lower?.toFixed(8),
             bb_width: ((bollingerBands.upper - bollingerBands.lower) / bollingerBands.middle * 100).toFixed(2),
-            
+
             // Additional technical indicators
             atr: latestATR?.toFixed(8),
             roc: latestROC?.toFixed(2),
@@ -1023,7 +1023,7 @@ export class CryptoAnalyzer {
             trendStrength: trendStrength,
             volatility: volatility.toFixed(2),
             momentum: momentum.toFixed(2),
-            
+
             // Price levels analysis
             ...priceLevels,
             pricePositionAnalysis: {
@@ -1034,14 +1034,14 @@ export class CryptoAnalyzer {
                     support: priceLevels.nearestSupport,
                     resistance: priceLevels.nearestResistance
                 }),
-                channelPosition: ((currentPrice - priceLevels.nearestSupport) / 
+                channelPosition: ((currentPrice - priceLevels.nearestSupport) /
                     (priceLevels.nearestResistance - priceLevels.nearestSupport) * 100).toFixed(2) + '%'
             },
             // Trend signals
             maShortTrend: this.calculateMATrend(sma7, sma30),
             maLongTrend: this.calculateMATrend(sma50, sma200),
 
-                    // New indicators
+            // New indicators
             // If the error is on a Bollinger Bands property
             bollingerBands: {
                 upper: safeToFixed(bollingerBands.upper, 8),
@@ -1051,7 +1051,7 @@ export class CryptoAnalyzer {
                 percentB: safeToFixed(bollingerBands.percentB, 2),
                 signal: bollingerBands.signal || 'Unknown'
             },
-            
+
             // If the error is on an ichimoku property
             ichimoku: {
                 tenkan: ichimoku.tenkan !== undefined ? safeToFixed(ichimoku.tenkan, 8) : null,
@@ -1062,7 +1062,7 @@ export class CryptoAnalyzer {
                 tkCross: ichimoku.tkCross || 'None'
             },
 
- 
+
             stochastic: {
                 k: stochastic.k?.toFixed(2),
                 d: stochastic.d?.toFixed(2),
@@ -1083,7 +1083,7 @@ export class CryptoAnalyzer {
                 trend: volatilityIndex.trend
             },
             advancedTrend: advancedTrend,
-            
+
             // Composite scores
             shortTermScore: shortTermScore.toFixed(2),
             longTermScore: longTermScore.toFixed(2),
@@ -1096,10 +1096,10 @@ export class CryptoAnalyzer {
 
     private calculateVolatility(prices: number[], period: number): number {
         // Calculate standard deviation of price changes
-        const changes = prices.slice(1).map((price, i) => 
+        const changes = prices.slice(1).map((price, i) =>
             ((price - prices[i]) / prices[i]) * 100
         );
-        
+
         // Use the library's SD (Standard Deviation) indicator
         return ti.SD.calculate({
             period: period,
@@ -1118,7 +1118,7 @@ export class CryptoAnalyzer {
         const short = shortMA[shortMA.length - 1];
         const long = longMA[longMA.length - 1];
         const diff = ((short - long) / long) * 100;
-        
+
         if (diff > 2) return 'Strong Uptrend';
         if (diff > 0.5) return 'Weak Uptrend';
         if (diff < -2) return 'Strong Downtrend';
@@ -1135,9 +1135,9 @@ export class CryptoAnalyzer {
     }
 
     private calculateShortTermScore(
-        rsi: number, 
-        macd: any, 
-        sma7: number, 
+        rsi: number,
+        macd: any,
+        sma7: number,
         sma30: number,
         stochRSI: any,
         momentum: number
@@ -1169,9 +1169,9 @@ export class CryptoAnalyzer {
     }
 
     private calculateLongTermScore(
-        sma50: number, 
-        sma200: number, 
-        percentFromHigh: number, 
+        sma50: number,
+        sma200: number,
+        percentFromHigh: number,
         percentFromLow: number,
         adx: number
     ): number {
@@ -1182,7 +1182,7 @@ export class CryptoAnalyzer {
         if (sma50 < sma200) score -= 0.15;
 
         // Historical price levels component (0.4 weight)
-        const pricePositionScore = (Math.abs(percentFromLow) - Math.abs(percentFromHigh)) / 
+        const pricePositionScore = (Math.abs(percentFromLow) - Math.abs(percentFromHigh)) /
             (Math.abs(percentFromLow) + Math.abs(percentFromHigh));
         score += 0.2 * pricePositionScore;
 
@@ -1203,7 +1203,7 @@ export class CryptoAnalyzer {
         const baseScore = (shortTermScore + longTermScore) / 2;
         const volatilityFactor = Math.max(0, 1 - (volatility / 100));
         const atrFactor = Math.max(0, 1 - (atr / 100));
-        
+
         return baseScore * (volatilityFactor + atrFactor) / 2;
     }
 
@@ -1221,10 +1221,10 @@ export class CryptoAnalyzer {
             // console.log('Invalid MACD data:', { macdData });
             return 'Neutral';
         }
-        
+
         const current = macdData[macdData.length - 1];
         const previous = macdData[macdData.length - 2];
-        
+
         if (!current || !previous) {
             console.log('Missing current or previous MACD data:', { current, previous });
             return 'Neutral';
@@ -1274,7 +1274,7 @@ export class CryptoAnalyzer {
 
     private calculateTrendStrength(adxData: { adx: number; plusDI: number; minusDI: number }): string {
         const { adx, plusDI, minusDI } = adxData;
-        
+
         if (adx > 25) {
             if (plusDI > minusDI) {
                 return adx > 40 ? 'Strong Uptrend' : 'Moderate Uptrend';
@@ -1284,22 +1284,22 @@ export class CryptoAnalyzer {
         } else if (adx > 20) {
             return plusDI > minusDI ? 'Weak Uptrend' : 'Weak Downtrend';
         }
-        
+
         return 'No Clear Trend';
     }
 
     // Add RSI divergence detection
     private calculateRSIDivergence(prices: number[], rsiValues: number[], periods: number = 14): string {
         if (rsiValues.length < periods * 2) return 'Insufficient Data';
-        
+
         const priceHigh1 = Math.max(...prices.slice(-periods * 2, -periods));
         const priceHigh2 = Math.max(...prices.slice(-periods));
         const priceTrend = priceHigh2 > priceHigh1 ? 'up' : 'down';
-        
+
         const rsiHigh1 = Math.max(...rsiValues.slice(-periods * 2, -periods));
         const rsiHigh2 = Math.max(...rsiValues.slice(-periods));
         const rsiTrend = rsiHigh2 > rsiHigh1 ? 'up' : 'down';
-        
+
         if (priceTrend === 'up' && rsiTrend === 'down') return 'Bearish Divergence';
         if (priceTrend === 'down' && rsiTrend === 'up') return 'Bullish Divergence';
         return 'No Divergence';
@@ -1308,15 +1308,15 @@ export class CryptoAnalyzer {
     // Add MACD signal line crossover detection
     private calculateMACDCrossover(macdData: any[]): string {
         if (!macdData || macdData.length < 2) return 'Insufficient Data';
-        
+
         const current = macdData[macdData.length - 1];
         const previous = macdData[macdData.length - 2];
-        
+
         if (current.MACD > current.signal && previous.MACD <= previous.signal)
-        return 'Bullish Crossover';
+            return 'Bullish Crossover';
         if (current.MACD < current.signal && previous.MACD >= previous.signal)
-        return 'Bearish Crossover';
-        
+            return 'Bearish Crossover';
+
         return 'No Crossover';
     }
 
@@ -1416,7 +1416,7 @@ export class CryptoAnalyzer {
         // });
 
         const latest = ichimoku[ichimoku.length - 1] || {};
-        
+
         // Cloud analysis
         let signal = 'Neutral';
         if (latest.spanA && latest.spanB) {
@@ -1430,7 +1430,7 @@ export class CryptoAnalyzer {
                 signal = 'Bearish';
             }
         }
-        
+
         // TK Cross analysis
         let tkCross = 'None';
         if (latest.conversion > latest.base && ichimoku[ichimoku.length - 2]?.conversion <= ichimoku[ichimoku.length - 2]?.base) {
@@ -1438,7 +1438,7 @@ export class CryptoAnalyzer {
         } else if (latest.conversion < latest.base && ichimoku[ichimoku.length - 2]?.conversion >= ichimoku[ichimoku.length - 2]?.base) {
             tkCross = 'Bearish TK Cross';
         }
-        
+
         const result = {
             tenkan: latest.conversion,
             kijun: latest.base,
@@ -1450,7 +1450,7 @@ export class CryptoAnalyzer {
         };
 
         // console.log('Final Ichimoku values:', result);
-        
+
         return result;
     }
 
@@ -1459,49 +1459,49 @@ export class CryptoAnalyzer {
         // Calculate %K
         const stochK = [];
         for (let i = period - 1; i < close.length; i++) {
-        const currentClose = close[i];
-        const highestHigh = Math.max(...high.slice(i - period + 1, i + 1));
-        const lowestLow = Math.min(...low.slice(i - period + 1, i + 1));
-        
-        const k = (currentClose - lowestLow) / (highestHigh - lowestLow) * 100;
-        stochK.push(k);
+            const currentClose = close[i];
+            const highestHigh = Math.max(...high.slice(i - period + 1, i + 1));
+            const lowestLow = Math.min(...low.slice(i - period + 1, i + 1));
+
+            const k = (currentClose - lowestLow) / (highestHigh - lowestLow) * 100;
+            stochK.push(k);
         }
-        
+
         // Smooth %K
         const smoothedK = ti.SMA.calculate({ values: stochK, period: smoothK });
-        
+
         // Calculate %D (SMA of %K)
         const smoothedD = ti.SMA.calculate({ values: smoothedK, period: smoothD });
-        
+
         const latestK = smoothedK[smoothedK.length - 1];
         const latestD = smoothedD[smoothedD.length - 1];
-        
+
         // Signal determination
         let signal = 'Neutral';
         if (latestK > 80 && latestD > 80) {
-        signal = 'Overbought';
+            signal = 'Overbought';
         } else if (latestK < 20 && latestD < 20) {
-        signal = 'Oversold';
+            signal = 'Oversold';
         } else if (latestK > latestD && smoothedK[smoothedK.length - 2] <= smoothedD[smoothedD.length - 2]) {
-        signal = 'Bullish Crossover';
+            signal = 'Bullish Crossover';
         } else if (latestK < latestD && smoothedK[smoothedK.length - 2] >= smoothedD[smoothedD.length - 2]) {
-        signal = 'Bearish Crossover';
+            signal = 'Bearish Crossover';
         }
-        
+
         return {
-        k: latestK,
-        d: latestD,
-        signal
+            k: latestK,
+            d: latestD,
+            signal
         };
     }
 
     // Advanced trend identification using multiple indicators
     private calculateAdvancedTrend(close: number[], macdData: any[], rsi: number[], ema50: number[], ema200: number[]): string {
 
-          // Check if we have sufficient data
-        if (!macdData || macdData.length === 0 || !rsi || rsi.length === 0 || 
+        // Check if we have sufficient data
+        if (!macdData || macdData.length === 0 || !rsi || rsi.length === 0 ||
             !ema50 || ema50.length === 0 || !ema200 || ema200.length === 0) {
-        return 'Insufficient Data';
+            return 'Insufficient Data';
         }
         // Get latest values
         const latestPrice = close[close.length - 1];
@@ -1517,24 +1517,24 @@ export class CryptoAnalyzer {
         const latestEMA200 = ema200[ema200.length - 1];
 
 
-        
+
         // Score-based trend determination
         let trendScore = 0;
-        
+
         // MACD checks
         if (latestMACD.MACD > 0) trendScore += 1;
         if (latestMACD.MACD > latestMACD.signal) trendScore += 1;
         if (latestMACD.histogram > 0) trendScore += 1;
-        
+
         // RSI checks
         if (latestRSI > 50) trendScore += 1;
         if (latestRSI > 60) trendScore += 1;
-        
+
         // Moving average checks
         if (latestPrice > latestEMA50) trendScore += 2;
         if (latestEMA50 > latestEMA200) trendScore += 2;
         if (latestPrice > latestEMA200) trendScore += 1;
-        
+
         // Overall trend interpretation
         if (trendScore >= 8) return 'Strong Uptrend';
         if (trendScore >= 6) return 'Uptrend';
@@ -1652,27 +1652,27 @@ export class CryptoAnalyzer {
             volatility: 0.10,
             supportResistance: 0.10
         };
-        
+
         // RSI component
         let rsiScore = 0.5; // Neutral
         if (indicators.rsi > 70) rsiScore = 0.1; // Overbought
         else if (indicators.rsi < 30) rsiScore = 0.9; // Oversold
         else rsiScore = 0.5 + (indicators.rsi - 50) / 40; // Linear scaling between 0.25-0.75
-        
+
         // MACD component
         let macdScore = 0.5;
         if (indicators.macdTrend === 'Strong Uptrend') macdScore = 0.9;
         else if (indicators.macdTrend === 'Weak Uptrend') macdScore = 0.7;
         else if (indicators.macdTrend === 'Weak Downtrend') macdScore = 0.3;
         else if (indicators.macdTrend === 'Strong Downtrend') macdScore = 0.1;
-        
+
         // Volume component
         let volumeScore = 0.5;
         if (indicators.volumeOscillator > 15) volumeScore = 0.8;
         else if (indicators.volumeOscillator > 0) volumeScore = 0.6;
         else if (indicators.volumeOscillator < -15) volumeScore = 0.2;
         else if (indicators.volumeOscillator < 0) volumeScore = 0.4;
-        
+
         // Price movement component
         const priceChangeValue = parseFloat(indicators.dailyPriceChange);
         let priceScore = 0.5;
@@ -1681,7 +1681,7 @@ export class CryptoAnalyzer {
         else if (priceChangeValue < -10) priceScore = 0.1;
         else if (priceChangeValue < -5) priceScore = 0.3;
         else priceScore = 0.5 + (priceChangeValue / 10);
-        
+
         // Moving averages component
         let maScore = 0.5;
         const above7_30 = indicators.sma_7 > indicators.sma_30;
@@ -1690,7 +1690,7 @@ export class CryptoAnalyzer {
         else if (!above7_30 && !above50_200) maScore = 0.1;
         else if (above7_30) maScore = 0.7;
         else if (above50_200) maScore = 0.6;
-        
+
         // Volatility component (inverse - lower is better for risk-adjusted score)
         const atrValue = parseFloat(indicators.atr);
         let volatilityScore = 0.5;
@@ -1699,24 +1699,24 @@ export class CryptoAnalyzer {
         else if (atrValue > 5) volatilityScore = 0.1;
         else if (atrValue > 3) volatilityScore = 0.3;
         else volatilityScore = 0.5 - ((atrValue - 2) / 6);
-        
+
         // Support/Resistance component
         const percentFromHighValue = parseFloat(indicators.percentChangeFromHigh);
         let srScore = 0.5;
         if (percentFromHighValue < -50) srScore = 0.9; // Far from high - more upside potential
         else if (percentFromHighValue > -10) srScore = 0.2; // Close to high - less upside potential
         else srScore = 0.5 + ((Math.abs(percentFromHighValue) - 10) / 80) * 0.7;
-        
+
         // Combine all components with their weights
-        const compositeScore = 
-        rsiScore * weights.rsi +
-        macdScore * weights.macd +
-        volumeScore * weights.volumeOscillator +
-        priceScore * weights.priceMovement +
-        maScore * weights.movingAverages +
-        volatilityScore * weights.volatility +
-        srScore * weights.supportResistance;
-        
+        const compositeScore =
+            rsiScore * weights.rsi +
+            macdScore * weights.macd +
+            volumeScore * weights.volumeOscillator +
+            priceScore * weights.priceMovement +
+            maScore * weights.movingAverages +
+            volatilityScore * weights.volatility +
+            srScore * weights.supportResistance;
+
         return Math.max(0, Math.min(1, compositeScore)); // Ensure score is between 0 and 1
     }
 
@@ -1762,10 +1762,10 @@ export class CryptoAnalyzer {
 
         // Calculate price changes over different periods
         const priceChange = ((currentCandle.close - previousCandle.close) / previousCandle.close) * 100;
-        
+
         // Add price velocity calculation (rate of price change)
         const priceVelocity = priceChange / (currentCandle.volume / avgVolume20); // Price change per unit of relative volume
-        
+
         // Calculate low liquidity multiplier
         const lowLiquidityMultiplier = Math.min(2, Math.max(1, 1 + (1 - currentCandle.volume / avgVolume20)));
 
@@ -1782,10 +1782,10 @@ export class CryptoAnalyzer {
         // Calculate price changes relative to recent ranges
         const currentDay = recentCandles[recentCandles.length - 1];
         const previousDay = recentCandles[recentCandles.length - 2];
-        
+
         // Daily high-low range
         const dailyRange = ((currentDay.high - currentDay.low) / currentDay.low) * 100;
-        
+
         // Day-over-day range
         const dayOverDayHigh = Math.max(currentDay.high, previousDay.high);
         const dayOverDayLow = Math.min(currentDay.low, previousDay.low);
@@ -1808,15 +1808,15 @@ export class CryptoAnalyzer {
             stdDev: 2
         });
         const latestBB = bb[bb.length - 1];
-        
+
         // Price position relative to Bollinger Bands
         let pricePosition = 'Neutral';
         let bbDeviation = 0;
         if (latestBB && latestBB.upper !== undefined && latestBB.lower !== undefined && latestBB.middle !== undefined) {
             bbDeviation = ((currentCandle.close - latestBB.middle) / (latestBB.upper - latestBB.middle)) * 100;
             pricePosition = currentCandle.close > latestBB.upper ? 'Above Upper' :
-                          currentCandle.close < latestBB.lower ? 'Below Lower' :
-                          currentCandle.close > latestBB.middle ? 'Near Upper' : 'Near Lower';
+                currentCandle.close < latestBB.lower ? 'Below Lower' :
+                    currentCandle.close > latestBB.middle ? 'Near Upper' : 'Near Lower';
         }
 
         const macd = ti.MACD.calculate({
@@ -1827,44 +1827,44 @@ export class CryptoAnalyzer {
             SimpleMAOscillator: false,
             SimpleMASignal: false
         });
-        const macdSlope = macd.length >= 2 ? 
+        const macdSlope = macd.length >= 2 ?
             (macd[macd.length - 1]?.histogram || 0) - (macd[macd.length - 2]?.histogram || 0) : 0;
 
         // Enhanced Pump Score Components
         const pumpScore = (
             // Volume component (max 20 points, reduced from 30)
             (volumeIncrease > 300 ? 20 :
-             volumeIncrease > 200 ? 15 :
-             volumeIncrease > 100 ? 10 :
-             volumeIncrease > 50 ? 5 : 0) +
-            
+                volumeIncrease > 200 ? 15 :
+                    volumeIncrease > 100 ? 10 :
+                        volumeIncrease > 50 ? 5 : 0) +
+
             // Price change components (max 35 points, increased from 30)
             (priceChange > 20 ? 35 :
-             priceChange > 15 ? 30 :
-             priceChange > 10 ? 25 :
-             priceChange > 5 ? 20 : 0) +
-            
+                priceChange > 15 ? 30 :
+                    priceChange > 10 ? 25 :
+                        priceChange > 5 ? 20 : 0) +
+
             // Add price velocity component (max 10 points)
             (priceVelocity > 5 ? 10 :
-             priceVelocity > 3 ? 7 :
-             priceVelocity > 1 ? 5 : 0) +
-            
+                priceVelocity > 3 ? 7 :
+                    priceVelocity > 1 ? 5 : 0) +
+
             // Intraday volatility component (max 15 points)
             (intradayPumpChange > dayOverDayRange ? 15 :
-             intradayPumpChange > dayOverDayRange * 0.75 ? 10 :
-             intradayPumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
-            
+                intradayPumpChange > dayOverDayRange * 0.75 ? 10 :
+                    intradayPumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
+
             // Technical indicators (max 20 points)
             // RSI component
             (currentRSI > 80 ? 10 :
-             currentRSI > 70 ? 7 :
-             currentRSI > 60 ? 5 : 0) +
-            
+                currentRSI > 70 ? 7 :
+                    currentRSI > 60 ? 5 : 0) +
+
             // Bollinger Band component
             (bbDeviation > 100 ? 7 :
-             bbDeviation > 75 ? 5 :
-             bbDeviation > 50 ? 3 : 0) +
-            
+                bbDeviation > 75 ? 5 :
+                    bbDeviation > 50 ? 3 : 0) +
+
             // MACD momentum
             (macdSlope > 0 ? 3 : 0)
         ) * lowLiquidityMultiplier; // Apply low liquidity multiplier
@@ -1873,37 +1873,37 @@ export class CryptoAnalyzer {
         const dumpScore = (
             // Volume component (max 20 points, reduced from 30)
             (volumeIncrease > 300 ? 20 :
-             volumeIncrease > 200 ? 15 :
-             volumeIncrease > 100 ? 10 :
-             volumeIncrease > 50 ? 5 : 0) +
-            
+                volumeIncrease > 200 ? 15 :
+                    volumeIncrease > 100 ? 10 :
+                        volumeIncrease > 50 ? 5 : 0) +
+
             // Price change components (max 35 points, increased from 30)
             (priceChange < -20 ? 35 :
-             priceChange < -15 ? 30 :
-             priceChange < -10 ? 25 :
-             priceChange < -5 ? 20 : 0) +
-            
+                priceChange < -15 ? 30 :
+                    priceChange < -10 ? 25 :
+                        priceChange < -5 ? 20 : 0) +
+
             // Add price velocity component (max 10 points)
             (priceVelocity < -5 ? 10 :
-             priceVelocity < -3 ? 7 :
-             priceVelocity < -1 ? 5 : 0) +
-            
+                priceVelocity < -3 ? 7 :
+                    priceVelocity < -1 ? 5 : 0) +
+
             // Intraday volatility component (max 15 points)
             (intradayDumpChange > dayOverDayRange ? 15 :
-             intradayDumpChange > dayOverDayRange * 0.75 ? 10 :
-             intradayDumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
-            
+                intradayDumpChange > dayOverDayRange * 0.75 ? 10 :
+                    intradayDumpChange > dayOverDayRange * 0.5 ? 5 : 0) +
+
             // Technical indicators (max 20 points)
             // RSI component
             (currentRSI < 20 ? 10 :
-             currentRSI < 30 ? 7 :
-             currentRSI < 40 ? 5 : 0) +
-            
+                currentRSI < 30 ? 7 :
+                    currentRSI < 40 ? 5 : 0) +
+
             // Bollinger Band component
             (bbDeviation < -100 ? 7 :
-             bbDeviation < -75 ? 5 :
-             bbDeviation < -50 ? 3 : 0) +
-            
+                bbDeviation < -75 ? 5 :
+                    bbDeviation < -50 ? 3 : 0) +
+
             // MACD momentum
             (macdSlope < 0 ? 3 : 0)
         ) * lowLiquidityMultiplier; // Apply low liquidity multiplier
@@ -1916,13 +1916,13 @@ export class CryptoAnalyzer {
 
         // Determine liquidity type based on volume metrics
         const liquidityType = volumeIncrease > 200 ? 'High' :
-                            currentCandle.volume < avgVolume20 * 0.5 ? 'Low' : 'Normal';
+            currentCandle.volume < avgVolume20 * 0.5 ? 'Low' : 'Normal';
 
         // Calculate separate volume score for UI display
         const volumeScore = (volumeIncrease > 300 ? 20 :
-                           volumeIncrease > 200 ? 15 :
-                           volumeIncrease > 100 ? 10 :
-                           volumeIncrease > 50 ? 5 : 0);
+            volumeIncrease > 200 ? 15 :
+                volumeIncrease > 100 ? 10 :
+                    volumeIncrease > 50 ? 5 : 0);
 
         return {
             isPumping: pumpScore >= pumpThreshold && priceChange > 0,
@@ -1939,13 +1939,13 @@ export class CryptoAnalyzer {
 
     private calculateSupportResistance(close: number[], period: number = 20): any {
         const levels = [];
-        
+
         // Use a rolling window approach
         for (let i = period; i < close.length - period; i++) {
             const leftWindow = close.slice(i - period, i);
             const rightWindow = close.slice(i + 1, i + period + 1);
             const currentPrice = close[i];
-            
+
             // Check if this point is a local maximum
             if (currentPrice > Math.max(...leftWindow) && currentPrice > Math.max(...rightWindow)) {
                 levels.push({ price: currentPrice, type: 'resistance', strength: 1 });
@@ -1955,27 +1955,27 @@ export class CryptoAnalyzer {
                 levels.push({ price: currentPrice, type: 'support', strength: 1 });
             }
         }
-        
+
         // Cluster and consolidate close levels
         const clusteredLevels = this.clusterLevels(levels, close[close.length - 1] * 0.01); // 1% threshold
-        
+
         // Sort by strength (descending)
         return clusteredLevels.sort((a, b) => b.strength - a.strength);
     }
 
     private clusterLevels(levels: any[], threshold: number): any[] {
         if (levels.length === 0) return [];
-        
+
         // Sort by price
         const sortedLevels = [...levels].sort((a, b) => a.price - b.price);
         const clusters = [];
-        
+
         let currentCluster = [sortedLevels[0]];
         let clusterType = sortedLevels[0].type;
-        
+
         for (let i = 1; i < sortedLevels.length; i++) {
             const lastLevel = currentCluster[currentCluster.length - 1];
-            
+
             // If this level is close to the previous one and the same type, add to cluster
             if (sortedLevels[i].price - lastLevel.price < threshold && sortedLevels[i].type === clusterType) {
                 currentCluster.push(sortedLevels[i]);
@@ -1986,12 +1986,12 @@ export class CryptoAnalyzer {
                     type: clusterType,
                     strength: currentCluster.length
                 });
-                
+
                 currentCluster = [sortedLevels[i]];
                 clusterType = sortedLevels[i].type;
             }
         }
-        
+
         // Add the last cluster
         if (currentCluster.length > 0) {
             clusters.push({
@@ -2000,34 +2000,34 @@ export class CryptoAnalyzer {
                 strength: currentCluster.length
             });
         }
-        
+
         return clusters;
     }
 
     private calculateFibonacciPosition(currentPrice: number, fibLevels: Array<{ level: number; price: number }>): { type: string; description: string } {
         // Sort levels by price in descending order
         const sortedLevels = [...fibLevels].sort((a, b) => b.price - a.price);
-        
+
         // Find the levels the price is between
         for (let i = 0; i < sortedLevels.length - 1; i++) {
             if (currentPrice <= sortedLevels[i].price && currentPrice >= sortedLevels[i + 1].price) {
                 const upperLevel = sortedLevels[i].level;
                 const lowerLevel = sortedLevels[i + 1].level;
-                
+
                 // Calculate how far between the levels the price is
                 const range = sortedLevels[i].price - sortedLevels[i + 1].price;
                 const position = currentPrice - sortedLevels[i + 1].price;
                 const percentage = (position / range * 100).toFixed(1);
-                
+
                 const description = `Between ${(lowerLevel * 100).toFixed(1)}% and ${(upperLevel * 100).toFixed(1)}% (${percentage}% from ${(lowerLevel * 100).toFixed(1)}%)`;
-                
+
                 // Determine if this is a retracement or extension level
                 const type = upperLevel <= 1 ? 'Retracement' : 'Extension';
-                
+
                 return { type, description };
             }
         }
-        
+
         // If price is above or below all levels
         if (currentPrice > sortedLevels[0].price) {
             return {
@@ -2045,12 +2045,12 @@ export class CryptoAnalyzer {
         // Calculate price levels and their volumes
         const volumeByPrice = new Map<number, number>();
         let maxVolume = 0;
-        
+
         candles.forEach(candle => {
             const price = (candle.high + candle.low) / 2;
             const volume = candle.volume;
             const roundedPrice = Math.round(price * 100) / 100;
-            
+
             volumeByPrice.set(
                 roundedPrice,
                 (volumeByPrice.get(roundedPrice) || 0) + volume
@@ -2074,15 +2074,15 @@ export class CryptoAnalyzer {
         let currentVolume = 0;
         let valueAreaHigh = poc;
         let valueAreaLow = poc;
-        
+
         // Expand value area until it contains 70% of volume
         while (currentVolume < valueAreaTarget) {
             const nextHighPrice = Math.max(...Array.from(volumeByPrice.keys()).filter(p => p > valueAreaHigh));
             const nextLowPrice = Math.min(...Array.from(volumeByPrice.keys()).filter(p => p < valueAreaLow));
-            
+
             const highVolume = volumeByPrice.get(nextHighPrice) || 0;
             const lowVolume = volumeByPrice.get(nextLowPrice) || 0;
-            
+
             if (highVolume > lowVolume) {
                 valueAreaHigh = nextHighPrice;
                 currentVolume += highVolume;
@@ -2121,20 +2121,20 @@ export class CryptoAnalyzer {
         };
     }
 
-    private calculateVolumeTrend(candles: CandleData[]): { 
+    private calculateVolumeTrend(candles: CandleData[]): {
         trend: 'Increasing' | 'Decreasing' | 'Neutral';
         trendStrength: number;
     } {
         const volumes = candles.map(c => c.volume);
         const volumeSMA = volumes.reduce((a, b) => a + b, 0) / volumes.length;
-        
+
         const recentVolume = volumes.slice(-3).reduce((a, b) => a + b, 0) / 3;
         const trendStrength = ((recentVolume - volumeSMA) / volumeSMA) * 100;
-        
+
         let trend: 'Increasing' | 'Decreasing' | 'Neutral' = 'Neutral';
         if (trendStrength > 20) trend = 'Increasing';
         else if (trendStrength < -20) trend = 'Decreasing';
-        
+
         return {
             trend,
             trendStrength: Math.abs(trendStrength)
@@ -2151,7 +2151,7 @@ export class CryptoAnalyzer {
         const stdDev = Math.sqrt(
             volumes.reduce((a, b) => a + Math.pow(b - avgVolume, 2), 0) / volumes.length
         );
-        
+
         return candles
             .filter(candle => {
                 return candle.volume > avgVolume + 2 * stdDev;
@@ -2166,12 +2166,12 @@ export class CryptoAnalyzer {
 
     private findVolumeLevels(candles: CandleData[]): VolumeLevel[] {
         const volumeByPrice = new Map<number, number>();
-        
+
         candles.forEach(candle => {
             const price = (candle.high + candle.low) / 2;
             const volume = candle.volume;
             const roundedPrice = Math.round(price * 100) / 100;
-            
+
             volumeByPrice.set(
                 roundedPrice,
                 (volumeByPrice.get(roundedPrice) || 0) + volume
@@ -2254,7 +2254,7 @@ export class CryptoAnalyzer {
             strength: Math.min(100, adx * 2),
             adx
         };
-        
+
         const trend = this.determineTrend(structure, trendStrength);
         const pivotLevels = this.findPivotLevels(candles.slice(-lookbackPeriod));
         const phase = this.determineMarketPhase(structure, trend, trendStrength, pivotLevels);
@@ -2273,14 +2273,14 @@ export class CryptoAnalyzer {
         const high = candles.map(c => Number(c.high));
         const low = candles.map(c => Number(c.low));
         const close = candles.map(c => Number(c.close));
-        
+
         // Calculate True Range
         const tr = high.map((h, i) => {
             if (i === 0) return h - low[i];
             const yesterdayClose = close[i - 1];
             return Math.max(h - low[i], Math.abs(h - yesterdayClose), Math.abs(low[i] - yesterdayClose));
         });
-        
+
         // Calculate +DM and -DM
         const plusDM = high.map((h, i) => {
             if (i === 0) return 0;
@@ -2288,31 +2288,31 @@ export class CryptoAnalyzer {
             const moveDown = low[i - 1] - low[i];
             return moveUp > moveDown && moveUp > 0 ? moveUp : 0;
         });
-        
+
         const minusDM = low.map((l, i) => {
             if (i === 0) return 0;
             const moveUp = high[i] - high[i - 1];
             const moveDown = low[i - 1] - l;
             return moveDown > moveUp && moveDown > 0 ? moveDown : 0;
         });
-        
+
         // Calculate smoothed values
         const period = 14;
         const smoothedTR = this.smoothSeries(tr, period);
         const smoothedPlusDM = this.smoothSeries(plusDM, period);
         const smoothedMinusDM = this.smoothSeries(minusDM, period);
-        
+
         // Calculate DI+ and DI-
         const plusDI = smoothedPlusDM.map((dm, i) => (dm / smoothedTR[i]) * 100);
         const minusDI = smoothedMinusDM.map((dm, i) => (dm / smoothedTR[i]) * 100);
-        
+
         // Calculate ADX
         const dx = plusDI.map((plus, i) => {
             const diff = Math.abs(plus - minusDI[i]);
             const sum = plus + minusDI[i];
             return (diff / sum) * 100;
         });
-        
+
         const adx = this.smoothSeries(dx, period);
         return adx[adx.length - 1];
     }
@@ -2320,18 +2320,18 @@ export class CryptoAnalyzer {
     private smoothSeries(series: number[], period: number): number[] {
         const smoothed: number[] = [];
         let sum = 0;
-        
+
         // First value is simple average
         for (let i = 0; i < period; i++) {
             sum += series[i];
         }
         smoothed.push(sum / period);
-        
+
         // Rest use smoothing formula
         for (let i = period; i < series.length; i++) {
             smoothed.push((smoothed[smoothed.length - 1] * (period - 1) + series[i]) / period);
         }
-        
+
         return smoothed;
     }
 
@@ -2349,18 +2349,18 @@ export class CryptoAnalyzer {
             significance: number;
             description?: string;
         }> = [];
-        
+
         const prices = candles.map(c => Number(c.close));
         const timestamps = candles.map(c => c.timestamp * 1000); // Convert to milliseconds
-        
+
         // Window size for swing point detection
         const window = 5;
-        
+
         for (let i = window; i < prices.length - window; i++) {
             const currentPrice = prices[i];
             const leftPrices = prices.slice(i - window, i);
             const rightPrices = prices.slice(i + 1, i + window + 1);
-            
+
             // Check for swing high
             if (currentPrice > Math.max(...leftPrices) && currentPrice > Math.max(...rightPrices)) {
                 const significance = this.calculateSwingSignificance(currentPrice, leftPrices, rightPrices);
@@ -2372,7 +2372,7 @@ export class CryptoAnalyzer {
                     description: `Swing High at ${currentPrice.toFixed(2)}`
                 });
             }
-            
+
             // Check for swing low
             if (currentPrice < Math.min(...leftPrices) && currentPrice < Math.min(...rightPrices)) {
                 const significance = this.calculateSwingSignificance(currentPrice, leftPrices, rightPrices);
@@ -2385,7 +2385,7 @@ export class CryptoAnalyzer {
                 });
             }
         }
-        
+
         // Sort by significance and return top points
         return points.sort((a, b) => b.significance - a.significance).slice(0, 5);
     }
@@ -2412,7 +2412,7 @@ export class CryptoAnalyzer {
     } {
         const highs = swingPoints.filter(p => p.type === 'High').sort((a, b) => b.timestamp - a.timestamp);
         const lows = swingPoints.filter(p => p.type === 'Low').sort((a, b) => b.timestamp - a.timestamp);
-        
+
         return {
             higherHighs: highs.length >= 2 && highs[0].price > highs[1].price,
             higherLows: lows.length >= 2 && lows[0].price > lows[1].price,
@@ -2447,16 +2447,16 @@ export class CryptoAnalyzer {
     private findPivotLevels(candles: CandleData[]): PivotLevel[] {
         const prices = candles.map(c => Number(c.close));
         const volumes = candles.map(c => Number(c.volume));
-        
+
         // Find price clusters
         const clusters = this.findPriceClusters(prices, 0.005); // 0.5% threshold
-        
+
         // Convert clusters to pivot levels
         return clusters.map(cluster => {
             const isSupport = prices[prices.length - 1] > cluster.price;
             const volumeAtLevel = this.calculateVolumeAtLevel(candles, cluster.price);
             const strength = this.calculateLevelStrength(cluster, candles, isSupport ? 'Support' : 'Resistance');
-            
+
             return {
                 price: cluster.price,
                 type: isSupport ? 'Support' as const : 'Resistance' as const,
@@ -2530,11 +2530,11 @@ export class CryptoAnalyzer {
         // Calculate volume moving averages in USD
         const volumes = candles.map(c => c.volume * c.close); // Convert to USD
         const prices = candles.map(c => c.close);
-        
+
         // Calculate VMAs
         const vma7 = this.calculateSMA(volumes.slice(-7));
         const vma30 = this.calculateSMA(volumes.slice(-30));
-        
+
         // Calculate volume oscillator
         const volumeOscillator = ((vma7 - vma30) / vma30) * 100;
 
@@ -2568,7 +2568,7 @@ export class CryptoAnalyzer {
             signal = 'Moderate volume with downward price movement.';
         } else {
             trend = 'Neutral';
-            signal = Math.abs(volumeOscillator) < 5 
+            signal = Math.abs(volumeOscillator) < 5
                 ? 'Low volume indicating lack of conviction.'
                 : 'Mixed signals. Watch for trend confirmation.';
         }
