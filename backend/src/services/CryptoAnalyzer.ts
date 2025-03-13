@@ -952,6 +952,27 @@ export class CryptoAnalyzer {
 
         const volumeAnalysis = this.calculateVolumeAnalysis(recentCandles);
 
+        const riskAnalysis = this.calculateRiskAnalysis(
+            recentCandles,
+            pair,
+            enhancedScore,
+            {
+                atr: latestATR,
+                normalizedATR: advancedATR.normalizedATR,
+                volatility: advancedATR.volatility
+            }
+        );
+    
+        const opportunityMetrics = this.calculateOpportunityMetrics(
+            recentCandles,
+            this.calculateMACDTrend(macd),
+            volumeAnalysis,
+            riskAnalysis,
+            priceLevels.supports,
+            priceLevels.resistances,
+            enhancedScore
+        );
+
         return {
             currentPrice: currentPrice.toFixed(8),
             dailyPriceChange: this.calculateDailyPriceChange(recentCandles),
@@ -1091,6 +1112,9 @@ export class CryptoAnalyzer {
             enhancedScore: enhancedScore.toFixed(2),
             volumeProfile,
             volumeAnalysis,
+
+            riskAnalysis,
+            opportunityMetrics,
         };
     }
 
@@ -2600,4 +2624,345 @@ export class CryptoAnalyzer {
         if (!values.length) return 0;
         return values.reduce((acc, val) => acc + val, 0) / values.length;
     }
+
+    // Add these methods to the CryptoAnalyzer class
+
+    private calculateRiskAnalysis(candles: CandleData[], pair: string, enhancedScore: number, atrAnalysis: any): {
+        riskLevel: 'Low' | 'Medium' | 'High';
+        riskScore: number;
+        stopLoss: {
+            atrBased: number;
+            supportBased: number;
+            suggestion: string;
+        };
+        positionSizing: {
+            suggested: number;
+            maxSize: number;
+            riskPercentage: number;
+        };
+    } {
+        // Get current price and ATR data
+        const currentPrice = candles[candles.length - 1].close;
+        const atr = atrAnalysis.atr || 0;
+        const normalizedATR = atrAnalysis.normalizedATR || 0;
+        
+        // Find support/resistance levels
+        const levels = this.findSupportResistanceLevels(candles, pair);
+        
+        // Calculate risk level based on multiple factors
+        let riskScore = 0;
+        
+        // Factor 1: Volatility (30%)
+        if (normalizedATR > 5) {
+            riskScore += 30; // High volatility = high risk
+        } else if (normalizedATR > 3) {
+            riskScore += 20;
+        } else if (normalizedATR > 1) {
+            riskScore += 10;
+        }
+        
+        // Factor 2: Liquidity (20%)
+        const recentVolumes = candles.slice(-7).map(c => c.volume);
+        const avgVolume = recentVolumes.reduce((sum, vol) => sum + vol, 0) / recentVolumes.length;
+        const lastVolume = candles[candles.length - 1].volume;
+        
+        if (lastVolume < avgVolume * 0.5) {
+            riskScore += 20; // Low liquidity = high risk
+        } else if (lastVolume < avgVolume * 0.8) {
+            riskScore += 10;
+        }
+        
+        // Factor 3: Price position relative to supports/resistances (25%)
+        if (levels.supports.length > 0 && levels.resistances.length > 0) {
+            const nearestSupport = levels.nearestSupport;
+            const nearestResistance = levels.nearestResistance;
+            const priceRange = nearestResistance - nearestSupport;
+            const positionInRange = (currentPrice - nearestSupport) / priceRange;
+            
+            if (positionInRange > 0.8) {
+                riskScore += 25; // Close to resistance = high risk
+            } else if (positionInRange > 0.6) {
+                riskScore += 15;
+            } else if (positionInRange < 0.2) {
+                riskScore += 5; // Close to support = lower risk
+            } else {
+                riskScore += 10;
+            }
+        } else {
+            riskScore += 20; // Can't determine supports/resistances = increased risk
+        }
+        
+        // Factor 4: Risk-adjusted score (25% - inverse relationship)
+        const scoreComponent = (1 - enhancedScore) * 25;
+        riskScore += scoreComponent;
+        
+        // Determine risk level
+        let riskLevel: 'Low' | 'Medium' | 'High' = 'Medium';
+        if (riskScore >= 70) {
+            riskLevel = 'High';
+        } else if (riskScore <= 30) {
+            riskLevel = 'Low';
+        }
+        
+        // Calculate stop loss levels
+        const atrMultiplier = riskLevel === 'High' ? 3 : riskLevel === 'Medium' ? 2 : 1.5;
+        const atrBased = currentPrice - (atr * atrMultiplier);
+        
+        const supportBased = levels.supports.length > 0 
+            ? levels.supports[0].price 
+            : currentPrice * 0.85;
+        
+        // Suggest the more conservative of the two stop losses
+        const suggestion = Math.max(atrBased, supportBased).toFixed(8);
+        
+        // Calculate position sizing based on risk
+        const accountSize = 10000; // Default account size for calculation
+        const maxRiskPercentage = 2; // Maximum risk percentage per trade (2%)
+        const riskAmount = accountSize * (maxRiskPercentage / 100);
+        
+        // Risk per unit based on stop loss distance
+        const stopDistance = currentPrice - parseFloat(suggestion);
+        const riskPerUnit = stopDistance;
+        
+        // Calculate position size in units
+        const maxSizeUnits = riskAmount / riskPerUnit;
+        
+        // Convert to USD for display
+        const maxSize = maxSizeUnits * currentPrice;
+
+        // Adjust position size based on risk level
+        const riskMultiplier = riskLevel === 'High' ? 0.5 : riskLevel === 'Medium' ? 0.75 : 1;
+        // const suggestedSize = maxSize * riskMultiplier;
+        const suggestedSizeUnits = maxSizeUnits * riskMultiplier;
+        const suggestedSize = suggestedSizeUnits * currentPrice;
+        
+        // Actual risk percentage based on suggested position size
+        const actualRisk = (suggestedSize * riskPerUnit / accountSize) * 100;
+        
+        return {
+            riskLevel,
+            riskScore,
+            stopLoss: {
+                atrBased,
+                supportBased,
+                suggestion
+            },
+            positionSizing: {
+                suggested: suggestedSize,
+                maxSize,
+                riskPercentage: actualRisk
+            }
+        };
+    }
+
+    private calculateOpportunityMetrics(
+        candles: CandleData[], 
+        macdTrend: string, 
+        volumeAnalysis: any,
+        riskAnalysis: any,
+        supports: Array<{ price: number, strength: number }>,
+        resistances: Array<{ price: number, strength: number }>,
+        enhancedScore: number
+    ): {
+        type: 'Trend' | 'Reversal' | 'Breakout' | 'None';
+        timeframe: 'Short' | 'Medium' | 'Long';
+        confidence: number;
+        keyLevels: {
+            entry: number;
+            target: number;
+            stop: number;
+            riskRewardRatio: number;
+        };
+    } {
+        const currentPrice = candles[candles.length - 1].close;
+        
+        // Determine opportunity type based on indicators
+        let opportunityType: 'Trend' | 'Reversal' | 'Breakout' | 'None' = 'None';
+        let timeframe: 'Short' | 'Medium' | 'Long' = 'Medium';
+        let confidence = 0;
+        
+        // Analyze recent price action
+        const recentCandles = candles.slice(-30);
+        const priceHighs = recentCandles.map(c => c.high);
+        const priceLows = recentCandles.map(c => c.low);
+        const recentHigh = Math.max(...priceHighs);
+        const recentLow = Math.min(...priceLows);
+        
+        // Check for strong trend
+        if (macdTrend.includes('Strong')) {
+            opportunityType = 'Trend';
+            confidence += 20;
+            
+            if (macdTrend.includes('Uptrend')) {
+                timeframe = 'Medium';
+                confidence += 10;
+            } else if (macdTrend.includes('Downtrend')) {
+                timeframe = 'Medium';
+                confidence += 5;
+            }
+        }
+        
+        // Check for reversal signals
+        const lastRSI = this.calculateRSI(recentCandles.map(c => c.close), 14);
+        if ((lastRSI < 30 && currentPrice > recentCandles[recentCandles.length - 2].close) || 
+            (lastRSI > 70 && currentPrice < recentCandles[recentCandles.length - 2].close)) {
+            opportunityType = 'Reversal';
+            confidence += 15;
+            timeframe = 'Short';
+        }
+        
+        // Check for breakout signals
+        const volatilityContraction = this.checkVolatilityContraction(recentCandles);
+        const volumeSpike = volumeAnalysis.volumeOscillator > 15;
+        
+        if (volatilityContraction && volumeSpike && 
+            (currentPrice > recentHigh * 0.98 || currentPrice < recentLow * 1.02)) {
+            opportunityType = 'Breakout';
+            confidence += 25;
+            timeframe = 'Medium';
+        }
+        
+        // Add confidence based on enhancedScore
+        if (enhancedScore > 0.7) {
+            confidence += 20;
+        } else if (enhancedScore > 0.5) {
+            confidence += 10;
+        }
+        
+        // Calculate entry, target and stop levels
+        let entry = currentPrice;
+        let target = currentPrice;
+        let stop = riskAnalysis.stopLoss.suggestion || (currentPrice * 0.95);
+        
+        // Determine target based on opportunity type
+        if (opportunityType === 'Trend') {
+            if (macdTrend.includes('Uptrend')) {
+                // For uptrend, target next resistance or 2:1 risk/reward
+                target = resistances.length > 0 
+                    ? resistances[0].price 
+                    : currentPrice * 1.1;
+                
+                // Make sure target is higher than entry
+                if (target <= entry) {
+                    target = entry * 1.05;
+                }
+            } else {
+                // For downtrend, entry is current price, target is next support
+                target = supports.length > 0 
+                    ? supports[0].price 
+                    : currentPrice * 0.9;
+                
+                // Make sure target is lower than entry for short
+                if (target >= entry) {
+                    target = entry * 0.95;
+                }
+            }
+        } else if (opportunityType === 'Reversal') {
+            if (lastRSI < 30) {
+                // Bullish reversal
+                target = resistances.length > 0 
+                    ? resistances[0].price 
+                    : currentPrice * 1.15;
+            } else {
+                // Bearish reversal
+                target = supports.length > 0 
+                    ? supports[0].price 
+                    : currentPrice * 0.85;
+            }
+        } else if (opportunityType === 'Breakout') {
+            // For breakouts, look for extended targets
+            const range = recentHigh - recentLow;
+            if (currentPrice > recentHigh * 0.98) {
+                // Bullish breakout
+                target = currentPrice + range;
+            } else {
+                // Bearish breakout
+                target = currentPrice - range;
+            }
+        }
+        
+        // Calculate risk/reward ratio
+        const risk = Math.abs(entry - parseFloat(stop.toString()));
+        const reward = Math.abs(entry - target);
+        const riskRewardRatio = reward / risk;
+        
+        // Adjust confidence based on risk/reward
+        if (riskRewardRatio > 3) {
+            confidence += 15;
+        } else if (riskRewardRatio > 2) {
+            confidence += 10;
+        } else if (riskRewardRatio < 1) {
+            confidence -= 20;
+        }
+        
+        // Cap confidence at 100
+        confidence = Math.min(100, Math.max(0, confidence));
+        
+        return {
+            type: opportunityType,
+            timeframe,
+            confidence,
+            keyLevels: {
+                entry,
+                target,
+                stop: parseFloat(stop.toString()),
+                riskRewardRatio
+            }
+        };
+    }
+
+    private checkVolatilityContraction(candles: CandleData[]): boolean {
+        if (candles.length < 10) return false;
+        
+        const recent = candles.slice(-5);
+        const previous = candles.slice(-10, -5);
+        
+        const recentRanges = recent.map(c => c.high - c.low);
+        const previousRanges = previous.map(c => c.high - c.low);
+        
+        const avgRecentRange = recentRanges.reduce((sum, range) => sum + range, 0) / recentRanges.length;
+        const avgPreviousRange = previousRanges.reduce((sum, range) => sum + range, 0) / previousRanges.length;
+        
+        // Volatility contraction is when recent ranges are smaller than previous
+        return avgRecentRange < avgPreviousRange * 0.8;
+    }
+
+    private calculateRSI(prices: number[], period: number): number {
+        if (prices.length <= period) return 50; // Default value if not enough data
+        
+        let gains = 0;
+        let losses = 0;
+        
+        // Calculate initial average gain and loss
+        for (let i = 1; i <= period; i++) {
+            const change = prices[i] - prices[i - 1];
+            if (change >= 0) {
+                gains += change;
+            } else {
+                losses += Math.abs(change);
+            }
+        }
+        
+        let avgGain = gains / period;
+        let avgLoss = losses / period;
+        
+        // Calculate RSI using Wilder's smoothing method
+        for (let i = period + 1; i < prices.length; i++) {
+            const change = prices[i] - prices[i - 1];
+            if (change >= 0) {
+                avgGain = ((avgGain * (period - 1)) + change) / period;
+                avgLoss = ((avgLoss * (period - 1))) / period;
+            } else {
+                avgGain = ((avgGain * (period - 1))) / period;
+                avgLoss = ((avgLoss * (period - 1)) + Math.abs(change)) / period;
+            }
+        }
+        
+        // Calculate RS and RSI
+        const rs = avgGain / (avgLoss || 1);
+        const rsi = 100 - (100 / (1 + rs));
+        
+        return rsi;
+    }
+
 }

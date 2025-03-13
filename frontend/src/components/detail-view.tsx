@@ -2158,40 +2158,40 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
         <div className="space-y-2">
           <h3 className="text-sm font-medium mb-2">Risk Factors</h3>
           <div className={cn(
-            "p-2 rounded-md",
-            pair.isPumping ? "bg-emerald-50 border border-emerald-200" :
-            pair.isDumping ? "bg-red-50 border border-red-200" :
-            "bg-amber-50 border border-amber-200"
+            "p-2 rounded-md border",
+            pair.isPumping ? "bg-emerald-400/10 border-emerald-400/30 text-emerald-400" :
+            pair.isDumping ? "bg-red-400/10 border-red-400/30 text-red-400" :
+            "bg-amber-400/10 border-amber-400/30 text-amber-400"
           )}>
             {pair.isPumping && (
-              <div className="text-xs font-medium text-emerald-800 mb-1 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
                 Potential Pump Detected
               </div>
             )}
             {pair.isDumping && (
-              <div className="text-xs font-medium text-red-800 mb-1 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+              <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-400"></span>
                 Potential Dump Detected
               </div>
             )}
             {!pair.isPumping && !pair.isDumping && (
-              <div className="text-xs font-medium text-amber-800 mb-1 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+              <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
                 Risk Assessment
               </div>
             )}
-            <div className="text-xs">
+            <div className="text-xs text-muted-foreground">
               {pair.isPumping ? (
                 <>
-                  Pump Score: <span className="font-medium">{pair.pumpScore?.toFixed(1)}</span> | 
-                  Price Change: <span className="font-medium text-emerald-600">{pair.priceChange?.toFixed(2)}%</span> | 
+                  Pump Score: <span className="font-medium text-emerald-400">{pair.pumpScore?.toFixed(1)}</span> | 
+                  Price Change: <span className="font-medium text-emerald-400">{pair.priceChange?.toFixed(2)}%</span> | 
                   Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
                 </>
               ) : pair.isDumping ? (
                 <>
-                  Dump Score: <span className="font-medium">{pair.dumpScore?.toFixed(1)}</span> | 
-                  Price Change: <span className="font-medium text-red-600">{pair.priceChange?.toFixed(2)}%</span> | 
+                  Dump Score: <span className="font-medium text-red-400">{pair.dumpScore?.toFixed(1)}</span> | 
+                  Price Change: <span className="font-medium text-red-400">{pair.priceChange?.toFixed(2)}%</span> | 
                   Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
                 </>
               ) : (

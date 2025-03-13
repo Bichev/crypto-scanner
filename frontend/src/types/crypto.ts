@@ -1,3 +1,31 @@
+interface RiskAnalysis {
+    riskLevel: 'Low' | 'Medium' | 'High';
+    riskScore: number;
+    stopLoss: {
+        atrBased: number;
+        supportBased: number;
+        suggestion: string;
+    };
+    positionSizing: {
+        suggested: number;
+        maxSize: number;
+        riskPercentage: number;
+    };
+}
+
+interface OpportunityMetrics {
+    type: 'Trend' | 'Reversal' | 'Breakout' | 'None';
+    timeframe: 'Short' | 'Medium' | 'Long';
+    confidence: number;
+    keyLevels: {
+        entry: number;
+        target: number;
+        stop: number;
+        riskRewardRatio: number;
+    };
+}
+
+
 export interface CryptoPair {
     pair: string;
     currentPrice: string;
@@ -145,19 +173,21 @@ export interface CryptoPair {
         confidence: 'Low' | 'Medium' | 'High';
     };
 
+    riskAnalysis?: RiskAnalysis;
+    opportunityMetrics?: OpportunityMetrics;
     // Add opportunity metrics
-    opportunityMetrics?: {
-        score: number;
-        type: 'Reversal' | 'Trend' | 'Breakout' | 'None';
-        confidence: number;
-        timeframe: 'Short' | 'Medium' | 'Long';
-        keyLevels: {
-            entry: number;
-            target: number;
-            stop: number;
-            riskRewardRatio: number;
-        };
-    };
+    // opportunityMetrics?: {
+    //     score: number;
+    //     type: 'Reversal' | 'Trend' | 'Breakout' | 'None';
+    //     confidence: number;
+    //     timeframe: 'Short' | 'Medium' | 'Long';
+    //     keyLevels: {
+    //         entry: number;
+    //         target: number;
+    //         stop: number;
+    //         riskRewardRatio: number;
+    //     };
+    // };
     
     advancedTrend: string;
     enhancedScore: string;
@@ -264,47 +294,47 @@ export interface CryptoPair {
         close: number;
         volume: number;
     }>;
-    riskAnalysis?: {
-        riskScore: number;
-        riskLevel: 'Low' | 'Medium' | 'High';
-        riskRewardRatio: number;
-        potentialReward: number;
-        maxRiskAmount: number;
-        stopLoss: {
-            atrBased: number;
-            supportBased: number;
-            suggestion: string;
-        };
-        positionSizing: {
-            suggested: number;
-            maxSize: number;
-            riskPercentage: number;
-            adjustedForVolatility: number;
-        };
-        volatilityMetrics: {
-            percentile: number; // Historical volatility percentile
-            currentLevel: 'Low' | 'Medium' | 'High';
-            historicalComparison: string;
-            volatilityScore: number;
-        };
-        liquidityMetrics: {
-            type: 'Low' | 'Normal' | 'High';
-            score: number;
-            marketDepth: number;
-            spreadAnalysis: {
-                current: number;
-                average: number;
-                volatility: number;
-            };
-        };
-        riskFactors: {
-            volatilityRisk: number;
-            liquidityRisk: number;
-            trendRisk: number;
-            overallRisk: number;
-            warnings: string[];
-        };
-    };
+    // riskAnalysis?: {
+    //     riskScore: number;
+    //     riskLevel: 'Low' | 'Medium' | 'High';
+    //     riskRewardRatio: number;
+    //     potentialReward: number;
+    //     maxRiskAmount: number;
+    //     stopLoss: {
+    //         atrBased: number;
+    //         supportBased: number;
+    //         suggestion: string;
+    //     };
+    //     positionSizing: {
+    //         suggested: number;
+    //         maxSize: number;
+    //         riskPercentage: number;
+    //         adjustedForVolatility: number;
+    //     };
+    //     volatilityMetrics: {
+    //         percentile: number; // Historical volatility percentile
+    //         currentLevel: 'Low' | 'Medium' | 'High';
+    //         historicalComparison: string;
+    //         volatilityScore: number;
+    //     };
+    //     liquidityMetrics: {
+    //         type: 'Low' | 'Normal' | 'High';
+    //         score: number;
+    //         marketDepth: number;
+    //         spreadAnalysis: {
+    //             current: number;
+    //             average: number;
+    //             volatility: number;
+    //         };
+    //     };
+    //     riskFactors: {
+    //         volatilityRisk: number;
+    //         liquidityRisk: number;
+    //         trendRisk: number;
+    //         overallRisk: number;
+    //         warnings: string[];
+    //     };
+    // };
 }
 
 export interface IndicatorDescription {
