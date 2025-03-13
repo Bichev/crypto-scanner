@@ -86,7 +86,7 @@ export class CryptoAnalyzer {
         const startTime = moment();
         const results = [];
         const thirtyDaysAgo = moment().subtract(31, 'days');
-        const twoHundredDaysAgo = moment().subtract(200, 'days');
+        const twoHundredDaysAgo = moment().subtract(201, 'days');
 
         // Process all pairs
         for (const pair of pairs) {
@@ -137,8 +137,8 @@ export class CryptoAnalyzer {
                     pair
                 );
 
-                console.log('recentCandles:', recentCandles.length);
-                console.log('longTermCandles:', longTermCandles.length);
+                // console.log('recentCandles:', recentCandles.length);
+                // console.log('longTermCandles:', longTermCandles.length);
                 // Add pump/dump detection
                 const pumpDumpAnalysis = this.detectPumpDump(longTermCandles, recentCandles);
                 // console.log('Pump/dump analysis:', pumpDumpAnalysis);
