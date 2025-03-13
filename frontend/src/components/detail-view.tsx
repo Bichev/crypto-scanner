@@ -1772,7 +1772,8 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">ATR-based</span>
                 <span className="font-mono text-red-400">
-                  ${(parseFloat(pair.currentPrice) - parseFloat(pair.atrAnalysis?.atr || '0')).toFixed(6)}
+                  ${formatPrice(pair.riskAnalysis?.stopLoss?.atrBased || 
+                  (parseFloat(pair.currentPrice) - parseFloat(pair.atrAnalysis?.atr || pair.atr || '0')) || 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
