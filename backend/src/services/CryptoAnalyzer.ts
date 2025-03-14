@@ -2711,32 +2711,32 @@ export class CryptoAnalyzer {
         // Calculate stop loss levels
         const atrMultiplier = riskLevel === 'High' ? 3 : riskLevel === 'Medium' ? 2 : 1.5;
 
-    // Calculate appropriate stop losses based on direction
-    let atrBased: number;
-    let supportBased: number;
-    
-    if (isLikelyShort) {
-        // For short trades, stop loss is above current price
-        atrBased = currentPrice + (atr * atrMultiplier);
-        
-        // For shorts, use the nearest resistance level or a percentage above
-        supportBased = levels.resistances.length > 0 
-            ? levels.resistances[0].price 
-            : currentPrice * 1.05;
-    } else {
-        // For long trades, stop loss is below current price
-        atrBased = currentPrice - (atr * atrMultiplier);
-        
-        // For longs, use the nearest support level or a percentage below
-        supportBased = levels.supports.length > 0 
-            ? levels.supports[0].price 
-            : currentPrice * 0.95;
-    }
+        // Calculate appropriate stop losses based on direction
+        let atrBased: number;
+        let supportBased: number;
 
-    
+        if (isLikelyShort) {
+            // For short trades, stop loss is above current price
+            atrBased = currentPrice + (atr * atrMultiplier);
+
+            // For shorts, use the nearest resistance level or a percentage above
+            supportBased = levels.resistances.length > 0
+                ? levels.resistances[0].price
+                : currentPrice * 1.05;
+        } else {
+            // For long trades, stop loss is below current price
+            atrBased = currentPrice - (atr * atrMultiplier);
+
+            // For longs, use the nearest support level or a percentage below
+            supportBased = levels.supports.length > 0
+                ? levels.supports[0].price
+                : currentPrice * 0.95;
+        }
+
+
         // Choose the most appropriate stop loss based on direction
         let suggestion: string;
-    
+
         if (isLikelyShort) {
             // For shorts, higher of the two is more conservative (closer to entry)
             suggestion = Math.max(atrBased, supportBased).toFixed(8);
@@ -2744,11 +2744,11 @@ export class CryptoAnalyzer {
             // For longs, lower of the two is more conservative (closer to entry)
             suggestion = Math.min(atrBased, supportBased).toFixed(8);
         }
-        
+
         // Make sure stop and entry have some separation
         const minStopDistance = currentPrice * 0.01; // At least 1% separation
         const stopPrice = parseFloat(suggestion);
-        
+
         if (isLikelyShort && (stopPrice - currentPrice) < minStopDistance) {
             // For shorts, ensure stop is sufficiently above entry
             suggestion = (currentPrice + minStopDistance).toFixed(8);
@@ -2778,11 +2778,11 @@ export class CryptoAnalyzer {
         // Calculate position size in units
         const maxSizeUnits = riskAmount / effectiveRiskPerUnit;
 
-            // Cap the position size based on account percentage
-    const maxAccountPercentage = 0.4; // Maximum 40% of account in one trade
-    const maxPositionSizeByPercentage = accountSize * maxAccountPercentage / currentPrice;
-    const adjustedMaxSizeUnits = Math.min(maxSizeUnits, maxPositionSizeByPercentage);
-  
+        // Cap the position size based on account percentage
+        const maxAccountPercentage = 0.4; // Maximum 40% of account in one trade
+        const maxPositionSizeByPercentage = accountSize * maxAccountPercentage / currentPrice;
+        const adjustedMaxSizeUnits = Math.min(maxSizeUnits, maxPositionSizeByPercentage);
+
 
         // Convert to USD for display
         const maxSize = adjustedMaxSizeUnits * currentPrice;
@@ -2814,7 +2814,7 @@ export class CryptoAnalyzer {
             // Cap the suggested size to no more than 25% of account for high-value assets
             cappedSuggestedSize = Math.min(suggestedSize, accountSize * 0.25);
             cappedMaxSize = Math.min(maxSize, accountSize * 0.5);
-            
+
             // Recalculate risk percentage based on capped values
             const cappedSuggestedSizeUnits = cappedSuggestedSize / currentPrice;
             const cappedActualRiskAmount = cappedSuggestedSizeUnits * effectiveRiskPerUnit;
@@ -2914,20 +2914,20 @@ export class CryptoAnalyzer {
             }
         }
 
-            // Check for trend (not necessarily strong)
-    if (opportunityType === 'None' && macdTrend.includes('trend')) {
-        opportunityType = 'Trend';
-        confidence += 10;
-        
-        if (macdTrend.includes('Uptrend')) {
-            timeframe = 'Medium';
-            direction = 'long';
-        } else if (macdTrend.includes('Downtrend')) {
-            timeframe = 'Medium';
-            direction = 'short';
+        // Check for trend (not necessarily strong)
+        if (opportunityType === 'None' && macdTrend.includes('trend')) {
+            opportunityType = 'Trend';
+            confidence += 10;
+
+            if (macdTrend.includes('Uptrend')) {
+                timeframe = 'Medium';
+                direction = 'long';
+            } else if (macdTrend.includes('Downtrend')) {
+                timeframe = 'Medium';
+                direction = 'short';
+            }
         }
-    }
-        
+
         // Check for reversal signals
         const lastRSI = this.calculateRSI(recentCandles.map(c => c.close), 14);
         if ((lastRSI < 30 && currentPrice > recentCandles[recentCandles.length - 2].close)) {
@@ -2973,20 +2973,20 @@ export class CryptoAnalyzer {
         // let stop = riskAnalysis.stopLoss.suggestion || (currentPrice * 0.95);
 
         let stop = parseFloat(riskAnalysis.stopLoss.suggestion);
-    
+
         // Determine target based on opportunity type and direction
         if (opportunityType === 'Trend') {
             // Check the specific trend direction from MACD
             const isBullishTrend = macdTrend.includes('Uptrend');
-            
+
             // Update direction based on trend
             direction = isBullishTrend ? 'long' : 'short';
-            
+
             if (isBullishTrend) {
                 // For uptrend (long), target should be higher than entry
                 if (resistances.length > 0) {
                     target = resistances[0].price;
-                    
+
                     // Ensure the target is higher than entry
                     if (target <= entry) {
                         target = entry * 1.05;
@@ -2998,7 +2998,7 @@ export class CryptoAnalyzer {
                 // For downtrend (short), target should be lower than entry
                 if (supports.length > 0) {
                     target = supports[0].price;
-                    
+
                     // Ensure the target is lower than entry
                     if (target >= entry) {
                         target = entry * 0.95;
@@ -3013,7 +3013,7 @@ export class CryptoAnalyzer {
                 target = resistances.length > 0
                     ? resistances[0].price
                     : entry * 1.05;
-                    
+
                 // Ensure target is higher than entry
                 if (target <= entry) {
                     target = entry * 1.05;
@@ -3023,7 +3023,7 @@ export class CryptoAnalyzer {
                 target = supports.length > 0
                     ? supports[0].price
                     : entry * 0.95;
-                    
+
                 // Ensure target is lower than entry
                 if (target >= entry) {
                     target = entry * 0.95;
@@ -3038,7 +3038,7 @@ export class CryptoAnalyzer {
                 target = entry - (range * 0.5);
             }
         }
-        
+
         // Now that we have a proper target, ensure stop loss is appropriate for the trade direction
         if (direction === 'long') {
             // For long trades, stop should be below entry
@@ -3051,7 +3051,7 @@ export class CryptoAnalyzer {
                 stop = entry * 1.02; // Set stop 2% above entry
             }
         }
-        
+
         // Ensure stop and target aren't the same value
         if (Math.abs(stop - target) < 0.0000001) {
             if (direction === 'long') {
@@ -3063,255 +3063,45 @@ export class CryptoAnalyzer {
             }
         }
 
-           // Calculate risk/reward ratio with ensured non-zero risk
-    const risk = Math.abs(entry - stop);
-    const reward = Math.abs(entry - target);
-    const minRisk = entry * 0.005; // Minimum 0.5% risk
-    const effectiveRisk = Math.max(risk, minRisk);
-    const riskRewardRatio = reward / effectiveRisk;
-    
-    // Adjust confidence based on risk/reward ratio
-    if (riskRewardRatio >= 3) {
-        confidence += 15;
-    } else if (riskRewardRatio >= 2) {
-        confidence += 10;
-    } else if (riskRewardRatio < 1.5) {
-        confidence -= 10;
-    }
-    
-    // No opportunity if target and entry are too close
-    if (Math.abs(target - entry) < (entry * 0.01)) {
-        opportunityType = 'None';
-        confidence = 0;
-    }
-    
-    // Cap confidence at 100 and floor at 0
-    confidence = Math.min(100, Math.max(0, confidence));
+        // Calculate risk/reward ratio with ensured non-zero risk
+        const risk = Math.abs(entry - stop);
+        const reward = Math.abs(entry - target);
+        const minRisk = entry * 0.005; // Minimum 0.5% risk
+        const effectiveRisk = Math.max(risk, minRisk);
+        const riskRewardRatio = reward / effectiveRisk;
 
-       // Return the opportunity metrics with proper stop and target
-       return {
-        type: opportunityType,
-        timeframe,
-        confidence,
-        direction,
-        keyLevels: {
-            entry,
-            target,
-            stop,
-            riskRewardRatio
+        // Adjust confidence based on risk/reward ratio
+        if (riskRewardRatio >= 3) {
+            confidence += 15;
+        } else if (riskRewardRatio >= 2) {
+            confidence += 10;
+        } else if (riskRewardRatio < 1.5) {
+            confidence -= 10;
         }
-    };
-}
-        
 
-        // // Determine target based on opportunity type
-        // if (opportunityType === 'Trend') {
-        //     // Check the specific trend direction from MACD
-        //     const isBullishTrend = macdTrend.includes('Uptrend');
+        // No opportunity if target and entry are too close
+        if (Math.abs(target - entry) < (entry * 0.01)) {
+            opportunityType = 'None';
+            confidence = 0;
+        }
 
-        //     // Update direction based on trend
-        //     direction = isBullishTrend ? 'long' : 'short';
+        // Cap confidence at 100 and floor at 0
+        confidence = Math.min(100, Math.max(0, confidence));
 
-        //     if (isBullishTrend) {
-        //         // For uptrend (long), target should be higher than entry
-        //         // First try to use the nearest resistance
-        //         if (resistances.length > 0) {
-        //             target = resistances[0].price;
-
-        //             // Ensure the target is actually higher than current price
-        //             if (target <= currentPrice) {
-        //                 // If nearest resistance is invalid, look for the next one or use percentage increase
-        //                 target = resistances.length > 1 ? resistances[1].price : currentPrice * 1.1;
-        //             }
-        //         } else {
-        //             // No resistances found, use percentage increase
-        //             target = currentPrice * 1.1;
-        //         }
-
-        //         // Final safety check - always ensure target is higher than entry for uptrends
-        //         if (target <= entry) {
-        //             target = entry * 1.05;
-        //         }
-        //     } else {
-        //         // For downtrend (short), target should be lower than entry
-        //         // First try to use the nearest support
-        //         if (supports.length > 0) {
-        //             target = supports[0].price;
-
-        //             // Ensure the target is actually lower than current price
-        //             if (target >= currentPrice) {
-        //                 // If nearest support is invalid, look for the next one or use percentage decrease
-        //                 target = supports.length > 1 ? supports[1].price : currentPrice * 0.9;
-        //             }
-        //         } else {
-        //             // No supports found, use percentage decrease
-        //             target = currentPrice * 0.9;
-        //         }
-
-        //         // Final safety check - always ensure target is lower than entry for downtrends
-        //         if (target >= entry) {
-        //             target = entry * 0.95;
-        //         }
-        //     }
-        // } else if (opportunityType === 'Reversal') {
-        //     if (lastRSI < 30) {
-        //         // Bullish reversal
-        //         direction = 'long';
-        //         target = resistances.length > 0
-        //             ? resistances[0].price
-        //             : currentPrice * 1.15;
-        //     } else {
-        //         // Bearish reversal
-        //         direction = 'short';
-        //         target = supports.length > 0
-        //             ? supports[0].price
-        //             : currentPrice * 0.85;
-        //     }
-        // } else if (opportunityType === 'Breakout') {
-        //     // For breakouts, look for extended targets
-        //     const range = recentHigh - recentLow;
-        //     if (currentPrice > recentHigh * 0.98) {
-        //         // Bullish breakout
-        //         direction = 'long';
-        //         target = currentPrice + range;
-        //     } else {
-        //         // Bearish breakout
-        //         direction = 'short';
-        //         target = currentPrice - range;
-        //     }
-        // }
-
-        // Calculate risk/reward ratio
-    //     const risk = Math.abs(entry - parseFloat(stop.toString()));
-    //     const reward = Math.abs(entry - target);
-
-    //     // Make sure risk is not zero
-    //     const riskRewardRatio = risk > 0 ? reward / risk : 0;
-
-    //     // Double-check target direction based on trend direction
-    //     if (opportunityType === 'Trend' || opportunityType === 'Breakout') {
-    //         const isBullish = macdTrend.includes('Uptrend');
-
-    //         // Force correction if target is in wrong direction
-    //         if (isBullish && target < entry) {
-    //             // For bullish trends, target must be higher than entry
-    //             target = entry * 1.05;
-    //             direction = 'long';
-    //             // Recalculate R/R
-    //             const correctedReward = Math.abs(entry - target);
-    //             const correctedRiskRewardRatio = risk > 0 ? correctedReward / risk : 1.0;
-
-    //             return {
-    //                 type: opportunityType,
-    //                 timeframe,
-    //                 confidence,
-    //                 direction,
-    //                 keyLevels: {
-    //                     entry,
-    //                     target,
-    //                     stop: parseFloat(stop.toString()),
-    //                     riskRewardRatio: correctedRiskRewardRatio
-    //                 }
-    //             };
-    //         } else if (!isBullish && target > entry) {
-    //             // For bearish trends, target must be lower than entry
-    //             target = entry * 0.95;
-    //             direction = 'short';
-    //             // Recalculate R/R
-    //             const correctedReward = Math.abs(entry - target);
-    //             const correctedRiskRewardRatio = risk > 0 ? correctedReward / risk : 1.0;
-
-    //             return {
-    //                 type: opportunityType,
-    //                 timeframe,
-    //                 confidence,
-    //                 direction,
-    //                 keyLevels: {
-    //                     entry,
-    //                     target,
-    //                     stop: parseFloat(stop.toString()),
-    //                     riskRewardRatio: correctedRiskRewardRatio
-    //                 }
-    //             };
-    //         }
-    //     }
-
-    //     // Adjust confidence based on risk/reward
-    //     if (riskRewardRatio > 3) {
-    //         confidence += 15;
-    //     } else if (riskRewardRatio > 2) {
-    //         confidence += 10;
-    //     } else if (riskRewardRatio < 1) {
-    //         confidence -= 20;
-    //     }
-
-    //     // If the keyLevels have the same target and entry, this is not a valid trade - set type to None
-    //     if (Math.abs(target - entry) < 0.0000001) {
-    //         opportunityType = 'None';
-    //         confidence = 0;
-    //     }
-
-    //     // Cap confidence at 100
-    //     confidence = Math.min(100, Math.max(0, confidence));
-
-    //     // Special handling for high-value cryptocurrencies like Bitcoin
-    //     const isHighValueCrypto = currentPrice > 10000; // Assuming BTC, ETH, etc.
-
-    //     if (isHighValueCrypto) {
-    //         // Additional validation for high-value cryptos
-    //         const minTargetMove = currentPrice * 0.005; // Minimum 0.5% move for target
-
-    //         if (opportunityType === 'Trend' && macdTrend.includes('Uptrend')) {
-    //             // For bullish trends on high-value cryptos, ensure target is sufficiently higher
-    //             if (target <= entry || (target - entry) < minTargetMove) {
-    //                 target = entry + minTargetMove;
-    //                 direction = 'long';
-    //             }
-    //         } else if (opportunityType === 'Trend' && !macdTrend.includes('Uptrend')) {
-    //             // For bearish trends on high-value cryptos, ensure target is sufficiently lower
-    //             if (target >= entry || (entry - target) < minTargetMove) {
-    //                 target = entry - minTargetMove;
-    //                 direction = 'short';
-    //             }
-    //         }
-
-    //         // Recalculate risk/reward with the adjusted target
-    //         const adjustedReward = Math.abs(entry - target);
-    //         const adjustedRiskRewardRatio = risk > 0 ? adjustedReward / risk : 1.0;
-            
-
-    //         return {
-    //             type: opportunityType,
-    //             timeframe,
-    //             confidence,
-    //             direction,
-    //             keyLevels: {
-    //                 entry,
-    //                 target,
-    //                 stop: parseFloat(stop.toString()),
-    //                 riskRewardRatio: adjustedRiskRewardRatio
-    //             }
-    //         };
-    //     }
-
-    //     // If there's no clear direction yet, determine it based on entry/target relationship
-    //     if (opportunityType !== 'None' && target !== entry) {
-    //         direction = target > entry ? 'long' : 'short';
-    //     }
-
-    //     return {
-    //         type: opportunityType,
-    //         timeframe,
-    //         confidence,
-    //         direction,
-    //         keyLevels: {
-    //             entry,
-    //             target,
-    //             stop: parseFloat(stop.toString()),
-    //             riskRewardRatio
-    //         }
-    //     };
-    // }
+        // Return the opportunity metrics with proper stop and target
+        return {
+            type: opportunityType,
+            timeframe,
+            confidence,
+            direction,
+            keyLevels: {
+                entry,
+                target,
+                stop,
+                riskRewardRatio
+            }
+        };
+    }
 
     private checkVolatilityContraction(candles: CandleData[]): boolean {
         if (candles.length < 10) return false;
