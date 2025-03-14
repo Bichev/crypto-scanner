@@ -2871,7 +2871,7 @@ export class CryptoAnalyzer {
         enhancedScore: number
     ): {
         type: 'Trend' | 'Reversal' | 'Breakout' | 'None';
-        timeframe: 'Short' | 'Medium' | 'Long';
+        timeframe: 'Short Term' | 'Medium Term' | 'Long Term';
         confidence: number;
         direction: 'long' | 'short';  // Add this property
         keyLevels: {
@@ -2885,7 +2885,7 @@ export class CryptoAnalyzer {
 
         // Determine opportunity type based on indicators
         let opportunityType: 'Trend' | 'Reversal' | 'Breakout' | 'None' = 'None';
-        let timeframe: 'Short' | 'Medium' | 'Long' = 'Medium';
+        let timeframe: 'Short Term' | 'Medium Term' | 'Long Term' = 'Medium Term';
         let confidence = 0;
 
         // Analyze recent price action
@@ -2904,11 +2904,11 @@ export class CryptoAnalyzer {
             confidence += 20;
 
             if (macdTrend.includes('Uptrend')) {
-                timeframe = 'Medium';
+                timeframe = 'Medium Term';
                 confidence += 10;
                 direction = 'long';  // Explicitly set direction
             } else if (macdTrend.includes('Downtrend')) {
-                timeframe = 'Medium';
+                timeframe = 'Medium Term';
                 confidence += 5;
                 direction = 'short';  // Explicitly set direction
             }
@@ -2920,10 +2920,10 @@ export class CryptoAnalyzer {
             confidence += 10;
 
             if (macdTrend.includes('Uptrend')) {
-                timeframe = 'Medium';
+                timeframe = 'Medium Term';
                 direction = 'long';
             } else if (macdTrend.includes('Downtrend')) {
-                timeframe = 'Medium';
+                timeframe = 'Medium Term';
                 direction = 'short';
             }
         }
@@ -2933,12 +2933,12 @@ export class CryptoAnalyzer {
         if ((lastRSI < 30 && currentPrice > recentCandles[recentCandles.length - 2].close)) {
             opportunityType = 'Reversal';
             confidence += 15;
-            timeframe = 'Short';
+            timeframe = 'Short Term';
             direction = 'long';  // Bullish reversal = long direction
         } else if ((lastRSI > 70 && currentPrice < recentCandles[recentCandles.length - 2].close)) {
             opportunityType = 'Reversal';
             confidence += 15;
-            timeframe = 'Short';
+            timeframe = 'Short Term';
             direction = 'short';  // Bearish reversal = short direction
         }
 
@@ -2950,12 +2950,12 @@ export class CryptoAnalyzer {
             if (currentPrice > recentHigh * 0.98) {
                 opportunityType = 'Breakout';
                 confidence += 25;
-                timeframe = 'Medium';
+                timeframe = 'Medium Term';
                 direction = 'long';  // Upward breakout = long direction
             } else if (currentPrice < recentLow * 1.02) {
                 opportunityType = 'Breakout';
                 confidence += 25;
-                timeframe = 'Medium';
+                timeframe = 'Medium Term';
                 direction = 'short';  // Downward breakout = short direction
             }
         }

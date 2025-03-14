@@ -14,7 +14,7 @@ import {
   hasOverlappingLevels
 } from '../lib/support-resistance-helpers';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { formatLargeNumber, formatTokenAmount, formatMoney, getPairBaseCurrency, calculateTokenQuantity } from "@/lib/utils";
+import { formatLargeNumber, formatTokenAmount, formatMoney, getPairBaseCurrency, calculateTokenQuantity, calculateLoss, calculateProfit, calculateAccountImpactLoss, calculateAccountImpactProfit } from "@/lib/utils";
 
 interface DetailViewProps {
   pair: CryptoPair | null;
@@ -1174,6 +1174,67 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                       )}
                     </div>
                   </div>
+
+                  {/* Risk Factors / Warnings */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium mb-2">Risk Factors</h3>
+                    <div className={cn(
+                      "p-2 rounded-md border",
+                      pair.isPumping ? "bg-emerald-400/10 border-emerald-400/30 text-emerald-400" :
+                        pair.isDumping ? "bg-red-400/10 border-red-400/30 text-red-400" :
+                          "bg-amber-400/10 border-amber-400/30 text-amber-400"
+                    )}>
+                      {pair.isPumping && (
+                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                          Potential Pump Detected
+                        </div>
+                      )}
+                      {pair.isDumping && (
+                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-400"></span>
+                          Potential Dump Detected
+                        </div>
+                      )}
+                      {!pair.isPumping && !pair.isDumping && (
+                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                          Risk Assessment
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {pair.isPumping ? (
+                          <>
+                            Pump Score: <span className="font-medium text-emerald-400">{pair.pumpScore?.toFixed(1)}</span> |
+                            Price Change: <span className="font-medium text-emerald-400">{pair.priceChange?.toFixed(2)}%</span> |
+                            Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
+                          </>
+                        ) : pair.isDumping ? (
+                          <>
+                            Dump Score: <span className="font-medium text-red-400">{pair.dumpScore?.toFixed(1)}</span> |
+                            Price Change: <span className="font-medium text-red-400">{pair.priceChange?.toFixed(2)}%</span> |
+                            Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
+                          </>
+                        ) : (
+                          <>
+                            Movement Type: <span className="font-medium">{pair.movementType || 'Normal'}</span> |
+                            Vol/Price Corr: <span className="font-medium">{pair.volumeAnalysis?.priceVolumeCorrelation?.toFixed(2) || 'N/A'}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {pair.isPumping ? (
+                        "Exercise caution - high volatility detected. Consider reduced position size."
+                      ) : pair.isDumping ? (
+                        "Exercise caution - significant selling pressure detected."
+                      ) : (
+                        pair.atrAnalysis?.volatility?.includes('High') ?
+                          "Higher than normal volatility. Consider adjusting position size." :
+                          "Normal market conditions. Standard risk management advised."
+                      )}
+                    </div>
+                  </div>
                 </div>
 
 
@@ -1214,7 +1275,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                                   "Bullish Breakout" :
                                   (pair.opportunityMetrics?.type === 'Breakout' && pair.opportunityMetrics?.direction === 'short') ?
                                     "Bearish Breakout" :
-                                    pair.opportunityMetrics?.type || 'None'} ({pair.opportunityMetrics?.timeframe || 'Medium'})
+                                    pair.opportunityMetrics?.type || 'None'} ({pair.opportunityMetrics?.timeframe || 'Medium Term'})
                       </span>
                     </div>
 
@@ -1289,23 +1350,19 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                         </div>
                       </div>
                     )}
-
-
-
-
-
                   </div>
 
-
-
-                  {/* Position Sizing with improved explanations */}
+                  {/* Position Sizing with Profit/Loss Information */}
                   <div className="p-3 border rounded-lg bg-card/50">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-medium">Position Sizing</h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <InformationCircleIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                            <button className="inline-flex items-center justify-center rounded-full h-4 w-4 text-muted-foreground bg-muted-foreground/20">
+                              <span className="sr-only">Info</span>
+                              <span aria-hidden="true" className="text-xs">i</span>
+                            </button>
                           </TooltipTrigger>
                           <TooltipContent className="w-[350px] p-3 space-y-2 bg-card/95 backdrop-blur-sm border-border shadow-xl">
                             <p className="text-xs text-muted-foreground">Position sizing is calculated based on risk management principles:</p>
@@ -1314,7 +1371,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                               <li>• <span className="font-medium">Max Size</span>: Maximum exposure for a 2% account risk</li>
                               <li>• <span className="font-medium">Risk %</span>: Actual percentage of account at risk with suggested size</li>
                             </ul>
-                            <p className="text-xs italic text-muted-foreground mt-1">Based on $10,000 account with stop loss at ({pair.riskAnalysis?.stopLoss.suggestion})</p>
+                            <p className="text-xs italic text-muted-foreground mt-1">Based on $10,000 account with stop loss at ({pair.opportunityMetrics?.keyLevels.stop})</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1327,9 +1384,10 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="ml-1 cursor-help">
-                                  <InformationCircleIcon className="h-3 w-3 text-muted-foreground inline" />
-                                </span>
+                                <button className="inline-flex items-center justify-center rounded-full h-3 w-3 ml-1 text-muted-foreground bg-muted-foreground/20">
+                                  <span className="sr-only">Info</span>
+                                  <span aria-hidden="true" className="text-[10px]">i</span>
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent side="right" className="w-[250px] p-2 text-xs bg-card/95">
                                 Recommended position size adjusted for risk level ({pair.riskAnalysis?.riskLevel} risk)
@@ -1346,14 +1404,15 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm">
+                        <div className="flex items-center  text-sm">
                           <span className="text-muted-foreground">Max Size:</span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="ml-1 cursor-help">
-                                  <InformationCircleIcon className="h-3 w-3 text-muted-foreground inline" />
-                                </span>
+                                <button className="inline-flex items-center justify-center rounded-full h-3 w-3 ml-1 text-muted-foreground bg-muted-foreground/20">
+                                  <span className="sr-only">Info</span>
+                                  <span aria-hidden="true" className="text-[10px]">i</span>
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent side="right" className="w-[250px] p-2 text-xs bg-card/95">
                                 Maximum position size with 2% account risk
@@ -1362,7 +1421,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                           </TooltipProvider>
                         </div>
                         <div>
-                          <span className="font-mono text-sm">
+                          <span className="font-mono  text-sm">
                             ${formatMoney(pair.riskAnalysis?.positionSizing.maxSize ?? 0)}
                           </span>
                           <span className="text-xs text-muted-foreground ml-1">USD</span>
@@ -1370,14 +1429,15 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm">
+                        <div className="flex items-center  text-sm">
                           <span className="text-muted-foreground">Risk %:</span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="ml-1 cursor-help">
-                                  <InformationCircleIcon className="h-3 w-3 text-muted-foreground inline" />
-                                </span>
+                                <button className="inline-flex items-center justify-center rounded-full h-3 w-3 ml-1 text-muted-foreground bg-muted-foreground/20">
+                                  <span className="sr-only">Info</span>
+                                  <span aria-hidden="true" className="text-[10px]">i</span>
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent side="right" className="w-[250px] p-2 text-xs bg-card/95">
                                 Account percentage at risk with suggested position
@@ -1387,9 +1447,9 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                         </div>
                         <div>
                           <span className={cn(
-                            "font-monfont-mono text-smo",
-                            (pair.riskAnalysis?.positionSizing.riskPercentage ?? 0) > 2 ? "text-red-400" :
-                              (pair.riskAnalysis?.positionSizing.riskPercentage ?? 0) < 0.5 ? "text-emerald-400" :
+                            "font-mono  text-sm",
+                            pair.riskAnalysis?.positionSizing.riskPercentage ?? 0 > 2 ? "text-red-400" :
+                              pair.riskAnalysis?.positionSizing.riskPercentage ?? 0 < 0.5 ? "text-emerald-400" :
                                 "text-yellow-400"
                           )}>
                             {pair.riskAnalysis?.positionSizing.riskPercentage.toFixed(2)}%
@@ -1397,17 +1457,68 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                         </div>
                       </div>
 
-                      {/* Add native token amount equivalent */}
+                      {/* Native token amount */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Est. quantity:</span>
+                        <span className="text-xs font-mono">
+                          {calculateTokenQuantity(pair)} {getPairBaseCurrency(pair.pair)}
+                        </span>
+                      </div>
+
+                      {/* New Profit/Loss section */}
                       <div className="mt-3 pt-2 border-t border-border/40">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium">Potential Outcome</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button className="inline-flex items-center justify-center rounded-full h-3 w-3 text-muted-foreground bg-muted-foreground/20">
+                                  <span className="sr-only">Info</span>
+                                  <span aria-hidden="true" className="text-[10px]">i</span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="w-[250px] p-2 text-xs bg-card/95">
+                                Calculated based on suggested position size and trade levels
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+
+                        {/* Profit calculation */}
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Est. quantity:</span>
-                          <span className="text-xs font-mono">
-                            {calculateTokenQuantity(pair)} {getPairBaseCurrency(pair.pair)}
+                          <span className="text-xs text-muted-foreground">Profit target:</span>
+                          <span className={cn(
+                            "text-xs font-mono",
+                            "text-emerald-400"
+                          )}>
+                            ${calculateProfit(pair)}
                           </span>
+                        </div>
+
+                        {/* Loss calculation */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Max loss:</span>
+                          <span className={cn(
+                            "text-xs font-mono",
+                            "text-red-400"
+                          )}>
+                            -${calculateLoss(pair)}
+                          </span>
+                        </div>
+
+                        {/* Account Impact */}
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-muted-foreground">Account impact:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-mono text-emerald-400">+{calculateAccountImpactProfit(pair)}%</span>
+                            <span className="text-xs text-muted-foreground">/</span>
+                            <span className="text-xs font-mono text-red-400">-{calculateAccountImpactLoss(pair)}%</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+
 
                   {/* Stop Loss Suggestions */}
                   <div className="p-3 border rounded-lg bg-card/50">
@@ -1436,66 +1547,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                     </div>
                   </div>
 
-                  {/* Risk Factors / Warnings */}
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium mb-2">Risk Factors</h3>
-                    <div className={cn(
-                      "p-2 rounded-md border",
-                      pair.isPumping ? "bg-emerald-400/10 border-emerald-400/30 text-emerald-400" :
-                        pair.isDumping ? "bg-red-400/10 border-red-400/30 text-red-400" :
-                          "bg-amber-400/10 border-amber-400/30 text-amber-400"
-                    )}>
-                      {pair.isPumping && (
-                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                          Potential Pump Detected
-                        </div>
-                      )}
-                      {pair.isDumping && (
-                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-red-400"></span>
-                          Potential Dump Detected
-                        </div>
-                      )}
-                      {!pair.isPumping && !pair.isDumping && (
-                        <div className="text-xs font-medium mb-1 flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
-                          Risk Assessment
-                        </div>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        {pair.isPumping ? (
-                          <>
-                            Pump Score: <span className="font-medium text-emerald-400">{pair.pumpScore?.toFixed(1)}</span> |
-                            Price Change: <span className="font-medium text-emerald-400">{pair.priceChange?.toFixed(2)}%</span> |
-                            Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
-                          </>
-                        ) : pair.isDumping ? (
-                          <>
-                            Dump Score: <span className="font-medium text-red-400">{pair.dumpScore?.toFixed(1)}</span> |
-                            Price Change: <span className="font-medium text-red-400">{pair.priceChange?.toFixed(2)}%</span> |
-                            Vol Increase: <span className="font-medium">{pair.volumeIncrease?.toFixed(0)}%</span>
-                          </>
-                        ) : (
-                          <>
-                            Movement Type: <span className="font-medium">{pair.movementType || 'Normal'}</span> |
-                            Vol/Price Corr: <span className="font-medium">{pair.volumeAnalysis?.priceVolumeCorrelation?.toFixed(2) || 'N/A'}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {pair.isPumping ? (
-                        "Exercise caution - high volatility detected. Consider reduced position size."
-                      ) : pair.isDumping ? (
-                        "Exercise caution - significant selling pressure detected."
-                      ) : (
-                        pair.atrAnalysis?.volatility?.includes('High') ?
-                          "Higher than normal volatility. Consider adjusting position size." :
-                          "Normal market conditions. Standard risk management advised."
-                      )}
-                    </div>
-                  </div>
+
 
                 </div>
 
@@ -2043,6 +2095,8 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
               </div>
             </CardContent>
           </Card>
+
+
         </div>
 
         {/* Market Structure Card */}

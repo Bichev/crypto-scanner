@@ -65,14 +65,80 @@ export function formatLargeNumber(value: number): string {
     return value.toFixed(2);
 } 
 
-{/* Helper function for formatting money values */}
-export function formatMoney (value: number): string {
-  if (!value) return '0.00';
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value);
+
+{/* Helper function for profit calculation */}
+export function calculateProfit (pair: CryptoPair): string {
+  if (!pair?.opportunityMetrics?.keyLevels || !pair?.riskAnalysis?.positionSizing) {
+    return '0.00';
+  }
+  
+  const entry = pair.opportunityMetrics.keyLevels.entry;
+  const target = pair.opportunityMetrics.keyLevels.target;
+  const positionSize = pair.riskAnalysis.positionSizing.suggested;
+  
+  if (!entry || !target || !positionSize) return '0.00';
+  
+  const quantity = positionSize / entry;
+  let profit = 0;
+  
+  if (pair.opportunityMetrics.direction === 'long') {
+    profit = quantity * (target - entry);
+  } else {
+    profit = quantity * (entry - target);
+  }
+  
+  return formatMoney(Math.abs(profit));
 };
+
+{/* Helper function for loss calculation */}
+export function calculateLoss (pair: CryptoPair): string {
+  if (!pair?.opportunityMetrics?.keyLevels || !pair?.riskAnalysis?.positionSizing) {
+    return '0.00';
+  }
+  
+  const entry = pair.opportunityMetrics.keyLevels.entry;
+  const stop = pair.opportunityMetrics.keyLevels.stop;
+  const positionSize = pair.riskAnalysis.positionSizing.suggested;
+  
+  if (!entry || !stop || !positionSize) return '0.00';
+  
+  const quantity = positionSize / entry;
+  let loss = 0;
+  
+  if (pair.opportunityMetrics.direction === 'long') {
+    loss = quantity * (entry - stop);
+  } else {
+    loss = quantity * (stop - entry);
+  }
+  
+  return formatMoney(Math.abs(loss));
+};
+
+{/* Helper function for account impact (profit) */}
+export function calculateAccountImpactProfit (pair: CryptoPair): string {
+  if (!pair?.opportunityMetrics?.keyLevels || !pair?.riskAnalysis?.positionSizing) {
+    return '0.00';
+  }
+  
+  const profit = parseFloat(calculateProfit(pair).replace(/,/g, ''));
+  const accountSize = 10000; // Default account size
+  
+  return (profit / accountSize * 100).toFixed(2);
+};
+
+{/* Helper function for account impact (loss) */}
+export function calculateAccountImpactLoss (pair: CryptoPair): string {
+  if (!pair?.opportunityMetrics?.keyLevels || !pair?.riskAnalysis?.positionSizing) {
+    return '0.00';
+  }
+  
+  // This should be the same as risk percentage, but we calculate directly for clarity
+  const loss = parseFloat(calculateLoss(pair).replace(/,/g, ''));
+  const accountSize = 10000; // Default account size
+  
+  return (loss / accountSize * 100).toFixed(2);
+};
+
 
 {/* Helper function to get base currency from pair */}
 export function getPairBaseCurrency (pairString: string): string {
@@ -81,46 +147,58 @@ export function getPairBaseCurrency (pairString: string): string {
   return pairString.split('-')[0];
 };
 
-{/* Helper function to calculate accurate token quantity */}
+
+{/* Helper function to calculate token quantity */}
 export function calculateTokenQuantity (pair: CryptoPair): string {
-  if (!pair || !pair.riskAnalysis?.positionSizing.suggested || !pair.currentPrice) {
+  if (!pair || !pair.riskAnalysis?.positionSizing.suggested || !pair.opportunityMetrics?.keyLevels.entry) {
     return '0';
   }
   
-  // Convert suggested USD position size to token quantity
   const suggestedUSD = pair.riskAnalysis.positionSizing.suggested;
-  const currentPrice = parseFloat(pair.currentPrice);
+  const entryPrice = pair.opportunityMetrics.keyLevels.entry;
   
-  if (!currentPrice || currentPrice === 0) return '0';
+  if (!entryPrice || entryPrice === 0) return '0';
   
-  const tokenQuantity = suggestedUSD / currentPrice;
+  const tokenQuantity = suggestedUSD / entryPrice;
   
-  // Format based on token value
   return formatTokenAmount(tokenQuantity);
 };
-
 
 {/* Helper function for formatting token amounts */}
 export function formatTokenAmount (amount: number): string {
   if (!amount) return '0';
   
-  // If amount is very small, use scientific notation
+  // For very small amounts (like shiba inu, etc.)
   if (amount < 0.0001) {
     return amount.toExponential(4);
   }
   
-  // If amount is less than 1, show more decimal places
+  // For medium-small amounts (like ETH, etc.)
   if (amount < 1) {
     return amount.toFixed(6);
   }
   
-  // If amount is less than 1000, round to 4 decimal places
-  if (amount < 1000) {
+  // For medium amounts (like DOT, LINK, etc.)
+  if (amount < 100) {
     return amount.toFixed(4);
   }
   
-  // If amount is large, format with comma separators
+  // For large amounts (like ADA, XRP, etc.)
+  if (amount < 10000) {
+    return amount.toFixed(2);
+  }
+  
+  // For very large amounts (like SHIB, DOGE, etc.)
   return new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 2
-  }).format(amount);
+  }).format(Math.round(amount));
+};
+
+{/* Helper function for formatting money values */}
+export function formatMoney (value: number): string {
+  if (!value) return '0.00';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
 };
