@@ -1411,7 +1411,7 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
 
                   {/* Stop Loss Suggestions */}
                   <div className="p-3 border rounded-lg bg-card/50">
-                    <h3 className="text-sm font-medium mb-2">Stop Loss Suggestions</h3>
+                    <h3 className="text-sm font-medium mb-2">Stop Loss Suggestions (for Long)</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">ATR-based:</span>
