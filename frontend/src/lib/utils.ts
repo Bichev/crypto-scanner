@@ -1,3 +1,4 @@
+import { CryptoPair } from "@/types/crypto";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -63,3 +64,63 @@ export function formatLargeNumber(value: number): string {
     }
     return value.toFixed(2);
 } 
+
+{/* Helper function for formatting money values */}
+export function formatMoney (value: number): string {
+  if (!value) return '0.00';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
+{/* Helper function to get base currency from pair */}
+export function getPairBaseCurrency (pairString: string): string {
+  if (!pairString) return '';
+  // Extract the first part of the pair (e.g., "BTC" from "BTC-USD")
+  return pairString.split('-')[0];
+};
+
+{/* Helper function to calculate accurate token quantity */}
+export function calculateTokenQuantity (pair: CryptoPair): string {
+  if (!pair || !pair.riskAnalysis?.positionSizing.suggested || !pair.currentPrice) {
+    return '0';
+  }
+  
+  // Convert suggested USD position size to token quantity
+  const suggestedUSD = pair.riskAnalysis.positionSizing.suggested;
+  const currentPrice = parseFloat(pair.currentPrice);
+  
+  if (!currentPrice || currentPrice === 0) return '0';
+  
+  const tokenQuantity = suggestedUSD / currentPrice;
+  
+  // Format based on token value
+  return formatTokenAmount(tokenQuantity);
+};
+
+
+{/* Helper function for formatting token amounts */}
+export function formatTokenAmount (amount: number): string {
+  if (!amount) return '0';
+  
+  // If amount is very small, use scientific notation
+  if (amount < 0.0001) {
+    return amount.toExponential(4);
+  }
+  
+  // If amount is less than 1, show more decimal places
+  if (amount < 1) {
+    return amount.toFixed(6);
+  }
+  
+  // If amount is less than 1000, round to 4 decimal places
+  if (amount < 1000) {
+    return amount.toFixed(4);
+  }
+  
+  // If amount is large, format with comma separators
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 2
+  }).format(amount);
+};

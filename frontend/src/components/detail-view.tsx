@@ -14,7 +14,7 @@ import {
   hasOverlappingLevels
 } from '../lib/support-resistance-helpers';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { formatLargeNumber } from "@/lib/utils";
+import { formatLargeNumber, formatTokenAmount, formatMoney, getPairBaseCurrency, calculateTokenQuantity } from "@/lib/utils";
 
 interface DetailViewProps {
   pair: CryptoPair | null;
@@ -1296,6 +1296,119 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
 
                   </div>
 
+
+
+                  {/* Position Sizing with improved explanations */}
+                  <div className="p-3 border rounded-lg bg-card/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium">Position Sizing</h3>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <InformationCircleIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="w-[350px] p-3 space-y-2 bg-card/95 backdrop-blur-sm border-border shadow-xl">
+                            <p className="text-xs text-muted-foreground">Position sizing is calculated based on risk management principles:</p>
+                            <ul className="text-xs space-y-1.5 text-muted-foreground">
+                              <li>• <span className="font-medium">Suggested Size</span>: Recommended USD value to invest based on risk level</li>
+                              <li>• <span className="font-medium">Max Size</span>: Maximum exposure for a 2% account risk</li>
+                              <li>• <span className="font-medium">Risk %</span>: Actual percentage of account at risk with suggested size</li>
+                            </ul>
+                            <p className="text-xs italic text-muted-foreground mt-1">Based on $10,000 account with stop loss at ({pair.riskAnalysis?.stopLoss.suggestion})</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center text-sm">
+                          <span className="text-muted-foreground">Suggested:</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="ml-1 cursor-help">
+                                  <InformationCircleIcon className="h-3 w-3 text-muted-foreground inline" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="w-[250px] p-2 text-xs bg-card/95">
+                                Recommended position size adjusted for risk level ({pair.riskAnalysis?.riskLevel} risk)
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <div>
+                          <span className="font-mono text-sm">
+                            ${formatMoney(pair.riskAnalysis?.positionSizing.suggested ?? 0)}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">USD</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center text-sm">
+                          <span className="text-muted-foreground">Max Size:</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="ml-1 cursor-help">
+                                  <InformationCircleIcon className="h-3 w-3 text-muted-foreground inline" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="w-[250px] p-2 text-xs bg-card/95">
+                                Maximum position size with 2% account risk
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <div>
+                          <span className="font-mono text-sm">
+                            ${formatMoney(pair.riskAnalysis?.positionSizing.maxSize ?? 0)}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">USD</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center text-sm">
+                          <span className="text-muted-foreground">Risk %:</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="ml-1 cursor-help">
+                                  <InformationCircleIcon className="h-3 w-3 text-muted-foreground inline" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="w-[250px] p-2 text-xs bg-card/95">
+                                Account percentage at risk with suggested position
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <div>
+                          <span className={cn(
+                            "font-monfont-mono text-smo",
+                            (pair.riskAnalysis?.positionSizing.riskPercentage ?? 0) > 2 ? "text-red-400" :
+                              (pair.riskAnalysis?.positionSizing.riskPercentage ?? 0) < 0.5 ? "text-emerald-400" :
+                                "text-yellow-400"
+                          )}>
+                            {pair.riskAnalysis?.positionSizing.riskPercentage.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Add native token amount equivalent */}
+                      <div className="mt-3 pt-2 border-t border-border/40">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Est. quantity:</span>
+                          <span className="text-xs font-mono">
+                            {calculateTokenQuantity(pair)} {getPairBaseCurrency(pair.pair)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Stop Loss Suggestions */}
                   <div className="p-3 border rounded-lg bg-card/50">
                     <h3 className="text-sm font-medium mb-2">Stop Loss Suggestions</h3>
@@ -1318,34 +1431,6 @@ export function CryptoDetailView({ pair, isOpen, onClose }: DetailViewProps) {
                         <span className="text-muted-foreground">Suggested:</span>
                         <span className="font-mono font-medium text-red-400">
                           {pair.riskAnalysis?.stopLoss?.suggestion || '-'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Position Sizing */}
-                  <div className="p-3 border rounded-lg bg-card/50">
-                    <h3 className="text-sm font-medium mb-2">Position Sizing</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Suggested Size:</span>
-                        <span className="font-mono font-medium">
-                          {pair.riskAnalysis?.positionSizing?.suggested ?
-                            `${pair.riskAnalysis.positionSizing.suggested.toFixed(2)}` : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Max Size:</span>
-                        <span className="font-mono">
-                          {pair.riskAnalysis?.positionSizing?.maxSize ?
-                            `${pair.riskAnalysis.positionSizing.maxSize.toFixed(2)}` : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Risk %:</span>
-                        <span className="font-mono">
-                          {pair.riskAnalysis?.positionSizing?.riskPercentage ?
-                            `${pair.riskAnalysis.positionSizing.riskPercentage.toFixed(2)}%` : '-'}
                         </span>
                       </div>
                     </div>
